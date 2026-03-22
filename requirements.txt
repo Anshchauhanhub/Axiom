@@ -1,0 +1,32 @@
+# ─── Core Framework ─────────────────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+
+# ─── Database ───────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.40
+asyncpg==0.30.0
+alembic==1.15.2
+pgvector==0.3.6
+
+# ─── Telegram Bot ───────────────────────────────────────
+aiogram==3.19.0
+
+# ─── LLM ────────────────────────────────────────────────
+google-genai==1.12.1
+
+# ─── Scheduling ─────────────────────────────────────────
+apscheduler==3.11.0
+
+# ─── Validation & Settings ──────────────────────────────
+# aiogram requires pydantic <2.11, fastapi allows <3.0
+pydantic>=2.4.1,<2.11
+pydantic-settings==2.8.1
+
+# ─── Utilities ──────────────────────────────────────────
+python-dotenv==1.1.0
+httpx==0.28.1
+
+# ─── Testing ────────────────────────────────────────────
+pytest==8.3.5
+pytest-asyncio==0.26.0
+pytest-mock==3.14.0
