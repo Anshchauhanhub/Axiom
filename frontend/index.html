@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axiom — AI-Driven Growth Partner</title>
+    <meta name="description" content="Axiom turns passive learning into active, accountable dialogue. Set goals, get AI roadmaps, and prove mastery through quizzes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <!-- ─── Top Navigation ──────────────────────────────── -->
+    <nav id="main-nav" class="nav hidden">
+        <div class="nav-inner">
+            <a href="#dashboard" class="nav-brand">
+                <span class="brand-icon">🧠</span>
+                <span class="brand-text">Axiom</span>
+            </a>
+            <div class="nav-links">
+                <a href="#dashboard" class="nav-link" data-page="dashboard">Dashboard</a>
+                <a href="#roadmap" class="nav-link" data-page="roadmap">Roadmap</a>
+                <a href="#onboard" class="nav-link" data-page="onboard">New Goal</a>
+            </div>
+            <div class="nav-user">
+                <span id="nav-username" class="nav-username"></span>
+                <button id="logout-btn" class="btn btn-ghost btn-sm">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─── Main Content Area ───────────────────────────── -->
+    <main id="app"></main>
+
+    <!-- ─── Toast Container ─────────────────────────────── -->
+    <div id="toast-container"></div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
