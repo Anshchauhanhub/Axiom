@@ -9,6 +9,8 @@ from datetime import timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi import HTTPException
+
 from app.llm.client import generate_json_roadmap
 from app.models.roadmap import Roadmap
 from app.models.task import Task
