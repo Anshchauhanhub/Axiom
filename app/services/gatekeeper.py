@@ -18,8 +18,9 @@ async def evaluate_quiz(
     task_id: int,
     user_answers: list[int],
     mcq_json: dict,
-    telegram_id: int,
+    user_id: int,
     db: AsyncSession,
+    telegram_id: int | None = None,
 ) -> Verification:
     """
     Score the user's answers and decide PASS / FAIL.
@@ -54,12 +55,18 @@ async def evaluate_quiz(
 
     # ── Update streak ───────────────────────────────────
     if passed:
-        user_result = await db.execute(
-            select(User).where(User.telegram_id == telegram_id)
-        )
+        if telegram_id:
+            user_result = await db.execute(
+                select(User).where(User.telegram_id == telegram_id)
+            )
+        else:
+            user_result = await db.execute(
+                select(User).where(User.id == user_id)
+            )
         user = user_result.scalar_one()
         user.streak_count += 1
 
     await db.flush()
     await db.refresh(verification)
     return verification
+

@@ -16,7 +16,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(256), unique=True, nullable=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(512), nullable=True)
     username: Mapped[str | None] = mapped_column(String(128), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
     streak_count: Mapped[int] = mapped_column(Integer, default=0)

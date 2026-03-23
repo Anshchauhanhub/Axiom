@@ -20,11 +20,12 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    telegram_id: int
-    username: str | None
+    telegram_id: int | None = None
+    email: str | None = None
+    username: str | None = None
     timezone: str
     streak_count: int
-    current_goal: str | None
+    current_goal: str | None = None
     hours_per_day: int
     created_at: datetime
 

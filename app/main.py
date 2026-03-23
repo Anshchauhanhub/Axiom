@@ -2,12 +2,16 @@
 Axiom — FastAPI Application Entry Point.
 """
 
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.routers import users, roadmaps, tasks, webhooks
+from app.routers import users, roadmaps, tasks, webhooks, auth, quiz
 
 
 @asynccontextmanager
@@ -28,13 +32,31 @@ app = FastAPI(
     debug=settings.DEBUG,
 )
 
+# ── CORS ────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # ── Register Routers ────────────────────────────────────
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(roadmaps.router, prefix="/api/roadmaps", tags=["Roadmaps"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["Tasks"])
+app.include_router(quiz.router, prefix="/api/quiz", tags=["Quiz"])
 app.include_router(webhooks.router, prefix="/webhook", tags=["Webhooks"])
 
 
-@app.get("/", tags=["Health"])
+@app.get("/api/health", tags=["Health"])
 async def health_check():
     return {"status": "ok", "service": "axiom"}
+
+
+# ── Serve Frontend Static Files ─────────────────────────
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+
