@@ -12,7 +12,8 @@ pgvector==0.3.6
 aiogram==3.19.0
 
 # ─── LLM ────────────────────────────────────────────────
-google-genai==1.12.1
+# Using Groq via httpx instead of google-genai
+# google-genai==1.12.1
 
 # ─── Scheduling ─────────────────────────────────────────
 apscheduler==3.11.0

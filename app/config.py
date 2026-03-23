@@ -31,8 +31,9 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     WEBHOOK_BASE_URL: str = ""
 
-    # ── Gemini (Google AI Studio) ───────────────────────
+    # ── LLM APIs ────────────────────────────────────────
     GEMINI_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
 
 
 settings = Settings()
