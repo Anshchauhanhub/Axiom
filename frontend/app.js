@@ -23,9 +23,20 @@ async function api(path, options = {}) {
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`${API}${path}`, { ...options, headers });
-    if (res.status === 401) { clearToken(); currentUser = null; navigate('login'); return null; }
+    console.log(`[API] ${options.method || 'GET'} ${path} -> ${res.status}`);
+
+    if (res.status === 401) {
+        if (!path.includes('/auth/login') && !path.includes('/auth/register')) {
+            console.warn('[API] 401 Unauthorized, redirecting to login');
+            clearToken(); currentUser = null; navigate('login'); return null;
+        }
+    }
+
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Something went wrong');
+    if (!res.ok) {
+        console.error(`[API] Error ${res.status}:`, data);
+        throw new Error(data.detail || 'Something went wrong');
+    }
     return data;
 }
 
@@ -173,6 +184,9 @@ function attachLoginEvents() {
             const data = await api('/api/auth/login', {
                 method: 'POST', body: JSON.stringify({ email, password })
             });
+            if (!data || !data.access_token) {
+                throw new Error('Invalid login response from server');
+            }
             setToken(data.access_token);
             currentUser = data.user;
             toast('Welcome back! 🎉', 'success');
@@ -199,6 +213,9 @@ function attachRegisterEvents() {
             const data = await api('/api/auth/register', {
                 method: 'POST', body: JSON.stringify({ email, password, username: username || null })
             });
+            if (!data || !data.access_token) {
+                throw new Error('Invalid registration response from server');
+            }
             setToken(data.access_token);
             currentUser = data.user;
             toast('Account created! Let\'s set your first goal 🚀', 'success');
