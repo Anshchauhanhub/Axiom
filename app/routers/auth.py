@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserResponse
+from app.schemas.user import UserResponse, RegisterRequest, LoginRequest, TokenResponse
 from app.utils.auth import (
     create_access_token,
     get_current_user,
@@ -22,21 +22,7 @@ from app.utils.auth import (
 router = APIRouter()
 
 
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-    username: str | None = None
 
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
@@ -56,6 +42,33 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     db.add(user)
     await db.flush()
     await db.refresh(user)
+
+    token = create_access_token(user.id)
+    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+
+
+@router.post("/login/telegram", response_model=TokenResponse)
+async def login_telegram(telegram_id: int, username: str | None = None, db: AsyncSession = Depends(get_db)):
+    """Login or register via Telegram ID."""
+    result = await db.execute(
+        select(User).where(User.telegram_id == telegram_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # Auto-create Telegram user if not exists
+        user = User(
+            telegram_id=telegram_id,
+            username=username,
+        )
+        db.add(user)
+        await db.flush()
+        await db.refresh(user)
+    elif username and not user.username:
+        # Update username if provided
+        user.username = username
+        await db.flush()
+        await db.refresh(user)
 
     token = create_access_token(user.id)
     return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
