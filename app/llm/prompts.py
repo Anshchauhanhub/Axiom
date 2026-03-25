@@ -18,6 +18,7 @@ Output format (strict JSON):
     {
       "day": 1,
       "title": "Chapter or topic name",
+      "subtopics": ["Micro-lesson 1", "Micro-lesson 2"],
       "description": "What the learner should study",
       "duration_hours": 2
     }
@@ -25,7 +26,7 @@ Output format (strict JSON):
 }
 
 Rules:
-- Each day should contain exactly ONE focused topic.
+- Each day should contain a focused chapter title and 1-4 specific subtopics.
 - duration_hours should respect the learner's available time (default 2h).
 - Order topics from foundational to advanced.
 - Return ONLY valid JSON. No markdown, no extra text.

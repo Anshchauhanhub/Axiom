@@ -17,9 +17,58 @@ async def send_study_nudge(telegram_chat_id: int, time_slot: str) -> None:
 
     This function is called by APScheduler at each configured time slot.
     """
-    # TODO: Fetch the user's current active part.
-    # TODO: Send message via aiogram bot instance.
-    print(f"📩 Study nudge sent to chat_id={telegram_chat_id} for time={time_slot}")
+    from app.db.session import async_session_factory
+    from sqlalchemy import select
+    from app.models.user import User
+    from app.models.goal import Goal
+    from app.models.task import Task
+    from app.models.part import Part
+    from app.bot_instance import bot
+    from bot.keyboards.inline import build_task_keyboard
+
+    print(f"📩 Triggered study nudge for chat_id={telegram_chat_id} for time={time_slot}")
+
+    async with async_session_factory() as session:
+        # Find user
+        result = await session.execute(select(User).where(User.telegram_chat_id == telegram_chat_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            return
+
+        # Find latest active goal
+        result = await session.execute(
+            select(Goal).where(Goal.user_id == user.id, Goal.status == "Active").order_by(Goal.created_at.desc()).limit(1)
+        )
+        goal = result.scalar_one_or_none()
+        if not goal:
+            return
+
+        # Find first active task
+        result = await session.execute(
+            select(Task).where(Task.goal_id == goal.id, Task.status == "Active").order_by(Task.order_index).limit(1)
+        )
+        task = result.scalar_one_or_none()
+        if not task:
+            return
+
+        # Find first active part
+        result = await session.execute(
+            select(Part).where(Part.task_id == task.id, Part.status == "Active").order_by(Part.order_index).limit(1)
+        )
+        part = result.scalar_one_or_none()
+        if not part:
+            return
+
+        # Send nudge
+        try:
+            await bot.send_message(
+                chat_id=telegram_chat_id,
+                text=f"⏰ <b>Time to study!</b>\n\nYour next topic is: <i>{part.title}</i>\nAre you ready to prove mastery?",
+                reply_markup=build_task_keyboard(str(part.id))
+            )
+            print(f"✅ Nudge sent to {telegram_chat_id}")
+        except Exception as e:
+            print(f"❌ Failed to send nudge to {telegram_chat_id}: {str(e)}")
 
 
 def schedule_nudges_for_user(

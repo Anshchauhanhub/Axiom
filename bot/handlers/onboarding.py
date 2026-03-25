@@ -13,7 +13,11 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.user import User
+from app.services.goal_gen import generate_goal
+from app.services.onboarding import upsert_user_schedule
 from bot.states.onboarding import OnboardingStates
 
 router = Router()
@@ -71,7 +75,12 @@ async def receive_syllabus(message: Message, state: FSMContext) -> None:
 
 
 @router.message(OnboardingStates.waiting_for_schedule)
-async def receive_schedule(message: Message, state: FSMContext) -> None:
+async def receive_schedule(
+    message: Message, 
+    state: FSMContext,
+    db_session: AsyncSession,
+    db_user: User
+) -> None:
     """Receive daily schedule and trigger goal generation."""
     data = await state.get_data()
     goal = data.get("goal")
@@ -108,5 +117,19 @@ async def receive_schedule(message: Message, state: FSMContext) -> None:
         f"⏳ Generating your personalized roadmap with AI… This may take a moment."
     )
 
-    # TODO: Call goal_gen service and send the plan back.
-    # TODO: Save study_schedule to user via onboarding.upsert_user_schedule.
+    # Save study_schedule to user via onboarding service
+    await upsert_user_schedule(db_user.telegram_chat_id, time_slots, db_session)
+    
+    # Generate the goal and parts
+    try:
+        goal_obj = await generate_goal(
+            user=db_user,
+            title=goal,
+            total_days=total_days,
+            syllabus_text=syllabus,
+            db=db_session
+        )
+        await db_session.commit()
+        await message.answer(f"🎉 <b>Success!</b> Your goal <i>{goal_obj.title}</i> has been created and your roadmap is ready. Check the website for the full outline, or wait for your next scheduled nudge!")
+    except Exception as e:
+        await message.answer(f"❌ Failed to generate goal: {str(e)}")

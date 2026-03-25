@@ -28,6 +28,9 @@ class User(Base):
     telegram_chat_id: Mapped[int | None] = mapped_column(
         BigInteger, unique=True, nullable=True, index=True
     )
+    phone_number: Mapped[str | None] = mapped_column(
+        String(32), unique=True, nullable=True, index=True
+    )
     username: Mapped[str | None] = mapped_column(String(128), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
     study_schedule: Mapped[dict | None] = mapped_column(

@@ -28,6 +28,11 @@ class GoalCreateRequest(BaseModel):
     syllabus: str
 
 
+class RoadmapGenerateRequest(BaseModel):
+    user_msg: str
+    study_schedule: list[str]
+
+
 @router.post("/", response_model=GoalResponse, status_code=201)
 async def create_goal(
     payload: GoalCreateRequest,
@@ -37,10 +42,35 @@ async def create_goal(
     """Create a new goal — calls the LLM to generate tasks and parts."""
     goal = await generate_goal(
         user=user,
+        db=db,
         title=payload.title,
         total_days=payload.total_days,
         syllabus_text=payload.syllabus,
+    )
+    return goal
+
+
+@router.post("/generate", response_model=GoalResponse, status_code=201)
+async def generate_roadmap_endpoint(
+    payload: RoadmapGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Onboarding endpoint: 
+    1. Updates user study schedule.
+    2. Generates a full roadmap from a natural language prompt.
+    """
+    # Update user's study schedule
+    user.study_schedule = {"times": payload.study_schedule}
+    db.add(user)
+    await db.flush()
+
+    # Generate goal
+    goal = await generate_goal(
+        user=user,
         db=db,
+        syllabus_text=payload.user_msg,
     )
     return goal
 

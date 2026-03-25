@@ -17,11 +17,28 @@ from app.routers import users, goals, tasks, parts, webhooks, auth, quiz
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle hook."""
+    from app.services.scheduler import start_scheduler, stop_scheduler
+    from app.bot_instance import bot
+    from app.config import settings
+
     # ── Startup ─────────────────────────────────────────
     print("🧠 Axiom is starting up …")
+    start_scheduler()
+
+    if settings.WEBHOOK_BASE_URL:
+        webhook_url = f"{settings.WEBHOOK_BASE_URL}/webhook/telegram"
+        await bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+        print(f"🔗 Bot webhook set to: {webhook_url}")
+    else:
+        print("⚠️ WEBHOOK_BASE_URL not set. Running bot in long-polling mode requires running bot/main.py separately.")
+
     yield
     # ── Shutdown ────────────────────────────────────────
     print("🧠 Axiom is shutting down …")
+    if settings.WEBHOOK_BASE_URL:
+        await bot.delete_webhook(drop_pending_updates=True)
+    await bot.session.close()
+    stop_scheduler()
 
 
 app = FastAPI(

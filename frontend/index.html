@@ -5,12 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Axiom — AI-Driven Growth Partner</title>
     <meta name="description" content="Axiom turns passive learning into active, accountable dialogue. Set goals, get AI roadmaps, and prove mastery through quizzes.">
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="/styles.css?v=2">
 </head>
 <body>
+
     <!-- ─── Top Navigation ──────────────────────────────── -->
     <nav id="main-nav" class="nav hidden">
         <div class="nav-inner">
@@ -18,24 +23,37 @@
                 <span class="brand-icon">🧠</span>
                 <span class="brand-text">Axiom</span>
             </a>
+            
             <div class="nav-links">
-                <a href="#dashboard" class="nav-link" data-page="dashboard">Dashboard</a>
-                <a href="#roadmap" class="nav-link" data-page="roadmap">Roadmap</a>
-                <a href="#onboard" class="nav-link" data-page="onboard">New Goal</a>
+                <a href="#dashboard" class="nav-link" data-page="dashboard">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="#goals" class="nav-link" data-page="goals">
+                    <i class="fas fa-map"></i> Roadmap
+                </a>
+                <a href="#onboard" class="nav-link" data-page="onboard">
+                    <i class="fas fa-plus-circle"></i> New Goal
+                </a>
             </div>
+
             <div class="nav-user">
                 <span id="nav-username" class="nav-username"></span>
-                <button id="logout-btn" class="btn btn-ghost btn-sm">Logout</button>
+                <button id="logout-btn" class="btn btn-ghost btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
     </nav>
 
-    <!-- ─── Main Content Area ───────────────────────────── -->
-    <main id="app"></main>
+    <!-- ─── Main Application Container ──────────────────── -->
+    <main id="app">
+        <!-- JS routing will inject templates here -->
+    </main>
 
-    <!-- ─── Toast Container ─────────────────────────────── -->
+    <!-- ─── Global Toasts Container ─────────────────────── -->
     <div id="toast-container"></div>
 
-    <script src="/app.js?v=2"></script>
+    <!-- ─── Application Logic ───────────────────────────── -->
+    <script src="/app.js?v=3"></script>
 </body>
 </html>

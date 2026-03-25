@@ -13,6 +13,7 @@ from pydantic import BaseModel, field_validator
 class DayPlan(BaseModel):
     day: int
     title: str
+    subtopics: list[str] | str | None = None
     description: str | None = None
     duration_hours: int = 2
 

@@ -11,6 +11,7 @@ class UserCreate(BaseModel):
     email: str
     password: str
     username: str | None = None
+    phone_number: str | None = None
 
 
 class UserUpdate(BaseModel):
@@ -27,6 +28,7 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
     telegram_chat_id: int | None = None
+    phone_number: str | None = None
     username: str | None = None
     timezone: str
     study_schedule: Any | None = None

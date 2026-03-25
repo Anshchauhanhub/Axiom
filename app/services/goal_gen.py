@@ -16,10 +16,10 @@ from app.models.user import User
 
 async def generate_goal(
     user: User,
-    title: str,
-    total_days: int,
-    syllabus_text: str,
     db: AsyncSession,
+    syllabus_text: str,
+    title: str | None = None,
+    total_days: int | None = None,
 ) -> Goal:
     """
     End-to-end goal creation:
@@ -33,8 +33,8 @@ async def generate_goal(
     # ── 2. Persist Goal ────────────────────────────────
     goal = Goal(
         user_id=user.id,
-        title=title,
-        total_days=total_days,
+        title=title or json_plan.get("title", "My Learning Roadmap"),
+        total_days=total_days or json_plan.get("total_days", 7),
     )
     db.add(goal)
     await db.flush()
