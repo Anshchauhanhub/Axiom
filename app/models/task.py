@@ -1,46 +1,50 @@
 """
 ORM model — Task.
 
-An individual learning node within a Roadmap.
+Major chapters/milestones within a Goal.
+Studied in order — order_index forces sequential progression.
 """
 
 import enum
-from datetime import date, datetime
+import uuid
+from datetime import datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 
 class TaskStatus(str, enum.Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    VERIFIED = "verified"
-    RESCHEDULED = "rescheduled"
+    LOCKED = "Locked"
+    ACTIVE = "Active"
+    PASSED = "Passed"
 
 
 class Task(Base):
     __tablename__ = "tasks"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    roadmap_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("roadmaps.id", ondelete="CASCADE"), nullable=False
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    goal_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("goals.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
-    description: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, name="task_status"), default=TaskStatus.PENDING
+        String(20), default=TaskStatus.LOCKED
     )
-    due_date: Mapped[date] = mapped_column(Date, nullable=False)
-    duration_hours: Mapped[int] = mapped_column(Integer, default=2)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     # ── Relationships ───────────────────────────────────
-    roadmap: Mapped["Roadmap"] = relationship("Roadmap", back_populates="tasks")  # noqa: F821
-    verifications: Mapped[list["Verification"]] = relationship(  # noqa: F821
-        "Verification", back_populates="task", cascade="all, delete-orphan"
+    goal: Mapped["Goal"] = relationship("Goal", back_populates="tasks")  # noqa: F821
+    parts: Mapped[list["Part"]] = relationship(  # noqa: F821
+        "Part", back_populates="task", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
-        return f"<Task id={self.id} '{self.title}' status={self.status.value}>"
+        return f"<Task id={self.id} '{self.title}' order={self.order_index} status={self.status}>"

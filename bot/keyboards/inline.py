@@ -7,14 +7,14 @@ These are the "tap-to-answer" buttons displayed inside Telegram.
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def build_task_keyboard(task_id: int) -> InlineKeyboardMarkup:
-    """Build the daily nudge keyboard with a 'Mark as Done' button."""
+def build_task_keyboard(part_id: str) -> InlineKeyboardMarkup:
+    """Build the daily nudge keyboard with a 'Start Mastery Quiz' button."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Mark as Done",
-                    callback_data=f"task_done:{task_id}",
+                    text="🔒 Start Mastery Quiz",
+                    callback_data=f"start_quiz:{part_id}",
                 )
             ]
         ]
@@ -22,7 +22,7 @@ def build_task_keyboard(task_id: int) -> InlineKeyboardMarkup:
 
 
 def build_mcq_keyboard(
-    task_id: int,
+    part_id: str,
     question_index: int,
     options: list[str],
 ) -> InlineKeyboardMarkup:
@@ -35,7 +35,7 @@ def build_mcq_keyboard(
         [
             InlineKeyboardButton(
                 text=f"{chr(65 + i)}. {option}",
-                callback_data=f"mcq_answer:{task_id}:{question_index}:{i}",
+                callback_data=f"mcq_answer:{part_id}:{question_index}:{i}",
             )
         ]
         for i, option in enumerate(options)

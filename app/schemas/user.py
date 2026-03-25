@@ -1,32 +1,38 @@
 """Pydantic schemas for User."""
 
+import uuid
 from datetime import datetime
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, EmailStr
 
 
 class UserCreate(BaseModel):
-    telegram_id: int
+    email: str
+    password: str
     username: str | None = None
-    timezone: str = "UTC"
-    current_goal: str | None = None
-    hours_per_day: int = 2
+    phone_number: str | None = None
 
 
 class UserUpdate(BaseModel):
+    username: str | None = None
     timezone: str | None = None
-    current_goal: str | None = None
-    hours_per_day: int | None = None
+    study_schedule: list[str] | None = None
+
+
+class UserLinkTelegram(BaseModel):
+    telegram_chat_id: int
 
 
 class UserResponse(BaseModel):
-    id: int
-    telegram_id: int | None = None
-    email: str | None = None
+    id: uuid.UUID
+    email: str
+    telegram_chat_id: int | None = None
+    phone_number: str | None = None
     username: str | None = None
     timezone: str
-    streak_count: int
-    current_goal: str | None = None
-    hours_per_day: int
+    study_schedule: Any | None = None
+    current_streak_days: int
     created_at: datetime
 
     model_config = {"from_attributes": True}

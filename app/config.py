@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://axiom:axiom_secret@localhost:5432/axiom_db"
     )
 
+
     # ── Telegram ────────────────────────────────────────
     TELEGRAM_BOT_TOKEN: str = ""
     WEBHOOK_BASE_URL: str = ""
