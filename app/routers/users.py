@@ -1,8 +1,10 @@
 """
 Router — Users.
 
-CRUD endpoints for managing Axiom user profiles.
+CRUD endpoints for managing user profiles + Telegram linking.
 """
+
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -10,56 +12,67 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserLinkTelegram, UserResponse, UserUpdate
+from app.utils.auth import get_current_user
 
 router = APIRouter()
 
 
-@router.post("/", response_model=UserResponse, status_code=201)
-async def create_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
-    """Register a new user (typically called by the Telegram bot)."""
-    existing = await db.execute(
-        select(User).where(User.telegram_id == payload.telegram_id)
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="User already registered.")
-
-    user = User(**payload.model_dump())
-    db.add(user)
-    await db.flush()
-    await db.refresh(user)
+@router.get("/me", response_model=UserResponse)
+async def get_user_profile(user: User = Depends(get_current_user)):
+    """Fetch the current user's profile."""
     return user
 
 
-@router.get("/{telegram_id}", response_model=UserResponse)
-async def get_user(telegram_id: int, db: AsyncSession = Depends(get_db)):
-    """Fetch a user by their Telegram ID."""
-    result = await db.execute(
-        select(User).where(User.telegram_id == telegram_id)
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    return user
-
-
-@router.patch("/{telegram_id}", response_model=UserResponse)
-async def update_user(
-    telegram_id: int,
+@router.patch("/me", response_model=UserResponse)
+async def update_user_profile(
     payload: UserUpdate,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Partially update a user's profile."""
-    result = await db.execute(
-        select(User).where(User.telegram_id == telegram_id)
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-
+    """Update the current user's profile fields."""
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
 
     await db.flush()
     await db.refresh(user)
+    return user
+
+
+@router.patch("/link-telegram", response_model=UserResponse)
+async def link_telegram(
+    payload: UserLinkTelegram,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Link a Telegram chat ID to the authenticated web user."""
+    # Check if this telegram_chat_id is already linked to another user
+    existing = await db.execute(
+        select(User).where(User.telegram_chat_id == payload.telegram_chat_id)
+    )
+    existing_user = existing.scalar_one_or_none()
+    if existing_user and existing_user.id != user.id:
+        raise HTTPException(
+            status_code=409,
+            detail="This Telegram account is already linked to another user.",
+        )
+
+    user.telegram_chat_id = payload.telegram_chat_id
+    await db.flush()
+    await db.refresh(user)
+    return user
+
+
+@router.get("/by-telegram/{telegram_chat_id}", response_model=UserResponse)
+async def get_user_by_telegram(
+    telegram_chat_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fetch a user by their Telegram chat ID (used by bot internally)."""
+    result = await db.execute(
+        select(User).where(User.telegram_chat_id == telegram_chat_id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
     return user

@@ -1,6 +1,7 @@
 """Pydantic schemas for Task."""
 
-from datetime import date, datetime
+import uuid
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -8,26 +9,21 @@ from app.models.task import TaskStatus
 
 
 class TaskCreate(BaseModel):
-    roadmap_id: int
+    goal_id: uuid.UUID
     title: str
-    description: str | None = None
-    due_date: date
-    duration_hours: int = 2
+    order_index: int
 
 
 class TaskUpdate(BaseModel):
     status: TaskStatus | None = None
-    due_date: date | None = None
 
 
 class TaskResponse(BaseModel):
-    id: int
-    roadmap_id: int
+    id: uuid.UUID
+    goal_id: uuid.UUID
     title: str
-    description: str | None
+    order_index: int
     status: TaskStatus
-    due_date: date
-    duration_hours: int
     created_at: datetime
 
     model_config = {"from_attributes": True}

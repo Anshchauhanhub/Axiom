@@ -1,72 +1,122 @@
 """
 Service — Gatekeeper.
 
-Evaluates quiz answers, updates task status and user streak.
+Evaluates quiz answers from Redis session, saves results to PostgreSQL,
+and handles part/task/streak progression.
 """
+
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.part import Part, PartStatus
+from app.models.quiz_result import QuizResult
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.models.verification import Verification
+from app.services.redis_client import (
+    delete_quiz_session,
+    get_quiz_session,
+)
 
-PASS_THRESHOLD = 0.8  # 80%
+PASS_THRESHOLD = 80  # 80% score required to pass
 
 
 async def evaluate_quiz(
-    task_id: int,
-    user_answers: list[int],
-    mcq_json: dict,
-    user_id: int,
+    user: User,
+    telegram_chat_id: int,
     db: AsyncSession,
-    telegram_id: int | None = None,
-) -> Verification:
+) -> QuizResult | None:
     """
-    Score the user's answers and decide PASS / FAIL.
+    Evaluate the completed quiz from the Redis session.
 
-    Pass (≥80%):  Task → Verified, streak +1.
-    Fail (<80%):  Task → Rescheduled, streak unchanged.
+    1. Read session from Redis.
+    2. Calculate score percentage.
+    3. If passed (≥80%): save QuizResult, mark Part as Passed,
+       advance to next part/task, increment streak.
+    4. If failed: save QuizResult only, user must retry.
+    5. Delete Redis session.
     """
-    questions = mcq_json.get("questions", [])
+    session_data = await get_quiz_session(telegram_chat_id)
+    if not session_data:
+        return None
+
+    part_id = uuid.UUID(session_data["part_id"])
+    questions = session_data["questions"]
     total = len(questions)
-    correct = sum(
-        1
-        for q, ans in zip(questions, user_answers)
-        if q.get("correct") == ans
-    )
-    score = correct / total if total > 0 else 0.0
+    correct = session_data.get("current_score", 0)
+    score = int((correct / total) * 100) if total > 0 else 0
     passed = score >= PASS_THRESHOLD
 
-    # ── Persist verification ────────────────────────────
-    verification = Verification(
-        task_id=task_id,
-        mcq_json=mcq_json,
+    # ── Persist QuizResult ─────────────────────────────
+    quiz_result = QuizResult(
+        user_id=user.id,
+        part_id=part_id,
         score=score,
-        attempts=1,
-        passed=passed,
+        is_passed=passed,
     )
-    db.add(verification)
+    db.add(quiz_result)
 
-    # ── Update task status ──────────────────────────────
-    result = await db.execute(select(Task).where(Task.id == task_id))
-    task = result.scalar_one()
-    task.status = TaskStatus.VERIFIED if passed else TaskStatus.RESCHEDULED
-
-    # ── Update streak ───────────────────────────────────
     if passed:
-        if telegram_id:
-            user_result = await db.execute(
-                select(User).where(User.telegram_id == telegram_id)
-            )
+        # ── Mark Part as Passed ────────────────────────
+        part_result = await db.execute(select(Part).where(Part.id == part_id))
+        part = part_result.scalar_one()
+        part.status = PartStatus.PASSED
+
+        # ── Advance to next part in same task ──────────
+        task_result = await db.execute(select(Task).where(Task.id == part.task_id))
+        task = task_result.scalar_one()
+
+        next_part_result = await db.execute(
+            select(Part)
+            .where(Part.task_id == task.id, Part.status == PartStatus.LOCKED)
+            .order_by(Part.created_at)
+            .limit(1)
+        )
+        next_part = next_part_result.scalar_one_or_none()
+
+        if next_part:
+            next_part.status = PartStatus.ACTIVE
         else:
-            user_result = await db.execute(
-                select(User).where(User.id == user_id)
+            # All parts in this task are passed — mark task as Passed
+            task.status = TaskStatus.PASSED
+
+            # Unlock next task in the goal
+            from app.models.goal import Goal, GoalStatus
+            next_task_result = await db.execute(
+                select(Task)
+                .where(Task.goal_id == task.goal_id, Task.status == TaskStatus.LOCKED)
+                .order_by(Task.order_index)
+                .limit(1)
             )
-        user = user_result.scalar_one()
-        user.streak_count += 1
+            next_task = next_task_result.scalar_one_or_none()
+
+            if next_task:
+                next_task.status = TaskStatus.ACTIVE
+                # Unlock first part of next task
+                first_part_result = await db.execute(
+                    select(Part)
+                    .where(Part.task_id == next_task.id)
+                    .order_by(Part.created_at)
+                    .limit(1)
+                )
+                first_part = first_part_result.scalar_one_or_none()
+                if first_part:
+                    first_part.status = PartStatus.ACTIVE
+            else:
+                # All tasks passed — mark goal as Completed
+                goal_result = await db.execute(
+                    select(Goal).where(Goal.id == task.goal_id)
+                )
+                goal = goal_result.scalar_one()
+                goal.status = GoalStatus.COMPLETED
+
+        # ── Increment streak ───────────────────────────
+        user.current_streak_days += 1
+
+    # ── Delete Redis session ───────────────────────────
+    await delete_quiz_session(telegram_chat_id)
 
     await db.flush()
-    await db.refresh(verification)
-    return verification
-
+    await db.refresh(quiz_result)
+    return quiz_result

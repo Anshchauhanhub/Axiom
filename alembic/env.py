@@ -10,9 +10,10 @@ from app.config import settings
 
 # Import all models so Base.metadata knows about every table
 from app.models.user import User  # noqa: F401
-from app.models.roadmap import Roadmap  # noqa: F401
+from app.models.goal import Goal  # noqa: F401
 from app.models.task import Task  # noqa: F401
-from app.models.verification import Verification  # noqa: F401
+from app.models.part import Part  # noqa: F401
+from app.models.quiz_result import QuizResult  # noqa: F401
 
 # ── Alembic Config ──────────────────────────────────────
 config = context.config

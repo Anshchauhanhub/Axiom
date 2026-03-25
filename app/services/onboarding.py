@@ -3,9 +3,10 @@ Service — Onboarding.
 
 Orchestrates the "Interrogation" state machine:
   1. Collect goal
-  2. Collect hours per day
+  2. Collect study hours / total days
   3. Collect syllabus
-  4. Trigger roadmap generation
+  4. Collect daily routine → AI extracts study_schedule
+  5. Trigger goal generation
 """
 
 from sqlalchemy import select
@@ -15,32 +16,36 @@ from app.models.user import User
 
 
 async def upsert_user_goal(
-    telegram_id: int,
+    telegram_chat_id: int,
     goal: str,
     db: AsyncSession,
 ) -> User:
-    """Set or update a user's current learning goal."""
-    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    """Set or update a user's current learning goal title."""
+    result = await db.execute(
+        select(User).where(User.telegram_chat_id == telegram_chat_id)
+    )
     user = result.scalar_one_or_none()
     if not user:
-        raise ValueError(f"User with telegram_id={telegram_id} not found.")
-    user.current_goal = goal
+        raise ValueError(f"User with telegram_chat_id={telegram_chat_id} not found.")
+    # Goal title is stored temporarily in FSM state, not on user directly
     await db.flush()
     await db.refresh(user)
     return user
 
 
-async def upsert_user_hours(
-    telegram_id: int,
-    hours: int,
+async def upsert_user_schedule(
+    telegram_chat_id: int,
+    study_schedule: list[str],
     db: AsyncSession,
 ) -> User:
-    """Set or update a user's daily study hours."""
-    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    """Set or update a user's daily study schedule (list of time strings)."""
+    result = await db.execute(
+        select(User).where(User.telegram_chat_id == telegram_chat_id)
+    )
     user = result.scalar_one_or_none()
     if not user:
-        raise ValueError(f"User with telegram_id={telegram_id} not found.")
-    user.hours_per_day = hours
+        raise ValueError(f"User with telegram_chat_id={telegram_chat_id} not found.")
+    user.study_schedule = study_schedule
     await db.flush()
     await db.refresh(user)
     return user

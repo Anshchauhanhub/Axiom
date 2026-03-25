@@ -8,7 +8,8 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class OnboardingStates(StatesGroup):
-    """The 3-step interrogation."""
+    """The 4-step interrogation."""
     waiting_for_goal = State()
-    waiting_for_hours = State()
+    waiting_for_days = State()
     waiting_for_syllabus = State()
+    waiting_for_schedule = State()

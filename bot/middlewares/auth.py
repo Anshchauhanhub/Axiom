@@ -1,7 +1,7 @@
 """
 Middleware — Auth.
 
-Auto-registers users in the database on their first message.
+Auto-registers Telegram users or links them to existing web accounts.
 Injects the ``User`` object into handler data for convenience.
 """
 
@@ -24,17 +24,23 @@ class AuthMiddleware(BaseMiddleware):
         event: Message,
         data: Dict[str, Any],
     ) -> Any:
-        telegram_id = event.from_user.id
+        telegram_chat_id = event.from_user.id
         username = event.from_user.username
 
         async with async_session_factory() as session:
             result = await session.execute(
-                select(User).where(User.telegram_id == telegram_id)
+                select(User).where(User.telegram_chat_id == telegram_chat_id)
             )
             user = result.scalar_one_or_none()
 
             if not user:
-                user = User(telegram_id=telegram_id, username=username)
+                # Create a minimal user (email will be linked later from web)
+                user = User(
+                    telegram_chat_id=telegram_chat_id,
+                    username=username,
+                    email=f"tg_{telegram_chat_id}@axiom.placeholder",
+                    password_hash="",  # No password for Telegram-only users
+                )
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
