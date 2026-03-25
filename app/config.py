@@ -27,8 +27,6 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://axiom:axiom_secret@localhost:5432/axiom_db"
     )
 
-    # ── Redis ───────────────────────────────────────────
-    REDIS_URL: str = "redis://localhost:6379/0"
 
     # ── Telegram ────────────────────────────────────────
     TELEGRAM_BOT_TOKEN: str = ""

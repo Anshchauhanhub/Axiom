@@ -63,6 +63,15 @@ async def generate_goal(
                 title=part_title,
                 status=PartStatus.ACTIVE if (i == 0 and j == 0) else PartStatus.LOCKED,
             )
+            
+            # ── Pre-generate quiz for the first active part ──
+            if i == 0 and j == 0:
+                from app.services.mcq_gen import create_quiz_for_task
+                try:
+                    part.quiz_data = await create_quiz_for_task(part.title, None)
+                except Exception as e:
+                    print(f"⚠️ Pre-generation failed for first part: {e}")
+                    
             db.add(part)
 
     await db.flush()

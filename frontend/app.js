@@ -615,7 +615,7 @@ function renderQuizArena(partId) {
                 <div style="text-align:center;">
                     <div class="brand-icon" style="font-size:3rem; animation: pulse-soft 2s infinite;">🧠</div>
                     <h2 style="margin-top:20px; font-size:2rem;">Initializing Assessment...</h2>
-                    <p style="color:var(--text-secondary);">Connecting to Redis engine</p>
+                    <p style="color:var(--text-secondary);">Connecting to Axiom engine</p>
                 </div>
             </div>
         </div>
@@ -639,7 +639,7 @@ function renderQuestion() {
     if (!session || !session.session_id) return;
     
     const container = document.getElementById('quiz-container');
-    const qCount = session.quiz_length;
+    const qCount = session.total_questions;
     const answeredCount = Object.keys(session.answers).length;
     
     if (answeredCount >= qCount) {

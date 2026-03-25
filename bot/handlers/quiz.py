@@ -8,9 +8,14 @@ Quiz sessions are stored in Redis with a 15-minute TTL.
 from aiogram import Router
 from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 
 from app.models.user import User
-from app.services.redis_client import get_quiz_session, update_quiz_session
+from app.services.session_manager import (
+    get_quiz_session_db,
+    update_quiz_session_db,
+    delete_quiz_session_db,
+)
 from app.services.gatekeeper import evaluate_quiz
 from bot.keyboards.inline import build_mcq_keyboard
 
@@ -31,31 +36,30 @@ async def handle_mcq_answer(
     parts = callback.data.split(":")
     part_id = parts[1]
     question_idx = int(parts[2])
-    selected = int(parts[3])
+    selected_idx = int(parts[3])
 
-    session = await get_quiz_session(callback.from_user.id)
+    # Get session from DB
+    session = await get_quiz_session_db(db_session, str(callback.from_user.id), uuid.UUID(part_id))
     if not session:
-        await callback.answer("Quiz session expired or not found. Start a new quiz.", show_alert=True)
+        await callback.answer("Quiz session expired or not found.", show_alert=True)
         return
 
-    questions = session["questions"]
+    questions = session.questions
+    answers = session.answers
     
-    if question_idx != session.get("current_question", 0):
+    if str(question_idx) in answers:
         await callback.answer("You answered this question already.", show_alert=True)
         return
 
-    correct = questions[question_idx].get("correct") == selected
-    if correct:
-        session["current_score"] = session.get("current_score", 0) + 1
-
-    session["current_question"] = question_idx + 1
-    await update_quiz_session(callback.from_user.id, session)
+    # Update answers dict
+    answers[str(question_idx)] = selected_idx
+    await update_quiz_session_db(db_session, str(callback.from_user.id), uuid.UUID(part_id), answers=answers)
 
     await callback.answer(f"Answer #{question_idx + 1} recorded ✓")
 
-    if session["current_question"] < len(questions):
+    if len(answers) < len(questions):
         # Next question
-        next_idx = session["current_question"]
+        next_idx = len(answers)
         q = questions[next_idx]
         await callback.message.edit_text(
             f"<b>Question {next_idx + 1}/{len(questions)}</b>\n\n{q['question']}",
@@ -65,7 +69,7 @@ async def handle_mcq_answer(
     else:
         # Evaluate quiz
         await callback.message.edit_text("⏳ Evaluating your quiz...", parse_mode="HTML")
-        quiz_result = await evaluate_quiz(db_user, callback.from_user.id, db_session)
+        quiz_result = await evaluate_quiz(db=db_session, session_id=callback.from_user.id, part_id=uuid.UUID(part_id))
         await db_session.commit()
 
         if not quiz_result:

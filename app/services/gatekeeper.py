@@ -14,43 +14,54 @@ from app.models.part import Part, PartStatus
 from app.models.quiz_result import QuizResult
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.services.redis_client import (
-    delete_quiz_session,
-    get_quiz_session,
-)
+from app.services.session_manager import get_quiz_session_db, delete_quiz_session_db
+
 
 PASS_THRESHOLD = 80  # 80% score required to pass
 
 
 async def evaluate_quiz(
-    user: User,
-    telegram_chat_id: int,
     db: AsyncSession,
+    session_id: str | int,
+    part_id: uuid.UUID,
 ) -> QuizResult | None:
     """
     Evaluate the completed quiz from the Redis session.
 
-    1. Read session from Redis.
+    1. Read session from DB.
     2. Calculate score percentage.
     3. If passed (≥80%): save QuizResult, mark Part as Passed,
        advance to next part/task, increment streak.
     4. If failed: save QuizResult only, user must retry.
-    5. Delete Redis session.
+    5. Delete session from DB.
     """
-    session_data = await get_quiz_session(telegram_chat_id)
-    if not session_data:
+    # ── 1. Fetch from DB ───────────────────────────
+    session = await get_quiz_session_db(db, str(session_id), part_id)
+    if not session:
         return None
 
-    part_id = uuid.UUID(session_data["part_id"])
-    questions = session_data["questions"]
+    questions = session.questions
+    answers = session.answers
+    user_id = session.user_id
+
+    # Calculate score from answers dict
+    correct = 0
+    for i, q in enumerate(questions):
+        idx_str = str(i)
+        if idx_str in answers and q.get("correct") == answers[idx_str]:
+            correct += 1
+
     total = len(questions)
-    correct = session_data.get("current_score", 0)
     score = int((correct / total) * 100) if total > 0 else 0
     passed = score >= PASS_THRESHOLD
 
+    # We need the User object for streak increment later
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one()
+
     # ── Persist QuizResult ─────────────────────────────
     quiz_result = QuizResult(
-        user_id=user.id,
+        user_id=user_id,
         part_id=part_id,
         score=score,
         is_passed=passed,
@@ -77,6 +88,12 @@ async def evaluate_quiz(
 
         if next_part:
             next_part.status = PartStatus.ACTIVE
+            # ── Pre-generate quiz for next part ───────────────
+            from app.services.mcq_gen import create_quiz_for_task
+            try:
+                next_part.quiz_data = await create_quiz_for_task(next_part.title, None)
+            except Exception as e:
+                print(f"⚠️ Pre-generation failed for next part: {e}")
         else:
             # All parts in this task are passed — mark task as Passed
             task.status = TaskStatus.PASSED
@@ -103,6 +120,12 @@ async def evaluate_quiz(
                 first_part = first_part_result.scalar_one_or_none()
                 if first_part:
                     first_part.status = PartStatus.ACTIVE
+                    # ── Pre-generate quiz for next task's first part ──
+                    from app.services.mcq_gen import create_quiz_for_task
+                    try:
+                        first_part.quiz_data = await create_quiz_for_task(first_part.title, None)
+                    except Exception as e:
+                        print(f"⚠️ Pre-generation failed for next task part: {e}")
             else:
                 # All tasks passed — mark goal as Completed
                 goal_result = await db.execute(
@@ -114,8 +137,8 @@ async def evaluate_quiz(
         # ── Increment streak ───────────────────────────
         user.current_streak_days += 1
 
-    # ── Delete Redis session ───────────────────────────
-    await delete_quiz_session(telegram_chat_id)
+    # ── 4. Cleanup session ──────────────────────────
+    await delete_quiz_session_db(db, str(session_id), part_id)
 
     await db.flush()
     await db.refresh(quiz_result)

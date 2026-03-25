@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.services.redis_client import create_quiz_session
+from app.services.session_manager import create_quiz_session_db
 from app.services.mcq_gen import create_quiz_for_task
 from app.models.part import Part
 from bot.keyboards.inline import build_mcq_keyboard
@@ -46,16 +46,22 @@ async def handle_start_quiz(callback: CallbackQuery, db_session: AsyncSession) -
             parse_mode="HTML"
         )
 
-        mcq_data = await create_quiz_for_task(part.title, None)
-        questions = mcq_data.get("questions", [])
+        # Use pre-generated questions if available
+        if part.quiz_data:
+            questions = part.quiz_data.get("questions", [])
+        else:
+            mcq_data = await create_quiz_for_task(part.title, None)
+            questions = mcq_data.get("questions", [])
         
         if not questions:
             await callback.message.edit_text("❌ Failed to generate questions.")
             return
 
-        # Store in Redis
-        await create_quiz_session(
-            telegram_chat_id=callback.from_user.id,
+        # Store in DB
+        await create_quiz_session_db(
+            db=db_session,
+            session_id=str(callback.from_user.id),
+            user_id=part.task.user_id, # Assuming part.task has user_id
             part_id=part.id,
             questions=questions,
         )

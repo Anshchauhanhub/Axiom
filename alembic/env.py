@@ -14,6 +14,7 @@ from app.models.goal import Goal  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.part import Part  # noqa: F401
 from app.models.quiz_result import QuizResult  # noqa: F401
+from app.models.quiz_session import QuizSession  # noqa: F401
 
 # ── Alembic Config ──────────────────────────────────────
 config = context.config
