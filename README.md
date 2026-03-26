@@ -21,29 +21,22 @@ Axiom is an agentic learning platform that turns passive learning into an active
 
 ## 🚀 Quick Start
 
-### 1. Clone & Environment
+For a complete step-by-step walkthrough for new developers, see the **[Setup Guide](setup_guide.md)**.
 
+### 1. Minimal Backend Setup
 ```bash
-git clone https://github.com/Anshchauhanhub/Axiom.git
-cd Axiom
-python -m venv venv
-.\venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-```
-
-### 2. Configure Environment
-
-```bash
-# Create a .env file in the backend directory
-# Essential keys: TELEGRAM_BOT_TOKEN, GROK_API_KEY, DATABASE_URL, JWT_SECRET
-```
-
-### 3. Launch
-
-```bash
-# Start the FastAPI server
 cd backend
+python -m venv venv
+# Activate venv & install
+pip install -r requirements.txt
+# Configure .env then:
 uvicorn main:app --reload
+```
+
+### 2. Minimal Frontend Setup
+```bash
+npm install
+npm run dev
 ```
 
 ---
