@@ -27,7 +27,6 @@ For a complete step-by-step walkthrough for new developers, see the **[Setup Gui
 ```bash
 cd backend
 python -m venv venv
-# Activate venv & install
 pip install -r requirements.txt
 # Configure .env then:
 uvicorn main:app --reload
@@ -35,6 +34,7 @@ uvicorn main:app --reload
 
 ### 2. Minimal Frontend Setup
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
