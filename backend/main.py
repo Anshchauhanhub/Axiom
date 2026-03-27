@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -42,9 +43,18 @@ async def lifespan(app: FastAPI):
             set_bot_app(bot_app)
             set_bot(bot_app.bot)
 
-            # Start polling
+            # Start polling with conflict handling
             await bot_app.start()
-            await bot_app.updater.start_polling(drop_pending_updates=True)
+            try:
+                await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
+            except Exception as polling_err:
+                if "Conflict" in str(polling_err):
+                    logger.warning("⚠️ Bot conflict detected (possibly old instance still shutting down). Retrying in 2s...")
+                    await asyncio.sleep(2)
+                    await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
+                else:
+                    raise polling_err
+            
             _bot_started = True
             _bot_app_ref = bot_app
             logger.info("✅ Telegram bot started with polling.")
