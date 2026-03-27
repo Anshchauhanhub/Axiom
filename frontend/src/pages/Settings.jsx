@@ -132,25 +132,44 @@ const Settings = () => {
             <span className="h-[1px] w-8 bg-outline-variant/30"></span> Study Schedule
           </h3>
           <div className="bg-surface-container-low border border-outline-variant/15 rounded-[2rem] p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest mb-2 block">Session 1</label>
-                <input
-                  type="time"
-                  value={schedule[0] || '12:00'}
-                  onChange={(e) => setSchedule([e.target.value, schedule[1]])}
-                  className="w-full bg-surface-container border-none rounded-xl px-4 py-3 text-on-surface font-label text-sm focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest mb-2 block">Session 2</label>
-                <input
-                  type="time"
-                  value={schedule[1] || '18:00'}
-                  onChange={(e) => setSchedule([schedule[0], e.target.value])}
-                  className="w-full bg-surface-container border-none rounded-xl px-4 py-3 text-on-surface font-label text-sm focus:ring-1 focus:ring-primary"
-                />
-              </div>
+            <div className="flex flex-col gap-4 mb-6">
+              {schedule.map((time, idx) => (
+                <div key={idx} className="relative group">
+                  <label className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest mb-2 block">Session {idx + 1}</label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(e) => {
+                          const newSched = [...schedule];
+                          newSched[idx] = e.target.value;
+                          setSchedule(newSched);
+                        }}
+                        className="w-full bg-surface-container border-none rounded-2xl px-6 py-4 text-on-surface font-label text-base focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                      />
+                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-40 pointer-events-none text-sm">schedule</span>
+                    </div>
+                    {schedule.length > 1 && (
+                      <button 
+                        onClick={() => setSchedule(schedule.filter((_, i) => i !== idx))}
+                        className="h-14 w-14 flex items-center justify-center bg-error/5 text-error rounded-2xl hover:bg-error/10 transition-colors border border-outline-variant/5"
+                        title="Remove session"
+                      >
+                        <span className="material-symbols-outlined text-lg">close</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              <button 
+                onClick={() => setSchedule([...schedule, '09:00'])}
+                className="w-full py-5 mt-2 border-2 border-dashed border-outline-variant/20 rounded-2xl flex items-center justify-center gap-3 text-xs font-label font-bold text-on-surface-variant hover:border-primary/40 hover:text-primary transition-all group"
+              >
+                <span className="material-symbols-outlined text-sm group-hover:scale-125 transition-transform">add_circle</span> 
+                <span className="uppercase tracking-[0.2em]">Add Study Session</span>
+              </button>
             </div>
             <div className="mb-6">
               <label className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest mb-2 block">Timezone</label>
