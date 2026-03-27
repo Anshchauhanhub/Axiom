@@ -287,6 +287,17 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /info command — list available commands."""
+    commands_text = (
+        "ℹ️ *Axiom AI — Available Commands*\n\n"
+        "⚡ /quiz — Start a Sudden Death quiz\n"
+        "📊 /status — View your current streak and progress\n"
+        "📅 /schedule — View your study and nudge schedule\n"
+    )
+    await update.message.reply_text(commands_text, parse_mode="Markdown")
+
+
 def create_bot_app() -> Application:
     """Create and configure the Telegram bot application."""
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -295,6 +306,7 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("quiz", quiz_command))
     app.add_handler(CommandHandler("status", status_command))
     app.add_handler(CommandHandler("schedule", schedule_command))
+    app.add_handler(CommandHandler("info", info_command))
     app.add_handler(CallbackQueryHandler(handle_quiz_start, pattern=r"^startquiz_"))
     app.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer_"))
 
