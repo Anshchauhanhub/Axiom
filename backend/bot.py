@@ -215,24 +215,9 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             user = user_result.scalar_one_or_none()
 
-            from models import QuizResult
-            qr = QuizResult(
-                user_id=user.id,
-                part_id=quiz.part_id,
-                score_percent=score,
-                is_passed=is_passed,
-            )
-            db.add(qr)
-
-            if is_passed and user:
-                user.current_streak += 1
-                part_r = await db.execute(select(Part).where(Part.id == quiz.part_id))
-                pt = part_r.scalar_one_or_none()
-                if pt:
-                    pt.status = "passed"
-
-            await db.delete(quiz)
-            await db.commit()
+            from routers.quiz import process_quiz_result
+            if user:
+                await process_quiz_result(user, quiz, score, is_passed, db)
 
             if is_passed:
                 await query.edit_message_text(

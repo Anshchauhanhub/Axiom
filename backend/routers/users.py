@@ -51,8 +51,29 @@ async def link_telegram(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from services.scheduler import _bot_instance
+    import logging
+
     user.telegram_chat_id = req.telegram_chat_id
     await db.commit()
+    
+    # Notify the user on Telegram
+    if _bot_instance:
+        try:
+            await _bot_instance.send_message(
+                chat_id=req.telegram_chat_id,
+                text=(
+                    f"✅ *Your Telegram is successfully connected!*\n\n"
+                    f"Hey there, and welcome to Axiom AI's Neural Bridge.\n"
+                    f"You'll now receive your scheduled study nudges and can start "
+                    f"Sudden Death quizzes right from here.\n\n"
+                    f"Type /info to get more information."
+                ),
+                parse_mode="Markdown",
+            )
+        except Exception as e:
+            logging.getLogger("axiom.users").error(f"Failed to send Telegram connection message: {e}")
+
     return {"message": "Telegram linked successfully", "chat_id": req.telegram_chat_id}
 
 

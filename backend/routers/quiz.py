@@ -27,6 +27,71 @@ async def _cleanup_expired(user_id, db: AsyncSession):
     await db.commit()
 
 
+async def process_quiz_result(user: User, quiz: ActiveQuiz, score: float, is_passed: bool, db: AsyncSession):
+    """Core logic to process quiz results, update streak, unlock next parts/tasks."""
+    quiz_result = QuizResult(
+        user_id=user.id,
+        part_id=quiz.part_id,
+        score_percent=score,
+        is_passed=is_passed,
+    )
+    db.add(quiz_result)
+
+    if is_passed:
+        # Mark part as passed
+        part_result = await db.execute(select(Part).where(Part.id == quiz.part_id))
+        part = part_result.scalar_one_or_none()
+        if part:
+            part.status = "passed"
+
+            # Find all parts in the same task
+            siblings = await db.execute(
+                select(Part)
+                .where(Part.task_id == part.task_id)
+                .order_by(Part.id)
+            )
+            all_parts = siblings.scalars().all()
+
+            # Unlock next part
+            found_current = False
+            for p in all_parts:
+                if found_current and p.status == "locked":
+                    p.status = "active"
+                    break
+                if p.id == part.id:
+                    found_current = True
+
+            # Check if all parts in task are passed
+            all_passed = all(p.status == "passed" for p in all_parts)
+            if all_passed:
+                task_result = await db.execute(select(Task).where(Task.id == part.task_id))
+                task = task_result.scalar_one_or_none()
+                if task:
+                    task.status = "passed"
+                    # Unlock next task
+                    next_task = await db.execute(
+                        select(Task)
+                        .where(Task.goal_id == task.goal_id, Task.order_index == task.order_index + 1)
+                    )
+                    nt = next_task.scalar_one_or_none()
+                    if nt:
+                        nt.status = "active"
+                        # Unlock first part of next task
+                        first_part = await db.execute(
+                            select(Part).where(Part.task_id == nt.id).order_by(Part.id).limit(1)
+                        )
+                        fp = first_part.scalar_one_or_none()
+                        if fp:
+                            fp.status = "active"
+
+        # Increment streak
+        user.current_streak += 1
+
+    # Always delete active quiz (passed or failed)
+    await db.delete(quiz)
+    await db.commit()
+
+
 @router.post("/start/{part_id}", response_model=StartQuizResponse)
 async def start_quiz(
     part_id: str,
@@ -138,69 +203,8 @@ async def submit_quiz(
     score = (correct / len(questions)) * 100
     is_passed = score >= 80
 
-    # Save result
-    quiz_result = QuizResult(
-        user_id=user.id,
-        part_id=quiz.part_id,
-        score_percent=score,
-        is_passed=is_passed,
-    )
-    db.add(quiz_result)
-
-    # If passed: unlock next part, update streak
-    if is_passed:
-        # Mark part as passed
-        part_result = await db.execute(select(Part).where(Part.id == quiz.part_id))
-        part = part_result.scalar_one_or_none()
-        if part:
-            part.status = "passed"
-
-            # Find all parts in the same task
-            siblings = await db.execute(
-                select(Part)
-                .where(Part.task_id == part.task_id)
-                .order_by(Part.id)
-            )
-            all_parts = siblings.scalars().all()
-
-            # Unlock next part
-            found_current = False
-            for p in all_parts:
-                if found_current and p.status == "locked":
-                    p.status = "active"
-                    break
-                if p.id == part.id:
-                    found_current = True
-
-            # Check if all parts in task are passed
-            all_passed = all(p.status == "passed" for p in all_parts)
-            if all_passed:
-                task_result = await db.execute(select(Task).where(Task.id == part.task_id))
-                task = task_result.scalar_one_or_none()
-                if task:
-                    task.status = "passed"
-                    # Unlock next task
-                    next_task = await db.execute(
-                        select(Task)
-                        .where(Task.goal_id == task.goal_id, Task.order_index == task.order_index + 1)
-                    )
-                    nt = next_task.scalar_one_or_none()
-                    if nt:
-                        nt.status = "active"
-                        # Unlock first part of next task
-                        first_part = await db.execute(
-                            select(Part).where(Part.task_id == nt.id).order_by(Part.id).limit(1)
-                        )
-                        fp = first_part.scalar_one_or_none()
-                        if fp:
-                            fp.status = "active"
-
-        # Increment streak
-        user.current_streak += 1
-
-    # Always delete active quiz (passed or failed)
-    await db.delete(quiz)
-    await db.commit()
+    # Process result and unlock progression using shared function
+    await process_quiz_result(user, quiz, score, is_passed, db)
 
     message = (
         f"🏆 Mastery verified! Score: {score:.0f}%. Part unlocked."
