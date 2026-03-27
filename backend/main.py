@@ -35,8 +35,10 @@ async def lifespan(app: FastAPI):
     logger.info("✅ Database tables created/verified.")
 
     # Initialize Telegram bot
+    disable_telegram = os.getenv("DISABLE_TELEGRAM", "false").lower() in ("true", "1", "yes", "t")
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if bot_token and bot_token != "your-telegram-bot-token-here":
+    
+    if not disable_telegram and bot_token and bot_token != "your-telegram-bot-token-here":
         try:
             bot_app = create_bot_app()
             await bot_app.initialize()
@@ -63,7 +65,10 @@ async def lifespan(app: FastAPI):
             _bot_started = False
             _bot_app_ref = None
     else:
-        logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set. Bot disabled.")
+        if disable_telegram:
+            logger.info("⚠️ Telegram bot disabled via DISABLE_TELEGRAM environment variable.")
+        else:
+            logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set. Bot disabled.")
 
     # Start nudge scheduler
     start_scheduler()
