@@ -159,7 +159,7 @@ async def submit_quiz(
             siblings = await db.execute(
                 select(Part)
                 .where(Part.task_id == part.task_id)
-                .order_by(Part.id)
+                .order_by(Part.order_index)
             )
             all_parts = siblings.scalars().all()
 
@@ -189,7 +189,7 @@ async def submit_quiz(
                         nt.status = "active"
                         # Unlock first part of next task
                         first_part = await db.execute(
-                            select(Part).where(Part.task_id == nt.id).order_by(Part.id).limit(1)
+                            select(Part).where(Part.task_id == nt.id).order_by(Part.order_index).limit(1)
                         )
                         fp = first_part.scalar_one_or_none()
                         if fp:

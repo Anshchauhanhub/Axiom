@@ -58,6 +58,7 @@ async def gen_roadmap(
             part = Part(
                 task_id=task.id,
                 title=part_title,
+                order_index=pidx,
                 status="active" if idx == 0 and pidx == 0 else "locked",
             )
             db.add(part)
@@ -100,6 +101,10 @@ async def get_roadmap(
         .order_by(Task.order_index)
     )
     tasks = tasks_result.scalars().all()
+
+    # Sort parts for each task by their order_index
+    for task in tasks:
+        task.parts.sort(key=lambda p: p.order_index)
 
     tasks_out = []
     for task in tasks:

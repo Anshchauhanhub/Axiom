@@ -54,6 +54,7 @@ class Part(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=False)
+    order_index = Column(Integer, nullable=False, default=0)
     status = Column(String, default="locked")  # locked, active, passed
 
     task = relationship("Task", back_populates="parts")
