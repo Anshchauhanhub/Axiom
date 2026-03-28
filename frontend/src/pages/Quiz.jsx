@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { listGoals, getRoadmap, startQuiz, submitQuiz } from '../services/api';
+import { startQuiz, submitQuiz } from '../services/api';
+import { useData } from '../context/DataContext';
 
 const Quiz = () => {
   const { user, refreshUser } = useAuth();
+  const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
   const [phase, setPhase] = useState('loading'); // loading, select, quiz, result
-  const [parts, setParts] = useState([]);
+  const [activeTask, setActiveTask] = useState(null);
+  const [activeGoal, setActiveGoal] = useState(null);
   const [quizData, setQuizData] = useState(null);
   const [quizId, setQuizId] = useState(null);
   const [partTitle, setPartTitle] = useState('');
@@ -22,8 +25,26 @@ const Quiz = () => {
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
-    loadParts();
-  }, [user]);
+    if (roadmap && goals) {
+      let foundActiveTask = null;
+      let foundActiveGoal = null;
+
+      for (const goal of goals) {
+        for (const task of roadmap.tasks) {
+          if (task.status === 'active' || (task.status === 'locked' && !foundActiveTask)) {
+            if (!foundActiveTask || task.status === 'active') {
+              foundActiveTask = task;
+              foundActiveGoal = goal;
+            }
+          }
+        }
+        if (foundActiveTask && foundActiveTask.status === 'active') break;
+      }
+      setActiveTask(foundActiveTask);
+      setActiveGoal(foundActiveGoal);
+      setPhase('select');
+    }
+  }, [user, roadmap, goals]);
 
   useEffect(() => {
     if (phase === 'quiz') {
@@ -41,28 +62,6 @@ const Quiz = () => {
     }
     return () => clearInterval(timerRef.current);
   }, [phase]);
-
-  const loadParts = async () => {
-    try {
-      const goals = await listGoals();
-      const activeParts = [];
-      for (const goal of goals) {
-        const rm = await getRoadmap(goal.id);
-        for (const task of rm.tasks) {
-          for (const part of task.parts) {
-            if (part.status === 'active') {
-              activeParts.push({ ...part, taskTitle: task.title, goalTitle: goal.title });
-            }
-          }
-        }
-      }
-      setParts(activeParts);
-      setPhase('select');
-    } catch (e) {
-      setError(e.message);
-      setPhase('select');
-    }
-  };
 
   const handleStartQuiz = async (partId, title) => {
     setLoading(true);
@@ -105,6 +104,7 @@ const Quiz = () => {
       const res = await submitQuiz(quizId, finalAnswers);
       setResult(res);
       setPhase('result');
+      await refreshData();
       refreshUser();
     } catch (e) {
       setError(e.message);
@@ -126,48 +126,105 @@ const Quiz = () => {
     );
   }
 
-  // SELECT PART PHASE
+  // SELECT PHASE (RESTRUCTURED)
   if (phase === 'select') {
     return (
-      <div className="animate-in fade-in duration-1000 max-w-3xl mx-auto w-full">
-        <header className="mb-12">
+      <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
+        <header className="mb-12 text-center">
           <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Sudden Death Quiz</h2>
-          <p className="text-on-surface-variant font-label tracking-wide uppercase text-xs opacity-60">Select a topic to begin verification</p>
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[10px] font-label tracking-[0.3em] uppercase text-primary font-bold opacity-80">Target:</span>
+            <span className="text-[10px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-bold">{activeGoal?.title || 'Unknown Synthesis'}</span>
+          </div>
+          <p className="mt-4 text-[9px] text-on-surface-variant font-label tracking-widest uppercase opacity-40 italic">Verification Protocol // Neural Integrity</p>
         </header>
+
         {error && (
-          <div className="mb-8 p-4 bg-error-container/20 border border-error/30 rounded-xl">
-            <p className="text-error text-xs font-label font-bold">{error}</p>
+          <div className="mb-8 p-4 bg-error-container/20 border border-error/30 rounded-xl max-w-2xl mx-auto">
+            <p className="text-error text-xs font-label font-bold text-center">{error}</p>
           </div>
         )}
-        {parts.length === 0 ? (
-          <div className="text-center py-16">
-            <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">inbox</span>
-            <p className="text-on-surface-variant font-label uppercase tracking-widest">No active parts. Set a goal first.</p>
-            <button onClick={() => navigate('/onboarding')} className="mt-6 px-8 py-3 bg-primary rounded-xl font-label text-xs font-bold uppercase tracking-widest text-on-primary-container">
-              Set Goal
+
+        {!activeTask ? (
+          <div className="text-center py-16 bg-surface-container-low rounded-3xl border border-outline-variant/10">
+            <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">analytics</span>
+            <p className="text-on-surface-variant font-label uppercase tracking-widest text-sm">Initializing mastery protocols...</p>
+            <button onClick={() => navigate('/onboarding')} className="mt-8 px-10 py-4 bg-primary rounded-xl font-label text-xs font-bold uppercase tracking-widest text-on-primary-container shadow-xl shadow-primary/20">
+              Set Goal & Roadmap
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {parts.map((part) => (
-              <button
-                key={part.id}
-                onClick={() => handleStartQuiz(part.id, part.title)}
-                disabled={loading}
-                className="w-full group flex items-center justify-between p-8 bg-surface-container-low border border-outline-variant/10 rounded-2xl hover:border-primary/30 hover:bg-surface-container transition-all text-left disabled:opacity-50"
-              >
-                <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined">bolt</span>
-                  </div>
-                  <div>
-                    <h4 className="font-headline font-bold text-on-surface text-lg">{part.title}</h4>
-                    <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest">{part.goalTitle} • {part.taskTitle}</p>
-                  </div>
+          <div className="space-y-8 max-w-3xl mx-auto">
+            {/* Active Module Header Card */}
+            <div className="bg-surface-container-low border border-outline-variant/15 p-10 rounded-[2.5rem] relative overflow-hidden group shadow-2xl shadow-black/20">
+              <div className="absolute top-0 right-0 p-8">
+                 <span className={`px-4 py-1.5 rounded-lg text-[10px] font-label font-black tracking-widest uppercase border ${
+                   activeTask.status === 'active' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-surface-container-highest border-outline-variant/30 text-on-surface-variant'
+                 }`}>
+                   {activeTask.status}
+                 </span>
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                  <span className="text-[10px] font-label font-bold tracking-[0.2em] text-primary uppercase">Active Module</span>
                 </div>
-                <span className="material-symbols-outlined text-primary">arrow_forward</span>
-              </button>
-            ))}
+                <h3 className="text-4xl font-black font-headline text-on-surface leading-tight md:pr-24">
+                  {activeTask.title}
+                </h3>
+              </div>
+
+              {/* Parts Timeline */}
+              <div className="mt-12 space-y-4 relative">
+                {/* Vertical Line */}
+                <div className="absolute left-6 top-0 bottom-0 w-[1px] bg-outline-variant/20 ml-[-0.5px]"></div>
+
+                {activeTask.parts.map((part, idx) => {
+                  const isActive = part.status === 'active';
+                  const isLocked = part.status === 'locked';
+                  const isPassed = part.status === 'passed';
+
+                  return (
+                    <div 
+                      key={part.id} 
+                      className={`relative flex items-center justify-between p-6 rounded-2xl border transition-all duration-300 ml-12 ${
+                        isActive 
+                        ? 'bg-surface-container-highest/40 border-primary/30 shadow-lg shadow-primary/5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]' 
+                        : 'bg-transparent border-outline-variant/10'
+                      } ${isLocked ? 'opacity-40' : 'opacity-100'}`}
+                      onClick={() => isActive && handleStartQuiz(part.id, part.title)}
+                    >
+                      {/* Timeline Dot */}
+                      <div className={`absolute left-[-31px] w-4 h-4 rounded-full border-4 border-surface-container-low z-20 ${
+                        isActive ? 'bg-primary animate-pulse shadow-[0_0_10px_rgba(76,215,246,0.6)]' : isPassed ? 'bg-secondary' : 'bg-outline-variant/40'
+                      }`}></div>
+
+                      <div className="flex items-center gap-5">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                          isActive ? 'bg-primary/20 text-primary' : 'bg-surface-container-highest text-on-surface-variant'
+                         }`}>
+                          <span className="material-symbols-outlined text-[20px]">
+                            {isActive ? 'bolt' : isLocked ? 'lock' : 'verified'}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className={`text-sm font-bold ${isActive ? 'text-on-surface' : 'text-on-surface-variant'}`}>
+                            {part.title}
+                          </h4>
+                          <span className={`text-[9px] font-label tracking-widest uppercase font-bold ${isActive ? 'text-primary' : 'text-on-surface-variant/40'}`}>
+                            {part.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isActive && (
+                        <span className="material-symbols-outlined text-primary text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>

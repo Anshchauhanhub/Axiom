@@ -1,49 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { listGoals, getRoadmap } from '../services/api';
+import { useData } from '../context/DataContext';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { goals, roadmap, loading: dataLoading } = useData();
   const navigate = useNavigate();
-  const [goals, setGoals] = useState([]);
-  const [roadmap, setRoadmap] = useState(null);
   const [activePartId, setActivePartId] = useState(null);
   const [activePartTitle, setActivePartTitle] = useState('');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    loadData();
-  }, [user]);
-
-  const loadData = async () => {
-    try {
-      const g = await listGoals();
-      setGoals(g);
-      if (g.length > 0) {
-        const rm = await getRoadmap(g[0].id);
-        setRoadmap(rm);
-        // Find first active part
-        for (const task of rm.tasks) {
-          for (const part of task.parts) {
-            if (part.status === 'active') {
-              setActivePartId(part.id);
-              setActivePartTitle(part.title);
-              break;
-            }
+    if (roadmap) {
+      // Find first active part
+      let found = false;
+      for (const task of roadmap.tasks) {
+        for (const part of task.parts) {
+          if (part.status === 'active') {
+            setActivePartId(part.id);
+            setActivePartTitle(part.title);
+            found = true;
+            break;
           }
-          if (activePartId) break;
         }
+        if (found) break;
       }
-    } catch (e) {
-      console.error(e);
     }
-    setLoading(false);
-  };
+  }, [roadmap]);
 
   if (!user) {
     return (

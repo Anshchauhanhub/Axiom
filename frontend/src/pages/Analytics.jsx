@@ -1,32 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { listGoals, getRoadmap } from '../services/api';
+import { useData } from '../context/DataContext';
 
 const Analytics = () => {
   const { user } = useAuth();
+  const { goals, roadmap, loading: dataLoading } = useData();
   const navigate = useNavigate();
-  const [roadmap, setRoadmap] = useState(null);
-  const [goals, setGoals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [expandedTasks, setExpandedTasks] = useState(new Set());
 
   useEffect(() => {
-    if (!user) return;
-    loadAnalytics();
-  }, [user]);
-
-  const loadAnalytics = async () => {
-    try {
-      const g = await listGoals();
-      setGoals(g);
-      if (g.length > 0) {
-        const rm = await getRoadmap(g[0].id);
-        setRoadmap(rm);
-      }
-    } catch (e) {
-      console.error(e);
+    if (roadmap) {
+      const activeTasks = roadmap.tasks.filter(t => t.status === 'active').map(t => t.id);
+      setExpandedTasks(new Set(activeTasks));
     }
-    setLoading(false);
+  }, [roadmap]);
+
+  const toggleTask = (taskId) => {
+    const newExpanded = new Set(expandedTasks);
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+    } else {
+      newExpanded.add(taskId);
+    }
+    setExpandedTasks(newExpanded);
   };
 
   if (!user) {
@@ -88,11 +85,16 @@ const Analytics = () => {
                   const taskPassed = task.parts.filter(p => p.status === 'passed').length;
                   const taskTotal = task.parts.length;
                   const progress = taskTotal > 0 ? Math.round((taskPassed / taskTotal) * 100) : 0;
+                  const isExpanded = expandedTasks.has(task.id);
                   let status = task.status === 'passed' ? 'MASTERED' : task.status === 'active' ? 'IN PROGRESS' : 'LOCKED';
                   let color = task.status === 'passed' ? 'bg-primary' : task.status === 'active' ? 'bg-secondary animate-pulse' : 'bg-surface-container-highest';
+                  
                   return (
-                    <div key={task.id} className="group/item cursor-pointer">
-                      <div className="flex justify-between items-center mb-2">
+                    <div key={task.id} className="group/item">
+                      <div 
+                        className="flex justify-between items-center mb-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => toggleTask(task.id)}
+                      >
                         <div className="flex items-center gap-3">
                           {progress === 100 ? (
                             <span className="material-symbols-outlined text-primary text-sm">verified</span>
@@ -101,11 +103,49 @@ const Analytics = () => {
                           )}
                           <span className="text-sm font-bold text-on-surface">{task.title}</span>
                         </div>
-                        <span className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">{status}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">{status}</span>
+                          <span className={`material-symbols-outlined text-xs text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                            expand_more
+                          </span>
+                        </div>
                       </div>
-                      <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
                         <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
                       </div>
+
+                      {/* Parts List */}
+                      {isExpanded && (
+                        <div className="ml-5 mt-4 space-y-4 pb-4 animate-in slide-in-from-top-2 duration-300">
+                          {task.parts.map((part) => (
+                            <div key={part.id} className="flex justify-between items-center group/part">
+                              <div className="flex items-center gap-4">
+                                <span className={`material-symbols-outlined text-[14px] ${
+                                  part.status === 'passed' ? 'text-primary' : 
+                                  part.status === 'active' ? 'text-secondary animate-pulse' : 
+                                  'text-on-surface-variant opacity-40'
+                                }`}>
+                                  {part.status === 'passed' ? 'check_circle' : 'radio_button_unchecked'}
+                                </span>
+                                <span className={`text-[12px] font-medium transition-colors ${
+                                  part.status === 'passed' ? 'text-on-surface font-bold' : 
+                                  part.status === 'active' ? 'text-secondary' : 
+                                  'text-on-surface-variant/70'
+                                }`}>
+                                  {part.title}
+                                </span>
+                              </div>
+                              <span className={`text-[8px] font-label uppercase tracking-[0.1em] px-2 py-0.5 rounded border ${
+                                part.status === 'passed' ? 'border-primary/30 text-primary bg-primary/5' : 
+                                part.status === 'active' ? 'border-secondary/30 text-secondary bg-secondary/5' : 
+                                'border-outline-variant/20 text-on-surface-variant/40'
+                              }`}>
+                                {part.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
