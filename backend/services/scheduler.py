@@ -49,11 +49,12 @@ async def check_and_send_nudges():
                             f"⚡ *Axiom AI — Precision Nudge*\n\n"
                             f"It's `{current_time_str}` in your timezone.\n"
                             f"Your study session is ready.\n\n"
-                            f"🔗 Open your Dashboard to begin.\n\n"
+                            f"Type /quiz to begin.\n\n"
                             f"_Stay on track. Stay accountable._"
                         ),
                         parse_mode="Markdown",
                     )
+                    print("Nudge sent to user", user.id, "at", current_time_str)
                     logger.info(f"Nudge sent to user {user.id} at {current_time_str}")
             except Exception as e:
                 logger.error(f"Nudge failed for user {user.id}: {e}")
