@@ -26,22 +26,29 @@ const Quiz = () => {
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
     if (roadmap && goals) {
-      let foundActiveTask = null;
-      let foundActiveGoal = null;
+      let foundTask = null;
+      let foundGoal = null;
 
-      for (const goal of goals) {
+      // Find the specific roadmap for the current goal (if possible) or use the first goal
+      const primaryGoal = goals[0];
+      
+      if (roadmap.tasks) {
         for (const task of roadmap.tasks) {
-          if (task.status === 'active' || (task.status === 'locked' && !foundActiveTask)) {
-            if (!foundActiveTask || task.status === 'active') {
-              foundActiveTask = task;
-              foundActiveGoal = goal;
-            }
+          if (task.status === 'active') {
+            foundTask = task;
+            foundGoal = primaryGoal;
+            break; // Stop at first ACTIVE task
+          }
+          if (task.status === 'locked' && !foundTask) {
+            foundTask = task;
+            foundGoal = primaryGoal;
+            // Don't break yet, keep looking for an active one later in the list
           }
         }
-        if (foundActiveTask && foundActiveTask.status === 'active') break;
       }
-      setActiveTask(foundActiveTask);
-      setActiveGoal(foundActiveGoal);
+
+      setActiveTask(foundTask);
+      setActiveGoal(foundGoal);
       setPhase('select');
     }
   }, [user, roadmap, goals]);
