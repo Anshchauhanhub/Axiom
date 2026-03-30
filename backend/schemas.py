@@ -111,3 +111,24 @@ class QuizResultResponse(BaseModel):
 class QuizExpiredResponse(BaseModel):
     expired: bool = True
     message: str = "Session expired. Generating new questions for your restart."
+
+
+# --- Conversational Onboarding ---
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class OnboardingChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+
+class OnboardingChatResponse(BaseModel):
+    message: str
+    draft_roadmap: Optional[list[dict]] = None
+    phase: str  # "discovery", "syllabus", "draft", "refinement", "ready"
+
+
+class FinalizeGoalRequest(BaseModel):
+    title: str
+    roadmap: list[dict]

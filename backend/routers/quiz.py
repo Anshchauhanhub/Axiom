@@ -5,7 +5,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import User, Part, Task, ActiveQuiz, QuizResult
+from models import User, Goal, Part, Task, ActiveQuiz, QuizResult
 from schemas import StartQuizResponse, SubmitAnswerRequest, QuizResultResponse
 from auth import get_current_user
 from services.grok import generate_mcqs
@@ -194,6 +194,12 @@ async def submit_quiz(
                         fp = first_part.scalar_one_or_none()
                         if fp:
                             fp.status = "active"
+                    else:
+                        # No next task means goal is complete!
+                        goal_result = await db.execute(select(Goal).where(Goal.id == task.goal_id))
+                        goal_obj = goal_result.scalar_one_or_none()
+                        if goal_obj:
+                            goal_obj.status = "completed"
 
         # Increment streak
         user.current_streak += 1

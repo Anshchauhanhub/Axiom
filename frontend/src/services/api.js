@@ -59,3 +59,13 @@ export const submitQuiz = (quizId, answers) =>
   request('POST', '/quiz/submit', { quiz_id: quizId, answers });
 
 export const getActiveQuiz = () => request('GET', '/quiz/active');
+
+// --- Conversational Onboarding ---
+export const onboardingChat = (messages) =>
+  request('POST', '/goals/chat', { messages });
+
+export const finalizeGoal = (title, roadmap) =>
+  request('POST', '/goals/finalize', { title, roadmap });
+
+export const activateGoal = (goalId) =>
+  request('POST', `/goals/${goalId}/activate`);
