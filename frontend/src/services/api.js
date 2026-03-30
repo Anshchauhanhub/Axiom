@@ -66,3 +66,6 @@ export const onboardingChat = (messages) =>
 
 export const finalizeGoal = (title, roadmap) =>
   request('POST', '/goals/finalize', { title, roadmap });
+
+export const activateGoal = (goalId) =>
+  request('POST', `/goals/${goalId}/activate`);

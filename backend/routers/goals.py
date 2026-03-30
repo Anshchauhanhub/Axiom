@@ -153,7 +153,16 @@ async def finalize_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Create Goal
+    # 1. Strictly deactivate ALL other active goals for this user
+    from sqlalchemy import update
+    await db.execute(
+        update(Goal)
+        .where(Goal.user_id == user.id)
+        .values(status="paused")
+    )
+    # Ensure current goal will be the only active one
+
+    # 2. Create Goal
     goal = Goal(user_id=user.id, title=req.title, status="active")
     db.add(goal)
     await db.flush()
@@ -196,3 +205,32 @@ async def finalize_goal(
         goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
         tasks=tasks_out,
     )
+
+
+@router.post("/{goal_id}/activate", response_model=GoalResponse)
+async def activate_goal(
+    goal_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # 1. Strictly deactivate ALL goals first to ensure no duplicates
+    from sqlalchemy import update
+    await db.execute(
+        update(Goal)
+        .where(Goal.user_id == user.id)
+        .values(status="paused")
+    )
+    await db.commit() # Preliminary commit to clear existing active states
+
+    # 2. Activate target goal
+    result = await db.execute(
+        select(Goal).where(Goal.id == goal_id, Goal.user_id == user.id)
+    )
+    goal = result.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    goal.status = "active"
+    await db.commit()
+    await db.refresh(goal)
+    return goal

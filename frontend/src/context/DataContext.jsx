@@ -17,10 +17,13 @@ export const DataProvider = ({ children }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const g = await listGoals();
-      setGoals(g);
-      if (g.length > 0) {
-        const rm = await getRoadmap(g[0].id);
+      const gList = await listGoals();
+      setGoals(gList);
+      
+      const activeGoal = gList.find(g => g.status === 'active') || gList[0];
+      
+      if (activeGoal) {
+        const rm = await getRoadmap(activeGoal.id);
         setRoadmap(rm);
       } else {
         setRoadmap(null);
