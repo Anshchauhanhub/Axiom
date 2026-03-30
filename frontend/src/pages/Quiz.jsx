@@ -136,7 +136,7 @@ const Quiz = () => {
       <div className="animate-in fade-in duration-1000 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <span className="material-symbols-outlined text-primary text-6xl animate-pulse">quiz</span>
-          <p className="text-on-surface-variant font-label text-sm mt-4 uppercase tracking-widest">Loading available quizzes...</p>
+          <p className="text-on-surface-variant font-label text-sm mt-4 uppercase tracking-widest">Loading study sessions...</p>
         </div>
       </div>
     );
@@ -147,7 +147,7 @@ const Quiz = () => {
     <>
       {loadingQuiz && (
         <NeuralLoader
-          message="Generating Quiz"
+          message="Generating Study Session"
           subMessages={[
             'Analyzing module content',
             'Crafting intelligent questions',
@@ -178,7 +178,7 @@ const Quiz = () => {
       <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
         {renderLoaders()}
         <header className="mb-12 text-center">
-          <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Sudden Death Quiz</h2>
+          <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Neural Study Session</h2>
           <div className="flex items-center justify-center gap-2">
             <span className="text-[10px] font-label tracking-[0.3em] uppercase text-primary font-bold opacity-80">Target:</span>
             <span className="text-[10px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-bold">{activeGoal?.title || 'Unknown Synthesis'}</span>
