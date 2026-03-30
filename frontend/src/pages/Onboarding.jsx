@@ -256,7 +256,7 @@ const Onboarding = () => {
                       </div>
                     ))}
                   </div>
-                  {phase === 'ready' && (
+                  {['refinement', 'ready'].includes(phase) && (
                     <div className="flex justify-center pt-8 border-t border-outline-variant/10">
                        <button onClick={handleFinalize} className="px-12 py-5 bg-primary text-on-primary-container rounded-2xl font-label font-bold tracking-widest uppercase text-xs hover:scale-105 transition-all shadow-xl shadow-primary/20 group">
                          Activate Neural Path
