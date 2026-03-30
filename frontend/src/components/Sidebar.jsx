@@ -9,7 +9,7 @@ const Sidebar = () => {
   const navItems = [
     { name: 'Home', icon: 'home', path: '/' },
     { name: 'Onboarding', icon: 'person_add', path: '/onboarding' },
-    { name: 'Quiz', icon: 'quiz', path: '/quiz' },
+    { name: 'Study', icon: 'menu_book', path: '/study' },
     { name: 'Analytics', icon: 'insights', path: '/analytics' },
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];

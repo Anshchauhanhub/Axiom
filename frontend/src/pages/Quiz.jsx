@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { startQuiz, submitQuiz } from '../services/api';
 import { useData } from '../context/DataContext';
+import NeuralLoader from '../components/NeuralLoader';
 
 const Quiz = () => {
   const { user, refreshUser } = useAuth();
@@ -19,6 +20,8 @@ const Quiz = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(15 * 60);
   const timerRef = useRef(null);
@@ -72,6 +75,7 @@ const Quiz = () => {
 
   const handleStartQuiz = async (partId, title) => {
     setLoading(true);
+    setLoadingQuiz(true);
     setError('');
     try {
       const data = await startQuiz(partId);
@@ -82,9 +86,11 @@ const Quiz = () => {
       setAnswers([]);
       setSelectedOption(null);
       setTimeLeft(15 * 60);
+      setLoadingQuiz(false);
       setPhase('quiz');
     } catch (e) {
       setError(e.message);
+      setLoadingQuiz(false);
     }
     setLoading(false);
   };
@@ -106,15 +112,18 @@ const Quiz = () => {
 
   const handleSubmit = async (finalAnswers) => {
     setLoading(true);
+    setSubmittingQuiz(true);
     clearInterval(timerRef.current);
     try {
       const res = await submitQuiz(quizId, finalAnswers);
       setResult(res);
+      setSubmittingQuiz(false);
       setPhase('result');
       await refreshData();
       refreshUser();
     } catch (e) {
       setError(e.message);
+      setSubmittingQuiz(false);
       setPhase('select');
     }
     setLoading(false);
@@ -127,18 +136,49 @@ const Quiz = () => {
       <div className="animate-in fade-in duration-1000 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <span className="material-symbols-outlined text-primary text-6xl animate-pulse">quiz</span>
-          <p className="text-on-surface-variant font-label text-sm mt-4 uppercase tracking-widest">Loading available quizzes...</p>
+          <p className="text-on-surface-variant font-label text-sm mt-4 uppercase tracking-widest">Loading study sessions...</p>
         </div>
       </div>
     );
   }
 
+  // Full-screen loading overlays for LLM operations
+  const renderLoaders = () => (
+    <>
+      {loadingQuiz && (
+        <NeuralLoader
+          message="Generating Study Session"
+          subMessages={[
+            'Analyzing module content',
+            'Crafting intelligent questions',
+            'Calibrating difficulty level',
+            'Building answer options',
+            'Preparing your challenge',
+          ]}
+        />
+      )}
+      {submittingQuiz && (
+        <NeuralLoader
+          message="Evaluating Answers"
+          subMessages={[
+            'Analyzing your responses',
+            'Computing mastery score',
+            'Validating knowledge depth',
+            'Generating performance report',
+            'Updating your progress',
+          ]}
+        />
+      )}
+    </>
+  );
+
   // SELECT PHASE (RESTRUCTURED)
   if (phase === 'select') {
     return (
       <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
+        {renderLoaders()}
         <header className="mb-12 text-center">
-          <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Sudden Death Quiz</h2>
+          <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Neural Study Session</h2>
           <div className="flex items-center justify-center gap-2">
             <span className="text-[10px] font-label tracking-[0.3em] uppercase text-primary font-bold opacity-80">Target:</span>
             <span className="text-[10px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-bold">{activeGoal?.title || 'Unknown Synthesis'}</span>
@@ -243,15 +283,8 @@ const Quiz = () => {
     const q = quizData[currentQ];
     return (
       <div className="animate-in fade-in duration-1000 max-w-5xl mx-auto w-full flex flex-col items-center">
-        {/* Integrity Warning + Timer */}
-        <div className="w-full mb-12 flex flex-col items-center">
-          <div className="flex items-center gap-3 py-3 px-6 bg-error-container/10 border border-error/20 rounded-xl mb-4">
-            <span className="material-symbols-outlined text-error animate-pulse">warning</span>
-            <p className="font-label text-xs tracking-wide text-error font-bold uppercase">
-              Hard Reset Protocol Active — {formatTime(timeLeft)} remaining
-            </p>
-          </div>
-        </div>
+        {renderLoaders()}
+        {renderLoaders()}
 
         {/* Question */}
         <section className="w-full mb-16 space-y-4">

@@ -102,10 +102,10 @@ const Dashboard = () => {
               <div className="mt-12 flex flex-wrap items-center gap-6">
                 {activePartId ? (
                   <button
-                    onClick={() => navigate('/quiz')}
+                    onClick={() => navigate('/study')}
                     className="px-8 py-4 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase"
                   >
-                    Start Quiz
+                    Start Study Session
                   </button>
                 ) : (
                   <button
