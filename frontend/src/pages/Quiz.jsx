@@ -284,15 +284,7 @@ const Quiz = () => {
     return (
       <div className="animate-in fade-in duration-1000 max-w-5xl mx-auto w-full flex flex-col items-center">
         {renderLoaders()}
-        {/* Integrity Warning + Timer */}
-        <div className="w-full mb-12 flex flex-col items-center">
-          <div className="flex items-center gap-3 py-3 px-6 bg-error-container/10 border border-error/20 rounded-xl mb-4">
-            <span className="material-symbols-outlined text-error animate-pulse">warning</span>
-            <p className="font-label text-xs tracking-wide text-error font-bold uppercase">
-              Hard Reset Protocol Active — {formatTime(timeLeft)} remaining
-            </p>
-          </div>
-        </div>
+        {renderLoaders()}
 
         {/* Question */}
         <section className="w-full mb-16 space-y-4">
