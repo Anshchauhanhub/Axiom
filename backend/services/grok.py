@@ -62,10 +62,11 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
     """Generate a structured roadmap from a goal title."""
     system_prompt = (
         "You are Axiom AI, a high-accountability learning coach. "
-        "Generate a structured learning roadmap as a JSON array. "
+        "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
+        "The roadmap must be comprehensive, covering every nuance of the syllabus in detail. "
         "Each item has: title (task name), parts (array of subtopic strings). "
         "Return ONLY valid JSON, no markdown, no explanation. "
-        "Generate 5-8 tasks, each with 3-5 parts."
+        "Generate 10-15 granular tasks, each with 5-8 detailed sub-parts to ensure complete mastery."
     )
     user_prompt = f"Create a detailed learning roadmap for: {goal_title}"
 
@@ -119,7 +120,9 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "- 'draft_roadmap': (Optional) If you are in 'draft' or 'refinement' phase, include a JSON array of tasks "
         "exactly like generate_roadmap does (each task has: 'title', 'parts' [array of strings]).\n"
         "\n"
-        "Return ONLY the valid JSON object, no explanation outside of the 'message' field."
+        "Return ONLY the valid JSON object, no explanation outside of the 'message' field. "
+        "When generating 'draft_roadmap', ensure it is exhaustive and high-fidelity, usually 10-15 tasks "
+        "with 5-8 sub-parts each to cover the entire curriculum depth."
     )
 
     # Convert schemas/dicts to pure message list if needed, handle here
