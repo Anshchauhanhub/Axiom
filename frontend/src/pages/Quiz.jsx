@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { startQuiz, submitQuiz } from '../services/api';
 import { useData } from '../context/DataContext';
+import NeuralLoader from '../components/NeuralLoader';
 
 const Quiz = () => {
   const { user, refreshUser } = useAuth();
@@ -19,6 +20,8 @@ const Quiz = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(15 * 60);
   const timerRef = useRef(null);
@@ -72,6 +75,7 @@ const Quiz = () => {
 
   const handleStartQuiz = async (partId, title) => {
     setLoading(true);
+    setLoadingQuiz(true);
     setError('');
     try {
       const data = await startQuiz(partId);
@@ -82,9 +86,11 @@ const Quiz = () => {
       setAnswers([]);
       setSelectedOption(null);
       setTimeLeft(15 * 60);
+      setLoadingQuiz(false);
       setPhase('quiz');
     } catch (e) {
       setError(e.message);
+      setLoadingQuiz(false);
     }
     setLoading(false);
   };
@@ -106,15 +112,18 @@ const Quiz = () => {
 
   const handleSubmit = async (finalAnswers) => {
     setLoading(true);
+    setSubmittingQuiz(true);
     clearInterval(timerRef.current);
     try {
       const res = await submitQuiz(quizId, finalAnswers);
       setResult(res);
+      setSubmittingQuiz(false);
       setPhase('result');
       await refreshData();
       refreshUser();
     } catch (e) {
       setError(e.message);
+      setSubmittingQuiz(false);
       setPhase('select');
     }
     setLoading(false);
@@ -133,10 +142,41 @@ const Quiz = () => {
     );
   }
 
+  // Full-screen loading overlays for LLM operations
+  const renderLoaders = () => (
+    <>
+      {loadingQuiz && (
+        <NeuralLoader
+          message="Generating Quiz"
+          subMessages={[
+            'Analyzing module content',
+            'Crafting intelligent questions',
+            'Calibrating difficulty level',
+            'Building answer options',
+            'Preparing your challenge',
+          ]}
+        />
+      )}
+      {submittingQuiz && (
+        <NeuralLoader
+          message="Evaluating Answers"
+          subMessages={[
+            'Analyzing your responses',
+            'Computing mastery score',
+            'Validating knowledge depth',
+            'Generating performance report',
+            'Updating your progress',
+          ]}
+        />
+      )}
+    </>
+  );
+
   // SELECT PHASE (RESTRUCTURED)
   if (phase === 'select') {
     return (
       <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
+        {renderLoaders()}
         <header className="mb-12 text-center">
           <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Sudden Death Quiz</h2>
           <div className="flex items-center justify-center gap-2">
@@ -243,6 +283,7 @@ const Quiz = () => {
     const q = quizData[currentQ];
     return (
       <div className="animate-in fade-in duration-1000 max-w-5xl mx-auto w-full flex flex-col items-center">
+        {renderLoaders()}
         {/* Integrity Warning + Timer */}
         <div className="w-full mb-12 flex flex-col items-center">
           <div className="flex items-center gap-3 py-3 px-6 bg-error-container/10 border border-error/20 rounded-xl mb-4">

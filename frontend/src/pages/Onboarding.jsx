@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { register, login, createGoal, generateRoadmap } from '../services/api';
+import NeuralLoader from '../components/NeuralLoader';
 
 const Onboarding = () => {
   const { user, loginUser } = useAuth();
@@ -13,6 +14,7 @@ const Onboarding = () => {
   const [goalTitle, setGoalTitle] = useState('');
   const [customGoal, setCustomGoal] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [error, setError] = useState('');
 
   const handleAuth = async () => {
@@ -21,8 +23,8 @@ const Onboarding = () => {
     try {
       const fn = mode === 'register' ? register : login;
       const res = await fn(email, password);
-      loginUser(res.access_token);
-      setStep(2);
+      await loginUser(res.access_token);
+      navigate('/');
     } catch (e) {
       setError(e.message);
     }
@@ -33,13 +35,16 @@ const Onboarding = () => {
     const title = goalTitle || customGoal;
     if (!title) return setError('Please select or type a goal.');
     setLoading(true);
+    setGeneratingRoadmap(true);
     setError('');
     try {
       const goal = await createGoal(title);
       await generateRoadmap(goal.id);
+      setGeneratingRoadmap(false);
       navigate('/');
     } catch (e) {
       setError(e.message);
+      setGeneratingRoadmap(false);
     }
     setLoading(false);
   };
@@ -52,6 +57,18 @@ const Onboarding = () => {
 
   return (
     <div className="w-full flex flex-col items-center">
+      {generatingRoadmap && (
+        <NeuralLoader
+          message="Generating Roadmap"
+          subMessages={[
+            'Analyzing your learning objective',
+            'Building personalized task modules',
+            'Calibrating difficulty progression',
+            'Structuring knowledge graph',
+            'Finalizing your learning path',
+          ]}
+        />
+      )}
       {/* Step Indicator */}
       <div className="w-full max-w-2xl mb-12 flex justify-between items-center px-4">
         <div className="flex flex-col gap-1">
