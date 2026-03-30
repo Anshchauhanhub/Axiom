@@ -231,6 +231,46 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if pt:
                     pt.status = "passed"
 
+                    # Find all parts in the same task
+                    siblings = await db.execute(
+                        select(Part)
+                        .where(Part.task_id == pt.task_id)
+                        .order_by(Part.order_index)
+                    )
+                    all_parts = siblings.scalars().all()
+
+                    # Unlock next part
+                    found_current = False
+                    for p in all_parts:
+                        if found_current and p.status == "locked":
+                            p.status = "active"
+                            break
+                        if p.id == pt.id:
+                            found_current = True
+
+                    # Check if all parts in task are passed
+                    all_passed = all(p.status == "passed" for p in all_parts)
+                    if all_passed:
+                        task_result = await db.execute(select(Task).where(Task.id == pt.task_id))
+                        task = task_result.scalar_one_or_none()
+                        if task:
+                            task.status = "passed"
+                            # Unlock next task
+                            next_task = await db.execute(
+                                select(Task)
+                                .where(Task.goal_id == task.goal_id, Task.order_index == task.order_index + 1)
+                            )
+                            nt = next_task.scalar_one_or_none()
+                            if nt:
+                                nt.status = "active"
+                                # Unlock first part of next task
+                                first_part = await db.execute(
+                                    select(Part).where(Part.task_id == nt.id).order_by(Part.order_index).limit(1)
+                                )
+                                fp = first_part.scalar_one_or_none()
+                                if fp:
+                                    fp.status = "active"
+
             await db.delete(quiz)
             await db.commit()
 
@@ -239,7 +279,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"🏆 *MASTERY VERIFIED*\n\n"
                     f"Score: *{score:.0f}%* ({correct}/{len(mcqs)})\n"
                     f"Streak: *{user.current_streak} days*\n\n"
-                    f"Next part unlocked. Keep going!",
+                    f"Next part unlocked. Use /quiz to keep going!",
                     parse_mode="Markdown",
                 )
             else:
