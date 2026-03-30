@@ -98,3 +98,55 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
     except json.JSONDecodeError as e:
         logger.error(f"JSON parse error in MCQs: {e}\nRaw: {raw[:500]}")
         raise ValueError(f"Failed to parse AI response as JSON: {e}")
+
+
+async def generate_onboarding_response(messages: list[dict]) -> dict:
+    """Handle the conversational onboarding logic with Axiom AI."""
+    system_prompt = (
+        "You are Axiom AI, a high-accountability learning coach for the Axiom platform. "
+        "Your goal is to help the user define a razor-sharp learning goal and generate a roadmap. "
+        "### PHASES OF CONVERSATION:\n"
+        "1. **Discovery**: Ask about their current status (College, entrance exams, job prep) and what they want to master.\n"
+        "2. **Timeline**: Ask about their desired time period for this learning goal.\n"
+        "3. **Syllabus**: Ask if they have an existing syllabus (they can paste it) or if you should generate one.\n"
+        "4. **Drafting**: Once you have enough info, generate a structured roadmap.\n"
+        "5. **Refinement**: Ask if they want to change anything. If they are happy, signal we are ready.\n"
+        "\n"
+        "### OUTPUT FORMAT:\n"
+        "You MUST return a JSON object with the following fields:\n"
+        "- 'message': Your conversational response to the user.\n"
+        "- 'phase': Current phase ('discovery', 'timeline', 'syllabus', 'draft', 'refinement', 'ready').\n"
+        "- 'draft_roadmap': (Optional) If you are in 'draft' or 'refinement' phase, include a JSON array of tasks "
+        "exactly like generate_roadmap does (each task has: 'title', 'parts' [array of strings]).\n"
+        "\n"
+        "Return ONLY the valid JSON object, no explanation outside of the 'message' field."
+    )
+
+    # Convert schemas/dicts to pure message list if needed, handle here
+    raw = await call_grok(system_prompt, str(messages)) # Simplified, usually better to map Properly
+    # Mapping for call_grok which specifically takes (system, user)
+    # We should probably update call_grok or use it carefully.
+    
+    # Let's use a slightly different approach for the multi-turn chat
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            response = await client.post(
+                f"{GROK_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROK_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [{"role": "system", "content": system_prompt}] + messages,
+                    "temperature": 0.7,
+                    "response_format": {"type": "json_object"}
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            raw_content = data["choices"][0]["message"]["content"]
+            return json.loads(raw_content)
+        except Exception as e:
+            logger.error(f"Error in onboarding chat: {e}")
+            raise

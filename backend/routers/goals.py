@@ -5,7 +5,10 @@ from sqlalchemy.orm import selectinload
 
 from database import get_db
 from models import User, Goal, Task, Part
-from schemas import CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse
+from schemas import (
+    CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
+    OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest
+)
 from auth import get_current_user
 from services.grok import generate_roadmap
 
@@ -130,3 +133,66 @@ async def list_goals(
 ):
     result = await db.execute(select(Goal).where(Goal.user_id == user.id))
     return result.scalars().all()
+
+
+@router.post("/chat", response_model=OnboardingChatResponse)
+async def onboarding_chat(
+    req: OnboardingChatRequest,
+    user: User = Depends(get_current_user),
+):
+    # Map pydantic models to dicts for the LLM service
+    messages = [m.model_dump() for m in req.messages]
+    from services.grok import generate_onboarding_response
+    response = await generate_onboarding_response(messages)
+    return response
+
+
+@router.post("/finalize", response_model=RoadmapResponse)
+async def finalize_goal(
+    req: FinalizeGoalRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # 1. Create Goal
+    goal = Goal(user_id=user.id, title=req.title, status="active")
+    db.add(goal)
+    await db.flush()
+
+    # 2. Create Tasks & Parts from the approved draft
+    tasks_out = []
+    for idx, task_data in enumerate(req.roadmap):
+        task = Task(
+            goal_id=goal.id,
+            title=task_data["title"],
+            order_index=idx,
+            status="active" if idx == 0 else "locked",
+        )
+        db.add(task)
+        await db.flush()
+
+        parts_out = []
+        for pidx, part_title in enumerate(task_data.get("parts", [])):
+            part = Part(
+                task_id=task.id,
+                title=part_title,
+                order_index=pidx,
+                status="active" if idx == 0 and pidx == 0 else "locked",
+            )
+            db.add(part)
+            await db.flush()
+            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status))
+
+        tasks_out.append(TaskResponse(
+            id=task.id,
+            title=task.title,
+            order_index=task.order_index,
+            status=task.status,
+            parts=parts_out,
+        ))
+
+    await db.commit()
+
+    return RoadmapResponse(
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        tasks=tasks_out,
+    )
