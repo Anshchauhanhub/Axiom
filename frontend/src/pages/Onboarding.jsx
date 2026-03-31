@@ -26,7 +26,7 @@ const Onboarding = () => {
   const [draftRoadmap, setDraftRoadmap] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
 
-  const chatEndRef = useRef(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     if (user && messages.length === 0) {
@@ -36,7 +36,9 @@ const Onboarding = () => {
   }, [user, messages.length]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [messages, isTyping]);
 
   const handleAuth = async (e) => {
@@ -175,7 +177,7 @@ const Onboarding = () => {
   }
 
   return (
-    <div className="w-full h-[90vh] flex flex-col lg:flex-row gap-6 animate-in fade-in duration-1000">
+    <div className="w-full flex-1 min-h-[500px] flex flex-col lg:flex-row gap-6 animate-in fade-in duration-1000">
       {loading && <NeuralLoader message="Synchronizing Systems" />}
 
       {/* Main Chat Area */}
@@ -197,7 +199,10 @@ const Onboarding = () => {
         </div>
 
         {/* Message Area */}
-        <div className="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scrollbar">
+        <div 
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scrollbar"
+        >
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
               <div className={`max-w-[85%] p-6 rounded-[2rem] shadow-xl ${m.role === 'user'
@@ -267,7 +272,7 @@ const Onboarding = () => {
               </div>
             </div>
           )}
-          <div ref={chatEndRef} />
+
         </div>
 
         {/* Chat Input */}

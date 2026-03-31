@@ -8,12 +8,14 @@ import Onboarding from './pages/Onboarding';
 import Study from './pages/Study';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <AuthProvider>
       <DataProvider>
         <Router>
+          <ScrollToTop />
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
