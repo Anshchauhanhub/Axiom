@@ -2,8 +2,10 @@ import os
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -109,24 +111,51 @@ app.include_router(profile_router)
 app.include_router(goals_router)
 app.include_router(quiz_router)
 app.include_router(telegram_router)
+ 
+# Serve Static Files (Frontend Build)
+# In production, Vite builds to /frontend/dist. We copy this to /backend/static in Docker.
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    # Mount assets folder for bundled JS/CSS
+    ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
+    if os.path.exists(ASSETS_DIR):
+        app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+    
+    # Catch-all for SPA routing (React Router)
+    @app.get("/{full_path:path}", response_class=FileResponse)
+    async def serve_spa(request: Request, full_path: str):
+        # Exclude common API-like prefixes
+        if full_path.startswith(("auth", "goals", "quiz", "telegram", "profile", "users")):
+             return {"detail": "API endpoint not found", "path": full_path}
+             
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html")) # Fallback
+else:
+    logger.warning(f"⚠️ Static directory NOT found at {STATIC_DIR}. Frontend will not be served.")
 
 
 @app.get("/")
 async def root():
+    # If static index.html exists, serve it, otherwise return API info
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
-        "name": "Axiom AI",
+        "name": "Axiom AI API",
         "status": "operational",
         "version": "1.0.0",
-        "endpoints": {
-            "docs": "/docs",
-            "auth": "/auth",
-            "goals": "/goals",
-            "quiz": "/quiz",
-            "telegram": "/telegram/webhook",
-        },
     }
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    # Render provides PORT environment variable
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
