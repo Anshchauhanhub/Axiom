@@ -5,7 +5,7 @@ import Layout from './components/Layout';
 import { DataProvider } from './context/DataContext';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
-import Quiz from './pages/Quiz';
+import Study from './pages/Study';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 
@@ -18,7 +18,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/study" element={<Quiz />} />
+              <Route path="/study" element={<Study />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>

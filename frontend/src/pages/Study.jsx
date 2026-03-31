@@ -5,7 +5,7 @@ import { startQuiz, submitQuiz } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 
-const Quiz = () => {
+const Study = () => {
   const { user, refreshUser } = useAuth();
   const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
@@ -32,8 +32,8 @@ const Quiz = () => {
       let foundTask = null;
       let foundGoal = null;
 
-      // Find the specific roadmap for the current goal (if possible) or use the first goal
-      const primaryGoal = goals[0];
+      // Find the specific roadmap for the current goal (if possible) or use the active goal
+      const primaryGoal = goals.find(g => g.status === 'active') || goals[0];
       
       if (roadmap.tasks) {
         for (const task of roadmap.tasks) {
@@ -378,4 +378,4 @@ const Quiz = () => {
   return null;
 };
 
-export default Quiz;
+export default Study;

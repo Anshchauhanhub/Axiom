@@ -2,12 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { quickActivateGoal } from '../services/api';
+import GoalSelectionGrid from '../components/GoalSelectionGrid';
+import NeuralLoader from '../components/NeuralLoader';
+
 
 const Analytics = () => {
   const { user } = useAuth();
-  const { goals, roadmap, loading: dataLoading } = useData();
+  const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('Overview');
   const [expandedTasks, setExpandedTasks] = useState(new Set());
+  const [activationLoading, setActivationLoading] = useState(false);
+
+  useEffect(() => {
+    if (!dataLoading && !roadmap) {
+      setActiveTab('Onboarding');
+    } else if (roadmap) {
+      setActiveTab('Overview');
+    }
+  }, [roadmap, dataLoading]);
 
   useEffect(() => {
     if (roadmap) {
@@ -26,7 +40,25 @@ const Analytics = () => {
     setExpandedTasks(newExpanded);
   };
 
+  const handleSelectGoal = async (title) => {
+    if (title === 'CUSTOM') {
+      navigate('/onboarding');
+      return;
+    }
+    setActivationLoading(true);
+    try {
+      await quickActivateGoal(title);
+      await refreshData();
+      setActiveTab('Overview');
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActivationLoading(false);
+    }
+  };
+
   if (!user) {
+
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <button onClick={() => navigate('/onboarding')} className="px-10 py-4 rounded-full bg-primary text-on-primary-container font-label text-xs font-bold tracking-widest uppercase">
@@ -43,7 +75,31 @@ const Analytics = () => {
   const saturation = totalParts > 0 ? Math.round((passedParts / totalParts) * 100) : 0;
 
   return (
-    <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto">
+    <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto relative">
+      {activationLoading && <NeuralLoader message="Synthesizing Roadmap" />}
+
+      {/* Tab Navigation */}
+      <div className="flex gap-8 mb-12 border-b border-outline-variant/10">
+        {['Overview', 'Onboarding'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-4 px-2 font-label text-[10px] font-bold uppercase tracking-[0.3em] transition-all relative ${
+              activeTab === tab ? 'text-primary' : 'text-on-surface-variant opacity-40 hover:opacity-100'
+            }`}
+          >
+            {tab}
+            {activeTab === tab && (
+              <div className="absolute bottom-0 left-0 w-full h-[2px] bg-primary animate-in fade-in zoom-in duration-500"></div>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'Onboarding' ? (
+        <GoalSelectionGrid onSelect={handleSelectGoal} loading={activationLoading} />
+      ) : (
+        <>
       <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Mastery Analytics</h2>
@@ -167,8 +223,12 @@ const Analytics = () => {
             </div>
             <div className="bg-surface-container-lowest border border-outline-variant/10 p-6 rounded-3xl">
               <div className="font-label text-[10px] text-on-surface-variant uppercase tracking-[0.2em] mb-4">Goal</div>
-              <div className="text-lg font-black font-headline text-on-surface uppercase">{goals[0]?.title?.slice(0, 15) || '-'}...</div>
-              <div className="text-[10px] text-on-surface-variant/40 uppercase mt-1">{goals[0]?.status || 'N/A'}</div>
+              <div className="text-lg font-black font-headline text-on-surface uppercase whitespace-nowrap overflow-hidden text-ellipsis">
+                {roadmap?.goal?.title || goals.find(g => g.status === 'active')?.title || '-'}
+              </div>
+              <div className="text-[10px] text-on-surface-variant/40 uppercase mt-1">
+                {roadmap?.goal?.status || goals.find(g => g.status === 'active')?.status || 'N/A'}
+              </div>
             </div>
           </div>
         </div>
@@ -215,6 +275,8 @@ const Analytics = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

@@ -66,3 +66,15 @@ export const onboardingChat = (messages) =>
 
 export const finalizeGoal = (title, roadmap) =>
   request('POST', '/goals/finalize', { title, roadmap });
+
+export const quickActivateGoal = (title) =>
+  request('POST', '/goals/quick-activate', { title });
+ 
+export const activateGoal = (goalId) =>
+  request('POST', `/goals/${goalId}/activate`);
+ 
+export const deleteGoal = (goalId) =>
+  request('DELETE', `/goals/${goalId}`);
+ 
+export const toggleGoalStatus = (goalId) =>
+  request('POST', `/goals/${goalId}/toggle`);

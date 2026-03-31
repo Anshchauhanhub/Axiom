@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { quickActivateGoal } from '../services/api';
+import NeuralLoader from '../components/NeuralLoader';
+
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { goals, roadmap, loading: dataLoading } = useData();
+  const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
   const [activePartId, setActivePartId] = useState(null);
   const [activePartTitle, setActivePartTitle] = useState('');
+  const [activationLoading, setActivationLoading] = useState(false);
+
+
 
   useEffect(() => {
     if (roadmap) {
@@ -28,7 +34,24 @@ const Dashboard = () => {
     }
   }, [roadmap]);
 
+  const handleSelectGoal = async (title) => {
+    if (title === 'CUSTOM') {
+      navigate('/onboarding');
+      return;
+    }
+    setActivationLoading(true);
+    try {
+      await quickActivateGoal(title);
+      await refreshData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActivationLoading(false);
+    }
+  };
+
   if (!user) {
+
     return (
       <div className="animate-in fade-in duration-1000 flex flex-col items-center justify-center min-h-[60vh] gap-8">
         <div className="text-center">
@@ -49,7 +72,9 @@ const Dashboard = () => {
   const totalTasks = roadmap?.tasks?.length || 0;
 
   return (
-    <div className="animate-in fade-in duration-1000">
+    <div className="animate-in fade-in duration-1000 relative">
+      {activationLoading && <NeuralLoader message="Synthesizing Roadmap" />}
+
       {/* Header Section */}
       <section className="mb-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -95,7 +120,7 @@ const Dashboard = () => {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-base">layers</span>
-                    {goals[0]?.title || 'Set a goal'}
+                    {roadmap?.goal?.title || goals.find(g => g.status === 'active')?.title || 'Set a goal'}
                   </span>
                 </div>
               </div>
@@ -194,6 +219,7 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
     </div>
   );
 };

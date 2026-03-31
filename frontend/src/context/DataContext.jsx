@@ -19,8 +19,9 @@ export const DataProvider = ({ children }) => {
     try {
       const g = await listGoals();
       setGoals(g);
-      if (g.length > 0) {
-        const rm = await getRoadmap(g[0].id);
+      const activeGoal = g.find(goal => goal.status === 'active');
+      if (activeGoal) {
+        const rm = await getRoadmap(activeGoal.id);
         setRoadmap(rm);
       } else {
         setRoadmap(null);
