@@ -9,6 +9,7 @@ const Onboarding = () => {
   const { user, loginUser } = useAuth();
   const { goals, refreshData } = useData();
   const navigate = useNavigate();
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,12 +30,7 @@ const Onboarding = () => {
 
   useEffect(() => {
     if (user && messages.length === 0) {
-      // Initialize chat if logged in and no messages
-      const welcomeMsg = {
-        role: 'assistant',
-        content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?"
-      };
-      setMessages([welcomeMsg]);
+      setMessages([{ role: 'assistant', content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" }]);
       setAuthStep(false);
     }
   }, [user, messages.length]);
@@ -51,7 +47,6 @@ const Onboarding = () => {
       const fn = mode === 'register' ? register : login;
       const res = await fn(email, password);
       await loginUser(res.access_token);
-      // setAuthStep will be handled by useEffect [user]
     } catch (e) {
       setError(e.message);
     }
@@ -72,9 +67,7 @@ const Onboarding = () => {
       const res = await onboardingChat(newMessages);
       setMessages([...newMessages, { role: 'assistant', content: res.message }]);
       setPhase(res.phase);
-      if (res.draft_roadmap) {
-        setDraftRoadmap(res.draft_roadmap);
-      }
+      if (res.draft_roadmap) setDraftRoadmap(res.draft_roadmap);
     } catch (e) {
       setError("Neural link interrupted. Please retry.");
     } finally {
@@ -113,9 +106,9 @@ const Onboarding = () => {
     if (!draftRoadmap) return;
     setLoading(true);
     try {
-      // Find a suitable title from the conversation or the roadmap
       const title = draftRoadmap[0]?.title || "My Mastery Goal";
       await finalizeGoal(title, draftRoadmap);
+      await refreshData();
       navigate('/');
     } catch (e) {
       setError(e.message);
@@ -124,7 +117,19 @@ const Onboarding = () => {
     }
   };
 
-  // --- Auth UI ---
+  const handleSwitchGoal = async (id) => {
+    setLoading(true);
+    try {
+      await activateGoal(id);
+      await refreshData();
+      navigate('/');
+    } catch (e) {
+      setError("Failed to switch neural path.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authStep) {
     return (
       <div className="w-full max-w-md mx-auto mt-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -133,9 +138,7 @@ const Onboarding = () => {
             <span className="material-symbols-outlined text-primary text-3xl">neurology</span>
           </div>
           <h2 className="text-3xl font-black font-headline uppercase tracking-tighter text-on-surface">Initialize Session</h2>
-          <p className="text-on-surface-variant font-label text-[10px] tracking-widest uppercase mt-2 opacity-60 italic">Neural Protocol // V.1.0.4</p>
         </div>
-
         <form onSubmit={handleAuth} className="space-y-6 bg-surface-container-low p-8 rounded-[2rem] border border-outline-variant/10 shadow-2xl">
           <div className="space-y-2">
             <label className="text-[10px] font-label font-bold text-primary uppercase tracking-widest ml-1">Email Identifier</label>
@@ -145,7 +148,6 @@ const Onboarding = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
               required
-              placeholder="user@neural.network"
             />
           </div>
           <div className="space-y-2">
@@ -156,30 +158,14 @@ const Onboarding = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
               required
-              placeholder="••••••••"
             />
           </div>
-
-          {error && (
-            <div className="p-4 bg-error-container/10 border border-error/20 rounded-xl">
-              <p className="text-error text-xs font-bold text-center font-label">{error}</p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-5 bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-label font-bold text-xs tracking-[0.3em] uppercase rounded-2xl active:scale-95 transition-all shadow-xl shadow-primary/20"
-          >
-            {loading ? 'Processing...' : mode === 'register' ? 'Verify & Register' : 'Authorize Login'}
+          {error && <p className="text-error text-xs font-bold font-label text-center">{error}</p>}
+          <button type="submit" disabled={loading} className="w-full py-5 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest uppercase rounded-2xl shadow-xl">
+            {loading ? 'Processing...' : mode.toUpperCase()}
           </button>
-
           <div className="text-center pt-4">
-            <button
-              type="button"
-              onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
-              className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest hover:text-primary transition-colors"
-            >
+            <button type="button" onClick={() => setMode(mode === 'register' ? 'login' : 'register')} className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest hover:text-primary">
               {mode === 'register' ? 'Switch to Login' : 'Switch to Register'}
             </button>
           </div>
@@ -188,7 +174,6 @@ const Onboarding = () => {
     );
   }
 
-  // --- Chat UI ---
   return (
     <div className="w-full h-[90vh] flex flex-col lg:flex-row gap-6 animate-in fade-in duration-1000">
       {loading && <NeuralLoader message="Synchronizing Systems" />}

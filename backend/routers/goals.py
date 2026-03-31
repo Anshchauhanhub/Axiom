@@ -226,6 +226,7 @@ async def finalize_goal(
         tasks=tasks_out,
     )
 
+@router.post("/{goal_id}/activate", response_model=RoadmapResponse)
 @router.post("/quick-activate", response_model=RoadmapResponse)
 async def quick_activate(
     req: CreateGoalRequest,
@@ -299,7 +300,6 @@ async def quick_activate(
         tasks=tasks_out,
     )
 
-@router.post("/{goal_id}/activate", response_model=RoadmapResponse)
 async def activate_existing_goal(
     goal_id: str,
     user: User = Depends(get_current_user),
