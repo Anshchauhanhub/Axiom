@@ -14,6 +14,21 @@ const Analytics = () => {
   const [activeTab, setActiveTab] = useState('Overview');
   const [expandedTasks, setExpandedTasks] = useState(new Set());
   const [activationLoading, setActivationLoading] = useState(false);
+  const [nextSchedule, setNextSchedule] = useState('');
+
+  useEffect(() => {
+    const getNextTime = () => {
+      const schedule = user?.study_schedule || ['12:00', '18:00'];
+      const now = new Date();
+      const current = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const sorted = [...schedule].sort();
+      const next = sorted.find(t => t > current) || sorted[0];
+      setNextSchedule(next);
+    };
+    getNextTime();
+    const interval = setInterval(getNextTime, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     if (!dataLoading && !roadmap) {
@@ -108,7 +123,9 @@ const Analytics = () => {
         <div className="flex items-center gap-4 bg-surface-container-low px-6 py-3 rounded-2xl border border-outline-variant/10">
           <div className="text-right">
             <div className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Schedule</div>
-            <div className="text-sm font-bold text-primary font-headline">{user.study_schedule?.join(' / ') || '12:00 / 18:00'}</div>
+            <div className="text-sm font-bold text-primary font-headline">
+              {(user.study_schedule || ['12:00', '18:00']).sort().join(' / ')}
+            </div>
           </div>
           <span className="material-symbols-outlined text-primary animate-pulse">notifications_active</span>
         </div>
@@ -254,17 +271,20 @@ const Analytics = () => {
           <div className="bg-surface-container-low border border-outline-variant/15 p-8 rounded-[2rem]">
             <h4 className="font-headline font-bold text-on-surface mb-6 uppercase tracking-tighter">Nudge Schedule</h4>
             <div className="space-y-8">
-              {(user.study_schedule || ['12:00', '18:00']).map((time, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <div className={`mt-1.5 w-2 h-2 rounded-full ${i === 0 ? 'bg-secondary animate-pulse shadow-[0_0_10px_rgba(76,215,246,0.6)]' : 'bg-on-surface-variant'}`}></div>
-                  <div>
-                    <div className="text-sm font-bold text-on-surface">{time}</div>
-                    <div className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">
-                      {i === 0 ? 'Session 1' : 'Session 2'}
+              {(user.study_schedule || ['12:00', '18:00']).sort().map((time, i) => {
+                const isNext = time === nextSchedule;
+                return (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className={`mt-1.5 w-2 h-2 rounded-full ${isNext ? 'bg-secondary animate-pulse shadow-[0_0_10px_rgba(76,215,246,0.6)]' : 'bg-on-surface-variant/30'}`}></div>
+                    <div>
+                      <div className={`text-sm font-bold ${isNext ? 'text-on-surface' : 'text-on-surface-variant/60'}`}>{time}</div>
+                      <div className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">
+                        {isNext ? 'Next Session' : `Session ${i + 1}`}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <button
               onClick={() => navigate('/settings')}

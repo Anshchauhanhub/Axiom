@@ -13,6 +13,21 @@ const Dashboard = () => {
   const [activePartId, setActivePartId] = useState(null);
   const [activePartTitle, setActivePartTitle] = useState('');
   const [activationLoading, setActivationLoading] = useState(false);
+  const [nextSchedule, setNextSchedule] = useState('');
+
+  useEffect(() => {
+    const getNextTime = () => {
+      const schedule = user?.study_schedule || ['12:00', '18:00'];
+      const now = new Date();
+      const current = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const sorted = [...schedule].sort();
+      const next = sorted.find(t => t > current) || sorted[0];
+      setNextSchedule(next);
+    };
+    getNextTime();
+    const interval = setInterval(getNextTime, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
 
 
@@ -116,7 +131,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-4 text-on-surface-variant font-label text-sm uppercase tracking-wider">
                   <span className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-base">schedule</span>
-                    {user.study_schedule?.[0] || '12:00'} Today
+                    {nextSchedule || '12:00'} Today
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-base">layers</span>

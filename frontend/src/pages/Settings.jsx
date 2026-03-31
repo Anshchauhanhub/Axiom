@@ -39,7 +39,9 @@ const Settings = () => {
   const handleSaveSchedule = async () => {
     setSaving(true);
     try {
-      await updateSchedule(timezone, schedule);
+      const sortedSchedule = [...schedule].sort();
+      await updateSchedule(timezone, sortedSchedule);
+      setSchedule(sortedSchedule);
       setMessage('✅ Schedule updated!');
       refreshUser();
     } catch (e) {
