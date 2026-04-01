@@ -21,7 +21,7 @@ const Sidebar = () => {
       {/* Desktop SideNavBar */}
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40">
         <div className="mb-10 px-2 flex items-center justify-center">
-          <img src="frontend/public/logo.png" alt="Axiom Logo" className="w-56 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]" />
+          <img src="/logo.png" alt="Axiom Logo" className="w-56 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]" />
         </div>
         <nav className="flex-1 space-y-2">
           {navItems.map((item) => (
