@@ -122,9 +122,9 @@ const Analytics = () => {
         </div>
         <div className="flex items-center gap-4 bg-surface-container-low px-6 py-3 rounded-2xl border border-outline-variant/10">
           <div className="text-right">
-            <div className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Schedule</div>
+            <div className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Next Schedule</div>
             <div className="text-sm font-bold text-primary font-headline">
-              {(user.study_schedule || ['12:00', '18:00']).sort().join(' / ')}
+              {nextSchedule || '...'}
             </div>
           </div>
           <span className="material-symbols-outlined text-primary animate-pulse">notifications_active</span>
