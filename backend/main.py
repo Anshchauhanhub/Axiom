@@ -136,8 +136,6 @@ if os.path.exists(STATIC_DIR):
         # Fallback to index.html for SPA routing
         index_path = os.path.join(STATIC_DIR, "index.html")
         return FileResponse(index_path)
-else:
-    logger.warning(f"⚠️ Static directory NOT found at {STATIC_DIR}. Frontend will not be served.")
 
 
 @app.get("/")
