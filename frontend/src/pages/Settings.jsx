@@ -119,8 +119,8 @@ const Settings = () => {
                   >
                     {saving ? 'Linking...' : 'Link Telegram'}
                   </button>
-                  <p className="text-[10px] text-on-surface-variant font-label">
-                    Open Telegram → message @AxiomBot → send /start → copy your Chat ID
+                  <p className="text-xs text-on-surface-variant font-label leading-relaxed">
+                    Open Telegram → message <a href="https://t.me/Axiomneurobot" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-bold">@Axiomneurobot</a> → send <code className="bg-surface-container px-1 py-0.5 rounded">/start</code> → copy your Chat ID
                   </p>
                 </div>
               )}
