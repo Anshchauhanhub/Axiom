@@ -138,6 +138,28 @@ async def submit_quiz(
     score = (correct / len(questions)) * 100
     is_passed = score >= 80
 
+    # Check if we should increment streak today (before adding the current result)
+    should_increment = False
+    if is_passed:
+        recent_passed_result = await db.execute(
+            select(QuizResult)
+            .where(QuizResult.user_id == user.id)
+            .where(QuizResult.is_passed == True)
+            .order_by(QuizResult.completed_at.desc())
+            .limit(1)
+        )
+        last_passed = recent_passed_result.scalar_one_or_none()
+        today = datetime.now(timezone.utc).date()
+        
+        if not last_passed:
+            should_increment = True
+        else:
+            last_date = (last_passed.completed_at.replace(tzinfo=timezone.utc).date() 
+                         if last_passed.completed_at.tzinfo is None 
+                         else last_passed.completed_at.astimezone(timezone.utc).date())
+            if last_date < today:
+                should_increment = True
+
     # Save result
     quiz_result = QuizResult(
         user_id=user.id,
@@ -202,7 +224,8 @@ async def submit_quiz(
                             goal_obj.status = "completed"
 
         # Increment streak
-        user.current_streak += 1
+        if should_increment:
+            user.current_streak += 1
 
     # Always delete active quiz (passed or failed)
     await db.delete(quiz)
