@@ -103,11 +103,11 @@ const Dashboard = () => {
           </div>
           {/* Streak Widget */}
           <div className="bg-surface-container-low p-1 rounded-2xl flex items-center gap-4 pr-6 glow-blue border border-outline-variant/10">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#ff7e5f] to-[#feb47b] flex items-center justify-center shadow-lg shadow-orange-500/20">
-              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="material-symbols-outlined text-on-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
             </div>
             <div>
-              <div className="text-2xl font-black font-headline text-[#feb47b]">{user.current_streak}</div>
+              <div className="text-2xl font-black font-headline text-primary">{user.current_streak}</div>
               <div className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Day Streak</div>
             </div>
           </div>
@@ -162,15 +162,15 @@ const Dashboard = () => {
 
         {/* Side widgets */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="rounded-[2rem] bg-gradient-to-br from-[#0088cc]/20 to-transparent border border-[#0088cc]/30 p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+          <div className="rounded-[2rem] bg-gradient-to-br from-secondary/20 to-transparent border border-secondary/30 p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
             onClick={() => navigate('/settings')}
           >
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-[#0088cc] flex items-center justify-center text-white">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-white">
                   <span className="material-symbols-outlined">send</span>
                 </div>
-                <span className="font-label text-[10px] font-bold tracking-widest uppercase text-[#0088cc]">Coach Access</span>
+                <span className="font-label text-[10px] font-bold tracking-widest uppercase text-secondary">Coach Access</span>
               </div>
               <h4 className="text-xl font-bold font-headline mb-2">
                 {user.telegram_chat_id ? 'Telegram Connected ✓' : 'Connect Telegram'}
@@ -192,7 +192,7 @@ const Dashboard = () => {
             <div className="space-y-4">
               <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_12px_rgba(76,215,246,0.5)] transition-all duration-1000"
+                  className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_12px_rgba(0,179,89,0.5)] transition-all duration-1000"
                   style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
                 ></div>
               </div>
@@ -209,9 +209,8 @@ const Dashboard = () => {
             {roadmap.tasks.slice(0, 3).map((task, idx) => (
               <div key={task.id} className="bg-surface-container-lowest border border-outline-variant/10 p-6 rounded-3xl hover:bg-surface-container-low transition-colors group cursor-pointer">
                 <div className="flex justify-between items-start mb-8">
-                  <div className={`h-12 w-12 rounded-2xl bg-surface-container flex items-center justify-center group-hover:border-primary/40 border border-transparent transition-all ${
-                    task.status === 'passed' ? 'text-primary' : task.status === 'active' ? 'text-secondary' : 'text-on-surface-variant'
-                  }`}>
+                  <div className={`h-12 w-12 rounded-2xl bg-surface-container flex items-center justify-center group-hover:border-primary/40 border border-transparent transition-all ${task.status === 'passed' ? 'text-primary' : task.status === 'active' ? 'text-secondary' : 'text-on-surface-variant'
+                    }`}>
                     <span className="material-symbols-outlined">
                       {task.status === 'passed' ? 'verified' : task.status === 'active' ? 'play_arrow' : 'lock'}
                     </span>
@@ -223,9 +222,8 @@ const Dashboard = () => {
                   {task.parts.length} parts • {task.parts.filter(p => p.status === 'passed').length} mastered
                 </p>
                 <div className="flex gap-2">
-                  <span className={`px-2 py-1 rounded-md text-[9px] font-label uppercase tracking-wider ${
-                    task.status === 'passed' ? 'bg-primary/20 text-primary' : task.status === 'active' ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
-                  }`}>
+                  <span className={`px-2 py-1 rounded-md text-[9px] font-label uppercase tracking-wider ${task.status === 'passed' ? 'bg-primary/20 text-primary' : task.status === 'active' ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
+                    }`}>
                     {task.status}
                   </span>
                 </div>

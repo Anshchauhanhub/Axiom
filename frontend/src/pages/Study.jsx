@@ -243,7 +243,7 @@ const Study = () => {
                     >
                       {/* Timeline Dot */}
                       <div className={`absolute left-[-31px] w-4 h-4 rounded-full border-4 border-surface-container-low z-20 ${
-                        isActive ? 'bg-primary animate-pulse shadow-[0_0_10px_rgba(76,215,246,0.6)]' : isPassed ? 'bg-secondary' : 'bg-outline-variant/40'
+                        isActive ? 'bg-secondary animate-pulse shadow-[0_0_12px_rgba(0,179,89,0.4)]' : isPassed ? 'bg-secondary' : 'bg-outline-variant/40'
                       }`}></div>
 
                       <div className="flex items-center gap-5">
@@ -306,7 +306,7 @@ const Study = () => {
               key={i}
               onClick={() => handleSelectOption(i)}
               className={`group relative flex items-start gap-6 p-8 bg-surface-container-low hover:bg-surface-container text-left transition-all duration-300 border rounded-xl active:scale-[0.98] ${
-                selectedOption === i ? 'border-primary/40 glow-blue' : 'border-transparent hover:border-primary/20'
+                selectedOption === i ? 'border-primary/40 glow-gold' : 'border-transparent hover:border-primary/20'
               }`}
             >
               <div className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg transition-colors ${
@@ -332,7 +332,7 @@ const Study = () => {
         <button
           onClick={handleNext}
           disabled={selectedOption === null || loading}
-          className="group relative px-12 py-5 bg-gradient-to-br from-primary to-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 glow-blue disabled:opacity-40"
+          className="group relative px-12 py-5 bg-gradient-to-br from-primary to-secondary rounded-full overflow-hidden transition-all duration-300 active:scale-95 glow-gold disabled:opacity-40"
         >
           <span className="relative font-label font-bold tracking-[0.3em] text-on-primary-container text-lg uppercase">
             {loading ? 'Processing...' : currentQ + 1 < quizData.length ? 'Next Question' : 'Submit Answers'}

@@ -20,19 +20,18 @@ const Sidebar = () => {
     <>
       {/* Desktop SideNavBar */}
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40">
-        <div className="mb-12 px-4">
-          <h2 className="text-[#e5e1e4] font-bold font-headline text-xl tracking-tighter uppercase">AXIOM AI</h2>
+        <div className="mb-10 px-2 flex items-center justify-center">
+          <img src="/logo.png" alt="Axiom Logo" className="w-56 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]" />
         </div>
         <nav className="flex-1 space-y-2">
           {navItems.map((item) => (
             <Link
               key={item.name}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 transition-all duration-300 ${
-                isActive(item.path)
-                  ? 'text-[#adc6ff] border-r-2 border-[#4cd7f6] bg-gradient-to-r from-[#4d8eff]/10 to-transparent'
+              className={`flex items-center gap-3 px-4 py-3 transition-all duration-300 ${isActive(item.path)
+                  ? 'text-primary border-r-2 border-secondary bg-gradient-to-r from-primary/10 to-transparent'
                   : 'text-[#353437] hover:bg-[#1c1b1d] hover:text-[#e5e1e4]'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-lg">{item.icon}</span>
               <span className="font-['Space_Grotesk'] uppercase tracking-widest text-xs">{item.name}</span>
@@ -51,7 +50,7 @@ const Sidebar = () => {
               </div>
             </div>
           ) : (
-            <Link 
+            <Link
               to="/onboarding"
               className="w-full py-3 bg-primary-container/20 text-primary border border-primary/20 rounded-lg font-label text-[10px] font-bold tracking-[0.2em] hover:bg-primary-container hover:text-on-primary-container transition-all uppercase block text-center"
             >
@@ -67,9 +66,8 @@ const Sidebar = () => {
           <Link
             key={item.name}
             to={item.path}
-            className={`flex flex-col items-center justify-center transition-all duration-200 ${
-              isActive(item.path) ? 'text-[#4cd7f6] bg-[#201f22] rounded-xl px-4 py-1' : 'text-[#353437]'
-            }`}
+            className={`flex flex-col items-center justify-center transition-all duration-200 ${isActive(item.path) ? 'text-secondary bg-[#201f22] rounded-xl px-4 py-1' : 'text-[#353437]'
+              }`}
           >
             <span className="material-symbols-outlined">{item.icon}</span>
             <span className="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-widest">{item.name}</span>
