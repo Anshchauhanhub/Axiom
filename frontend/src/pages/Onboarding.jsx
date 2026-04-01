@@ -9,7 +9,7 @@ const Onboarding = () => {
   const { user, loginUser } = useAuth();
   const { goals, refreshData } = useData();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -76,7 +76,7 @@ const Onboarding = () => {
       setIsTyping(false);
     }
   };
-  
+
   const handleToggleStatus = async (goalId) => {
     setLoading(true);
     try {
@@ -182,7 +182,7 @@ const Onboarding = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
-        
+
         {/* Chat Header */}
         <div className="w-full p-8 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50">
           <div>
@@ -199,15 +199,15 @@ const Onboarding = () => {
         </div>
 
         {/* Message Area */}
-        <div 
+        <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scrollbar"
         >
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
               <div className={`max-w-[85%] p-6 rounded-[2rem] shadow-xl ${m.role === 'user'
-                  ? 'bg-primary-container text-on-primary-container border border-primary/20 rounded-tr-none'
-                  : 'bg-surface-container-lowest border border-outline-variant/10 shadow-lg rounded-tl-none'
+                ? 'bg-primary-container text-on-primary-container border border-primary/20 rounded-tr-none'
+                : 'bg-surface-container-lowest border border-outline-variant/10 shadow-lg rounded-tl-none'
                 }`}>
                 <p className="text-sm leading-relaxed font-light whitespace-pre-wrap">{m.content}</p>
               </div>
@@ -278,21 +278,23 @@ const Onboarding = () => {
         {/* Chat Input */}
         <div className="p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
           <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              disabled={isTyping || phase === 'ready'}
-              placeholder={phase === 'ready' ? "Roadmap finalized. Press Activate to begin." : "Respond to Axiom..."}
-              className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-2xl px-8 py-5 pr-16 text-on-surface font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-xl disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!inputText.trim() || isTyping || phase === 'ready'}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-primary text-on-primary-container rounded-full flex items-center justify-center active:scale-90 transition-all disabled:opacity-20"
-            >
-              <span className="material-symbols-outlined text-xl">arrow_forward</span>
-            </button>
+            <div className="relative">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                disabled={isTyping || phase === 'ready'}
+                placeholder={phase === 'ready' ? "Roadmap finalized. Press Activate to begin." : "Respond to Axiom..."}
+                className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-xl disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={!inputText.trim() || isTyping || phase === 'ready'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-primary text-on-primary-container rounded-xl flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 shadow-lg shadow-primary/20 hover:brightness-110"
+              >
+                <span className="material-symbols-outlined text-2xl font-bold">arrow_forward</span>
+              </button>
+            </div>
 
             {/* Quick Suggestions */}
             {phase === 'discovery' && messages.length <= 2 && (
@@ -318,7 +320,7 @@ const Onboarding = () => {
       <aside className="w-full lg:w-80 flex flex-col gap-6 animate-in slide-in-from-right-8 duration-700">
         <div className="h-full bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 p-8 flex flex-col backdrop-blur-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-30"></div>
-          
+
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
               <span className="material-symbols-outlined text-primary text-xl">history</span>
@@ -337,11 +339,10 @@ const Onboarding = () => {
               </div>
             ) : (
               goals.map((goal) => (
-                <div key={goal.id} className={`group p-4 rounded-2xl border transition-all cursor-default relative overflow-hidden ${
-                  goal.status === 'active' 
-                    ? 'bg-primary/5 border-primary/30 shadow-[0_0_20px_rgba(77,142,255,0.05)]' 
+                <div key={goal.id} className={`group p-4 rounded-2xl border transition-all cursor-default relative overflow-hidden ${goal.status === 'active'
+                    ? 'bg-primary/5 border-primary/30 shadow-[0_0_20px_rgba(77,142,255,0.05)]'
                     : 'bg-surface-container-lowest/50 border-outline-variant/10 opacity-70 hover:opacity-100'
-                }`}>
+                  }`}>
                   <div className="flex justify-between items-start mb-3">
                     <h4 className="text-[12px] font-bold text-on-surface uppercase tracking-tight line-clamp-1 pr-2">
                       {goal.title}
@@ -364,11 +365,10 @@ const Onboarding = () => {
                     </div>
                     <button
                       onClick={() => handleToggleStatus(goal.id)}
-                      className={`px-3 py-1.5 rounded-lg font-label font-bold text-[8px] tracking-widest uppercase transition-all flex items-center gap-1.5 ${
-                        goal.status === 'active'
+                      className={`px-3 py-1.5 rounded-lg font-label font-bold text-[8px] tracking-widest uppercase transition-all flex items-center gap-1.5 ${goal.status === 'active'
                           ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
                           : 'bg-surface-container-highest text-on-surface-variant hover:bg-primary/10 hover:text-primary border border-outline-variant/20'
-                      }`}
+                        }`}
                     >
                       <span className="material-symbols-outlined text-[12px]">
                         {goal.status === 'active' ? 'pause' : 'play_arrow'}
