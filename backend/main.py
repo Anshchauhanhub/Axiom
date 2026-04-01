@@ -125,13 +125,17 @@ if os.path.exists(STATIC_DIR):
     @app.get("/{full_path:path}", response_class=FileResponse)
     async def serve_spa(request: Request, full_path: str):
         # Exclude common API-like prefixes
-        if full_path.startswith(("auth", "goals", "quiz", "telegram", "profile", "users")):
+        if full_path.startswith(("auth", "goals", "quiz", "telegram", "profile", "users", "api")):
              return {"detail": "API endpoint not found", "path": full_path}
              
+        # Check if requested file exists in STATIC_DIR (like logo.png, favicon.ico)
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+
+        # Fallback to index.html for SPA routing
         index_path = os.path.join(STATIC_DIR, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        return FileResponse(os.path.join(STATIC_DIR, "index.html")) # Fallback
+        return FileResponse(index_path)
 else:
     logger.warning(f"⚠️ Static directory NOT found at {STATIC_DIR}. Frontend will not be served.")
 
