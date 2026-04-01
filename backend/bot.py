@@ -216,6 +216,29 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user = user_result.scalar_one_or_none()
 
             from models import QuizResult
+            from datetime import datetime, timezone
+            
+            should_increment = False
+            if is_passed and user:
+                recent_passed_result = await db.execute(
+                    select(QuizResult)
+                    .where(QuizResult.user_id == user.id)
+                    .where(QuizResult.is_passed == True)
+                    .order_by(QuizResult.completed_at.desc())
+                    .limit(1)
+                )
+                last_passed = recent_passed_result.scalar_one_or_none()
+                today = datetime.now(timezone.utc).date()
+                
+                if not last_passed:
+                    should_increment = True
+                else:
+                    last_date = (last_passed.completed_at.replace(tzinfo=timezone.utc).date() 
+                                 if last_passed.completed_at.tzinfo is None 
+                                 else last_passed.completed_at.astimezone(timezone.utc).date())
+                    if last_date < today:
+                        should_increment = True
+
             qr = QuizResult(
                 user_id=user.id,
                 part_id=quiz.part_id,
@@ -225,7 +248,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.add(qr)
 
             if is_passed and user:
-                user.current_streak += 1
+                if should_increment:
+                    user.current_streak += 1
                 part_r = await db.execute(select(Part).where(Part.id == quiz.part_id))
                 pt = part_r.scalar_one_or_none()
                 if pt:
