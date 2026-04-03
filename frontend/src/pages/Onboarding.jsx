@@ -178,7 +178,18 @@ const Onboarding = () => {
 
   return (
     <div className="w-full flex-1 min-h-[500px] flex flex-col lg:flex-row gap-6 animate-in fade-in duration-1000">
-      {loading && <NeuralLoader message="Synchronizing Systems" />}
+      {loading && (
+        <NeuralLoader 
+          message="SYNTHESIZING NEURAL PATH" 
+          subMessages={[
+            'Scanning global repositories',
+            'Calibrating neural roadmap',
+            'Tapping into node archives',
+            'Finalizing pathway synthesis',
+            'Synchronizing bio-locked records',
+          ]}
+        />
+      )}
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
