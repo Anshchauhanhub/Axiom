@@ -58,7 +58,12 @@ const Study = () => {
       setActiveTask(foundTask);
       setActiveGoal(foundGoal);
       setNotes(foundGoal?.notes || '');
-      setPhase('select');
+      
+      // Fix: Only reset to 'select' if we are in the initial loading state.
+      // This prevents refreshData() calls from kicking the user out of the Result or Learning phases.
+      if (phase === 'loading') {
+        setPhase('select');
+      }
     }
   }, [user, roadmap, goals, navigate]);
 
