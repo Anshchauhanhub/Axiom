@@ -213,6 +213,99 @@ const Study = () => {
     </>
   );
 
+  const renderParsedContent = (text) => {
+    const lines = text.split('\n');
+    const elements = [];
+    let currentBlock = [];
+    let inCodeBlock = false;
+    let codeLanguage = '';
+
+    const parseInline = (line) => {
+      // Handle **bold**
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="font-black text-on-surface bg-primary/10 px-1 rounded">{part.slice(2, -2)}</strong>;
+        }
+        // Handle `code`
+        const codeParts = part.split(/(`.*?`)/g);
+        return codeParts.map((cp, j) => {
+          if (cp.startsWith('`') && cp.endsWith('`')) {
+            return <code key={j} className="bg-surface-container-highest px-1.5 py-0.5 rounded font-mono text-primary text-sm font-bold uppercase tracking-tighter">{cp.slice(1, -1)}</code>;
+          }
+          return cp;
+        });
+      });
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (line.startsWith('```')) {
+        if (inCodeBlock) {
+          // Close block
+          elements.push(
+            <div key={`code-${i}`} className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl group transition-all duration-500 hover:border-primary/30">
+              <div className="bg-surface-container flex items-center justify-between px-6 py-3 border-b border-outline-variant/10">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
+                </div>
+                <span className="text-[9px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant/40">{codeLanguage || 'SYNTAX'}</span>
+              </div>
+              <pre className="p-8 bg-[#0b0c10] overflow-x-auto custom-scrollbar">
+                <code className="text-sm font-mono text-slate-300 leading-relaxed block whitespace-pre">
+                  {currentBlock.join('\n')}
+                </code>
+              </pre>
+            </div>
+          );
+          currentBlock = [];
+          inCodeBlock = false;
+        } else {
+          // Open block
+          inCodeBlock = true;
+          codeLanguage = line.slice(3).toUpperCase();
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        currentBlock.push(lines[i]);
+        continue;
+      }
+
+      if (line === '') {
+        elements.push(<div key={`space-${i}`} className="h-6" />);
+        continue;
+      }
+
+      if (line.startsWith('# ')) {
+        elements.push(<h1 key={i} className="text-4xl font-black text-on-surface mt-10 mb-6 uppercase tracking-tighter flex items-center gap-4 animate-in slide-in-from-left duration-500">{parseInline(line.replace('# ', ''))}</h1>);
+      } else if (line.startsWith('## ')) {
+        elements.push(<h2 key={i} className="text-2xl font-black text-on-surface mt-12 mb-6 uppercase tracking-tighter flex items-center gap-4"><div className="w-3 h-3 bg-primary rounded-sm rotate-45"></div>{parseInline(line.replace('## ', ''))}</h2>);
+      } else if (line.startsWith('### ')) {
+        elements.push(<h3 key={i} className="text-lg font-bold text-on-surface-variant mt-10 mb-4 tracking-widest uppercase flex items-center gap-3"><div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>{parseInline(line.replace('### ', ''))}</h3>);
+      } else if (line.startsWith('* ') || line.startsWith('- ')) {
+        elements.push(
+          <div key={i} className="flex gap-5 items-start ml-6 my-4 group transition-all duration-300">
+            <div className="mt-1.5 flex flex-col items-center gap-1 group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-primary text-base font-black">token</span>
+            </div>
+            <p className="flex-1 m-0 text-on-surface-variant leading-relaxed text-lg font-light group-hover:text-on-surface transition-colors">
+              {parseInline(line.substring(2))}
+            </p>
+          </div>
+        );
+      } else {
+        elements.push(<p key={i} className="m-0 text-on-surface-variant/80 font-light leading-loose text-lg">{parseInline(line)}</p>);
+      }
+    }
+
+    return elements;
+  };
+
   const renderNotebook = () => (
     <div className={`flex flex-col bg-[#0b0c10] border-l border-outline-variant/10 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[50%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
       <div className="h-full flex flex-col p-6 lg:p-10">
@@ -358,17 +451,11 @@ const Study = () => {
         </header>
 
         <div className="bg-surface-container-low border border-outline-variant/10 rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative transition-all duration-500 hover:border-primary/10">
-          <div className="prose prose-invert max-w-none text-on-surface-variant/80 font-light leading-loose space-y-8 text-lg">
-            {learningContent.split('\n').map((line, i) => {
-              if (line.startsWith('## ')) return <h2 key={i} className="text-3xl font-black text-on-surface mt-12 mb-6 uppercase tracking-tighter flex items-center gap-4"><div className="w-2 h-2 bg-primary rounded-full"></div>{line.replace('## ', '')}</h2>;
-              if (line.startsWith('### ')) return <h3 key={i} className="text-xl font-bold text-on-surface-variant mt-10 mb-4 italic tracking-wide">{line.replace('### ', '')}</h3>;
-              if (line.startsWith('- ')) return <div key={i} className="flex gap-4 items-start ml-4"><span className="text-primary mt-1">▹</span><p className="flex-1 m-0">{line.replace('- ', '')}</p></div>;
-              if (line.trim() === '') return <div key={i} className="h-4" />;
-              return <p key={i} className="m-0">{line}</p>;
-            })}
+          <div className="max-w-none text-on-surface-variant/80 font-light leading-relaxed text-lg">
+             {renderParsedContent(learningContent)}
           </div>
           <div className="mt-20 pt-10 border-t border-outline-variant/10 flex flex-col items-center">
-             <span className="text-[10px] font-label text-on-surface-variant/30 uppercase tracking-[0.3em] mb-8 italic">Neural integrity verification required for progression</span>
+             <span className="text-[10px] font-label text-on-surface-variant/30 uppercase tracking-[0.3em] mb-8 italic text-center">Neural integrity verification required for progression</span>
             <button
               onClick={handleStartQuiz}
               className="group relative px-16 py-6 bg-gradient-to-br from-primary via-primary to-secondary rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-[0_20px_50px_rgba(253,184,19,0.3)] hover:shadow-primary/40"
