@@ -11,7 +11,11 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends     build-essential     libpq-dev     gcc     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Backend dependencies
 COPY backend/requirements.txt ./
@@ -28,4 +32,4 @@ ENV PORT=8000
 EXPOSE 8000
 
 # Run the application
-CMD [python, main.py]
+CMD ["python3", "main.py"]
