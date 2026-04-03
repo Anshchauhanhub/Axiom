@@ -148,3 +148,23 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         except Exception as e:
             logger.error(f"Error in onboarding chat: {e}")
             raise
+
+
+async def generate_documentation(topic: str, research_data: str) -> str:
+    """Synthesize a structured study guide for a topic using research data."""
+    system_prompt = (
+        "You are Axiom AI, a high-fidelity learning synthesizer. "
+        "Your goal is to create a comprehensive, engaging, and structured study guide "
+        "based on the provided raw research data. "
+        "### GUIDELINES:\n"
+        "1. **Structured Layout**: Use Markdown headers (##, ###).\n"
+        "2. **Content Depth**: Explain core concepts, 'why it matters', and 'how it works' in detail.\n"
+        "3. **Visual Aids**: Use bullet points, bold text for key terms, and code blocks if applicable.\n"
+        "4. **Tone**: Intellectual, professional, yet accessible.\n"
+        "5. **Formatting**: Ensure it looks premium when rendered in a dark-themed UI.\n"
+        "\n"
+        "Return ONLY the Markdown content, no conversational fillers."
+    )
+    user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}"
+
+    return await call_groq(system_prompt, user_prompt)

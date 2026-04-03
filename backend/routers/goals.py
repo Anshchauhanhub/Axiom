@@ -7,10 +7,11 @@ from database import get_db
 from models import User, Goal, Task, Part
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
-    OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest
+    PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest
 )
 from auth import get_current_user
 from services.groq import generate_roadmap
+from services.synthesis import synthesize_part_content
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
  
@@ -366,3 +367,43 @@ async def toggle_goal_status(
     await db.commit()
     await db.refresh(goal)
     return goal
+
+
+@router.get("/parts/{part_id}/content", response_model=PartContentResponse)
+async def get_part_content(
+    part_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch the synthesized documentation for a roadmap part.
+    Generates it via Neural Synthesis if not already present.
+    """
+    result = await db.execute(
+        select(Part).where(Part.id == part_id)
+    )
+    part = result.scalar_one_or_none()
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    # Check if content already exists
+    if part.content:
+        return PartContentResponse(
+            part_id=part.id,
+            title=part.title,
+            content=part.content
+        )
+
+    # Trigger Neural Synthesis
+    try:
+        content = await synthesize_part_content(part.title)
+        part.content = content
+        await db.commit()
+        
+        return PartContentResponse(
+            part_id=part.id,
+            title=part.title,
+            content=content
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Neural Synthesis failed: {str(e)}")

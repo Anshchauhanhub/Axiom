@@ -5,9 +5,10 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import User, Goal, Part, Task, ActiveQuiz, QuizResult
+from models import User, Goal, Part, Task, QuizResult
 from schemas import StartQuizResponse, SubmitAnswerRequest, QuizResultResponse
-from auth import get_current_user
+from auth import get_current_user, JWT_SECRET, JWT_ALGORITHM
+from jose import jwt, JWTError
 from services.groq import generate_mcqs
 
 router = APIRouter(prefix="/quiz", tags=["Sudden Death Quiz"])
@@ -15,16 +16,27 @@ router = APIRouter(prefix="/quiz", tags=["Sudden Death Quiz"])
 QUIZ_EXPIRY_MINUTES = 15
 
 
-async def _cleanup_expired(user_id, db: AsyncSession):
-    """Delete all expired active quizzes for a user."""
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=QUIZ_EXPIRY_MINUTES)
-    await db.execute(
-        delete(ActiveQuiz).where(
-            ActiveQuiz.user_id == user_id,
-            ActiveQuiz.created_at < cutoff,
-        )
-    )
-    await db.commit()
+def _create_quiz_token(user_id: str, part_id: str, correct_indices: list[int]) -> str:
+    """Create a temporary signed token for the quiz session."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=QUIZ_EXPIRY_MINUTES)
+    payload = {
+        "sub": user_id,
+        "part_id": part_id,
+        "answers": correct_indices,
+        "exp": expire
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _verify_quiz_token(token: str, user_id: str):
+    """Verify and decode the quiz session token."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("sub") != user_id:
+            raise HTTPException(status_code=401, detail="Invalid quiz session")
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=410, detail="Quiz session expired or invalid")
 
 
 @router.post("/start/{part_id}", response_model=StartQuizResponse)
@@ -33,39 +45,7 @@ async def start_quiz(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Clean up any expired quizzes first
-    await _cleanup_expired(user.id, db)
-
-    # Check if already has an active quiz for this part
-    existing = await db.execute(
-        select(ActiveQuiz).where(
-            ActiveQuiz.user_id == user.id,
-            ActiveQuiz.part_id == part_id,
-        )
-    )
-    active = existing.scalar_one_or_none()
-
-    if active:
-        # Check if expired
-        elapsed = datetime.now(timezone.utc) - active.created_at.replace(tzinfo=timezone.utc)
-        if elapsed > timedelta(minutes=QUIZ_EXPIRY_MINUTES):
-            await db.delete(active)
-            await db.commit()
-            # Fall through to generate new
-        else:
-            # Return existing quiz (without correct answers)
-            questions_safe = [
-                {"question": q["question"], "options": q["options"]}
-                for q in active.questions_json
-            ]
-            part_result = await db.execute(select(Part).where(Part.id == part_id))
-            part = part_result.scalar_one_or_none()
-            return StartQuizResponse(
-                quiz_id=active.id,
-                part_title=part.title if part else "Unknown",
-                questions=questions_safe,
-            )
-
+    """Stateless quiz: doesn't save to DB, creates a 'Neural Seal' (JWT)."""
     # Get part info
     part_result = await db.execute(select(Part).where(Part.id == part_id))
     part = part_result.scalar_one_or_none()
@@ -74,26 +54,20 @@ async def start_quiz(
     if part.status == "locked":
         raise HTTPException(status_code=403, detail="This part is locked. Complete previous parts first.")
 
-    # Generate MCQs via Groq
+    # Generate random MCQs via Groq
     mcqs = await generate_mcqs(part.title, count=5)
 
-    # Save to active_quizzes
-    quiz = ActiveQuiz(
-        user_id=user.id,
-        part_id=part.id,
-        questions_json=mcqs,
-    )
-    db.add(quiz)
-    await db.commit()
-    await db.refresh(quiz)
+    # Extract correct answers for the secret token
+    correct_indices = [q.get("correct_index") for q in mcqs]
+    quiz_token = _create_quiz_token(str(user.id), str(part.id), correct_indices)
 
-    # Return without correct_index
+    # Return safe questions list (without correct answers)
     questions_safe = [
         {"question": q["question"], "options": q["options"]}
         for q in mcqs
     ]
     return StartQuizResponse(
-        quiz_id=quiz.id,
+        quiz_token=quiz_token,
         part_title=part.title,
         questions=questions_safe,
     )
@@ -105,37 +79,21 @@ async def submit_quiz(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Find active quiz
-    result = await db.execute(
-        select(ActiveQuiz).where(
-            ActiveQuiz.id == req.quiz_id,
-            ActiveQuiz.user_id == user.id,
-        )
-    )
-    quiz = result.scalar_one_or_none()
-    if not quiz:
-        raise HTTPException(status_code=404, detail="No active quiz found. It may have expired.")
-
-    # Check 15-minute expiry
-    elapsed = datetime.now(timezone.utc) - quiz.created_at.replace(tzinfo=timezone.utc)
-    if elapsed > timedelta(minutes=QUIZ_EXPIRY_MINUTES):
-        await db.delete(quiz)
-        await db.commit()
-        raise HTTPException(
-            status_code=410,
-            detail="Session expired. Generating new questions for your restart.",
-        )
+    """Verify stateless quiz via token."""
+    # Decode and verify the quiz session token
+    payload = _verify_quiz_token(req.quiz_token, str(user.id))
+    part_id = payload.get("part_id")
+    correct_indices = payload.get("answers")
 
     # Score the quiz
-    questions = quiz.questions_json
-    if len(req.answers) != len(questions):
-        raise HTTPException(status_code=400, detail=f"Expected {len(questions)} answers, got {len(req.answers)}")
+    if len(req.answers) != len(correct_indices):
+        raise HTTPException(status_code=400, detail=f"Expected {len(correct_indices)} answers, got {len(req.answers)}")
 
     correct = sum(
-        1 for i, q in enumerate(questions)
-        if req.answers[i] == q.get("correct_index")
+        1 for i, correct_idx in enumerate(correct_indices)
+        if req.answers[i] == correct_idx
     )
-    score = (correct / len(questions)) * 100
+    score = (correct / len(correct_indices)) * 100
     is_passed = score >= 80
 
     # Check if we should increment streak today (before adding the current result)
@@ -163,7 +121,7 @@ async def submit_quiz(
     # Save result
     quiz_result = QuizResult(
         user_id=user.id,
-        part_id=quiz.part_id,
+        part_id=part_id,
         score_percent=score,
         is_passed=is_passed,
     )
@@ -172,7 +130,7 @@ async def submit_quiz(
     # If passed: unlock next part, update streak
     if is_passed:
         # Mark part as passed
-        part_result = await db.execute(select(Part).where(Part.id == quiz.part_id))
+        part_result = await db.execute(select(Part).where(Part.id == part_id))
         part = part_result.scalar_one_or_none()
         if part:
             part.status = "passed"
@@ -227,8 +185,6 @@ async def submit_quiz(
         if should_increment:
             user.current_streak += 1
 
-    # Always delete active quiz (passed or failed)
-    await db.delete(quiz)
     await db.commit()
 
     message = (
@@ -245,30 +201,5 @@ async def get_active_quiz(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Check if user has any active quiz."""
-    await _cleanup_expired(user.id, db)
-
-    result = await db.execute(
-        select(ActiveQuiz).where(ActiveQuiz.user_id == user.id)
-    )
-    quiz = result.scalar_one_or_none()
-    if not quiz:
-        return {"active": False}
-
-    questions_safe = [
-        {"question": q["question"], "options": q["options"]}
-        for q in quiz.questions_json
-    ]
-    part_result = await db.execute(select(Part).where(Part.id == quiz.part_id))
-    part = part_result.scalar_one_or_none()
-
-    elapsed = datetime.now(timezone.utc) - quiz.created_at.replace(tzinfo=timezone.utc)
-    remaining = max(0, QUIZ_EXPIRY_MINUTES * 60 - elapsed.total_seconds())
-
-    return {
-        "active": True,
-        "quiz_id": str(quiz.id),
-        "part_title": part.title if part else "Unknown",
-        "questions": questions_safe,
-        "remaining_seconds": int(remaining),
-    }
+    """For stateless quizzes, we don't have a DB record to resume."""
+    return {"active": False}

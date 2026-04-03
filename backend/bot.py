@@ -11,7 +11,7 @@ from sqlalchemy import select
 from dotenv import load_dotenv
 
 from database import async_session
-from models import User, Goal, Task, Part, ActiveQuiz
+from models import User, Goal, Task, Part
 from services.groq import generate_mcqs
 
 load_dotenv()
@@ -128,22 +128,15 @@ async def handle_quiz_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("❌ Part not found.")
             return
 
-        # Generate MCQs
+        # Generate random MCQs
         mcqs = await generate_mcqs(part.title, count=5)
 
-        quiz = ActiveQuiz(
-            user_id=user.id,
-            part_id=part.id,
-            questions_json=mcqs,
-        )
-        db.add(quiz)
-        await db.commit()
-        await db.refresh(quiz)
-
-        # Store quiz ID in context for answer handling
-        context.user_data["active_quiz_id"] = str(quiz.id)
+        # Store quiz data in bot's memory (stateless relative to DB)
+        context.user_data["correct_indices"] = [q.get("correct_index") for q in mcqs]
+        context.user_data["mcqs"] = mcqs  # Store for reference during scoring
+        context.user_data["part_id"] = str(part.id)
         context.user_data["current_q"] = 0
-        context.user_data["answers"] = []
+        context.user_data["user_answers"] = []
 
         # Send first question
         await send_question(query.message, context, mcqs, 0)
@@ -177,38 +170,36 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q_idx = int(parts[1])
     answer_idx = int(parts[2])
 
-    answers = context.user_data.get("answers", [])
-    answers.append(answer_idx)
-    context.user_data["answers"] = answers
+    user_answers = context.user_data.get("user_answers", [])
+    user_answers.append(answer_idx)
+    context.user_data["user_answers"] = user_answers
 
-    quiz_id = context.user_data.get("active_quiz_id")
-    chat_id = query.message.chat_id
+    correct_indices = context.user_data.get("correct_indices")
+    mcqs = context.user_data.get("mcqs")
+    part_id = context.user_data.get("part_id")
+    
+    if not mcqs or correct_indices is None:
+        await query.edit_message_text("❌ Quiz session lost or expired. Start a new one with /quiz.")
+        return
 
-    async with async_session() as db:
-        result = await db.execute(
-            select(ActiveQuiz).where(ActiveQuiz.id == quiz_id)
+    next_idx = q_idx + 1
+
+    if next_idx < len(mcqs):
+        # Send next question
+        await query.edit_message_text(f"✅ Answer recorded for Q{q_idx+1}.")
+        await send_question(query.message, context, mcqs, next_idx)
+    else:
+        # All answered — score it
+        correct = sum(
+            1 for i, correct_idx in enumerate(correct_indices)
+            if user_answers[i] == correct_idx
         )
-        quiz = result.scalar_one_or_none()
-        if not quiz:
-            await query.edit_message_text("❌ Quiz expired or not found.")
-            return
+        score = (correct / len(mcqs)) * 100
+        is_passed = score >= 80
 
-        mcqs = quiz.questions_json
-        next_idx = q_idx + 1
+        chat_id = query.message.chat_id
 
-        if next_idx < len(mcqs):
-            # Send next question
-            await query.edit_message_text(f"✅ Answer recorded for Q{q_idx+1}.")
-            await send_question(query.message, context, mcqs, next_idx)
-        else:
-            # All answered — score it
-            correct = sum(
-                1 for i, q in enumerate(mcqs)
-                if answers[i] == q.get("correct_index")
-            )
-            score = (correct / len(mcqs)) * 100
-            is_passed = score >= 80
-
+        async with async_session() as db:
             # Get user
             user_result = await db.execute(
                 select(User).where(User.telegram_chat_id == chat_id)
@@ -241,7 +232,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             qr = QuizResult(
                 user_id=user.id,
-                part_id=quiz.part_id,
+                part_id=part_id,
                 score_percent=score,
                 is_passed=is_passed,
             )
@@ -250,7 +241,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if is_passed and user:
                 if should_increment:
                     user.current_streak += 1
-                part_r = await db.execute(select(Part).where(Part.id == quiz.part_id))
+                part_r = await db.execute(select(Part).where(Part.id == part_id))
                 pt = part_r.scalar_one_or_none()
                 if pt:
                     pt.status = "passed"
@@ -295,7 +286,6 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 if fp:
                                     fp.status = "active"
 
-            await db.delete(quiz)
             await db.commit()
 
             if is_passed:

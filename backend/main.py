@@ -48,13 +48,12 @@ async def lifespan(app: FastAPI):
             set_bot(bot_app.bot)
 
             # Start polling with conflict handling
-            await bot_app.start()
             try:
                 await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
             except Exception as polling_err:
                 if "Conflict" in str(polling_err):
-                    logger.warning("⚠️ Bot conflict detected (possibly old instance still shutting down). Retrying in 2s...")
-                    await asyncio.sleep(2)
+                    logger.warning("⚠️ Bot conflict detected. Retrying in 5s (waiting for old instance)...")
+                    await asyncio.sleep(5)
                     await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
                 else:
                     raise polling_err

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { startQuiz, submitQuiz } from '../services/api';
+import { startQuiz, submitQuiz, getPartContent } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 
@@ -13,7 +13,7 @@ const Study = () => {
   const [activeTask, setActiveTask] = useState(null);
   const [activeGoal, setActiveGoal] = useState(null);
   const [quizData, setQuizData] = useState(null);
-  const [quizId, setQuizId] = useState(null);
+  const [quizToken, setQuizToken] = useState(null);
   const [partTitle, setPartTitle] = useState('');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -24,6 +24,9 @@ const Study = () => {
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(15 * 60);
+  const [learningContent, setLearningContent] = useState(null);
+  const [activePartId, setActivePartId] = useState(null);
+  const [loadingContent, setLoadingContent] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -73,14 +76,34 @@ const Study = () => {
     return () => clearInterval(timerRef.current);
   }, [phase]);
 
-  const handleStartQuiz = async (partId, title) => {
+  const handleStartLearning = async (partId, title) => {
+    setLoading(true);
+    setLoadingContent(true);
+    setError('');
+    setActivePartId(partId);
+    setPartTitle(title);
+    try {
+      const data = await getPartContent(partId);
+      setLearningContent(data.content);
+      setPhase('learning');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+      setLoadingContent(false);
+    }
+  };
+
+  const handleStartQuiz = async () => {
+    const partId = activePartId;
+    const title = partTitle;
     setLoading(true);
     setLoadingQuiz(true);
     setError('');
     try {
       const data = await startQuiz(partId);
       setQuizData(data.questions);
-      setQuizId(data.quiz_id);
+      setQuizToken(data.quiz_token);
       setPartTitle(title);
       setCurrentQ(0);
       setAnswers([]);
@@ -115,7 +138,7 @@ const Study = () => {
     setSubmittingQuiz(true);
     clearInterval(timerRef.current);
     try {
-      const res = await submitQuiz(quizId, finalAnswers);
+      const res = await submitQuiz(quizToken, finalAnswers);
       setResult(res);
       setSubmittingQuiz(false);
       setPhase('result');
@@ -147,13 +170,13 @@ const Study = () => {
     <>
       {loadingQuiz && (
         <NeuralLoader
-          message="Generating Study Session"
+          message="CREATING NEURAL QUIZ"
           subMessages={[
-            'Analyzing module content',
-            'Crafting intelligent questions',
-            'Calibrating difficulty level',
-            'Building answer options',
-            'Preparing your challenge',
+            'Creating custom challenge',
+            'Calibrating neural depth',
+            'Tapping into node repositories',
+            'Preparing verification parameters',
+            'Finalizing neural synthesis',
           ]}
         />
       )}
@@ -166,6 +189,18 @@ const Study = () => {
             'Validating knowledge depth',
             'Generating performance report',
             'Updating your progress',
+          ]}
+        />
+      )}
+      {loadingContent && (
+        <NeuralLoader
+          message="Synthesizing Knowledge"
+          subMessages={[
+            'Tapping into neural repositories',
+            'Scraping real-time records',
+            'Structuring documentation',
+            'Calibrating educational depth',
+            'Finalizing neural synthesis',
           ]}
         />
       )}
@@ -239,7 +274,7 @@ const Study = () => {
                         ? 'bg-surface-container-highest/40 border-primary/30 shadow-lg shadow-primary/5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]' 
                         : 'bg-transparent border-outline-variant/10'
                       } ${isLocked ? 'opacity-40' : 'opacity-100'}`}
-                      onClick={() => isActive && handleStartQuiz(part.id, part.title)}
+                      onClick={() => isActive && handleStartLearning(part.id, part.title)}
                     >
                       {/* Timeline Dot */}
                       <div className={`absolute left-[-31px] w-4 h-4 rounded-full border-4 border-surface-container-low z-20 ${
@@ -274,6 +309,51 @@ const Study = () => {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // LEARNING PHASE
+  if (phase === 'learning' && learningContent) {
+    return (
+      <div className="animate-in slide-in-from-bottom duration-1000 max-w-4xl mx-auto w-full">
+        {renderLoaders()}
+        <header className="mb-12 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-label tracking-[0.2em] text-primary uppercase font-bold mb-2 block">Neural Documentation</span>
+            <h2 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tight">{partTitle}</h2>
+          </div>
+          <button 
+            onClick={() => setPhase('select')}
+            className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </header>
+
+        <div className="bg-surface-container-low border border-outline-variant/10 rounded-[2.5rem] p-10 md:p-16 shadow-2xl relative">
+          {/* Content area with some markdown-ish styling */}
+          <div className="prose prose-invert max-w-none text-on-surface-variant font-light leading-relaxed space-y-6">
+            {learningContent.split('\n').map((line, i) => {
+              if (line.startsWith('## ')) return <h2 key={i} className="text-2xl font-bold text-on-surface mt-8 mb-4">{line.replace('## ', '')}</h2>;
+              if (line.startsWith('### ')) return <h3 key={i} className="text-xl font-bold text-on-surface mt-6 mb-3">{line.replace('### ', '')}</h3>;
+              if (line.startsWith('- ')) return <li key={i} className="ml-4 list-disc marker:text-primary">{line.replace('- ', '')}</li>;
+              if (line.trim() === '') return <br key={i} />;
+              return <p key={i}>{line}</p>;
+            })}
+          </div>
+
+          <div className="mt-16 pt-8 border-t border-outline-variant/10 flex flex-col items-center">
+            <p className="text-[10px] font-label text-on-surface-variant/40 uppercase tracking-[0.3em] mb-8 italic">Neural integrity verification required for progression</p>
+            <button
+              onClick={handleStartQuiz}
+              className="group relative px-12 py-5 bg-gradient-to-br from-primary to-secondary rounded-full overflow-hidden transition-all duration-300 active:scale-95 glow-gold"
+            >
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span className="relative font-label font-bold tracking-[0.3em] text-on-primary-container text-lg uppercase">Begin Quiz</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -366,7 +446,7 @@ const Study = () => {
               Continue
             </button>
           ) : (
-            <button onClick={() => { setPhase('select'); loadParts(); }} className="px-10 py-4 rounded-full bg-gradient-to-br from-error to-error-container text-white font-label text-xs font-bold tracking-widest uppercase shadow-xl shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all">
+            <button onClick={() => { setPhase('select'); refreshData(); }} className="px-10 py-4 rounded-full bg-gradient-to-br from-error to-error-container text-white font-label text-xs font-bold tracking-widest uppercase shadow-xl shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all">
               Try Again
             </button>
           )}
