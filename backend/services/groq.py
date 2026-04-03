@@ -144,9 +144,19 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
             response.raise_for_status()
             data = response.json()
             raw_content = data["choices"][0]["message"]["content"]
-            return json.loads(raw_content)
+            
+            # Use _clean_json to handle potential markdown wrappers even with json_object format
+            cleaned = _clean_json(raw_content)
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
+                raise ValueError(f"AI response is not valid JSON: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
+            raise
         except Exception as e:
-            logger.error(f"Error in onboarding chat: {e}")
+            logger.error(f"Unexpected error in onboarding chat: {e}")
             raise
 
 
