@@ -176,10 +176,10 @@ const Study = () => {
     <>
       {loadingQuiz && (
         <NeuralLoader
-          message="CREATING NEURAL QUIZ"
+          message="SYNTHESIZING VERIFICATION"
           subMessages={[
-            'Creating custom challenge',
-            'Calibrating neural depth',
+            'Creating custom neural challenge',
+            'Calibrating knowledge depth',
             'Tapping into node repositories',
             'Preparing verification parameters',
             'Finalizing neural synthesis',
@@ -188,13 +188,13 @@ const Study = () => {
       )}
       {submittingQuiz && (
         <NeuralLoader
-          message="Evaluating Answers"
+          message="NEURAL EVALUATION"
           subMessages={[
-            'Analyzing your responses',
+            'Analyzing neural responses',
             'Computing mastery score',
-            'Validating knowledge depth',
-            'Generating performance report',
-            'Updating your progress',
+            'Validating knowledge integrity',
+            'Generating final performance record',
+            'Updating neural archives',
           ]}
         />
       )}
