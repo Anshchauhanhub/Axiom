@@ -466,7 +466,7 @@ const Study = () => {
               className="group relative px-16 py-6 bg-gradient-to-br from-primary via-primary to-secondary rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-[0_20px_50px_rgba(253,184,19,0.3)] hover:shadow-primary/40"
             >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <span className="relative font-label font-black tracking-[0.5em] text-on-primary-container text-lg uppercase">Begin Verification</span>
+              <span className="relative font-label font-black tracking-[0.5em] text-on-primary-container text-lg uppercase">TAKE QUIZ</span>
             </button>
           </div>
         </div>
