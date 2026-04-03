@@ -6,20 +6,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = logging.getLogger("axiom.grok")
+logger = logging.getLogger("axiom.groq")
 
-GROK_API_KEY = os.getenv("GROK_API_KEY")
-GROK_BASE_URL = os.getenv("GROK_BASE_URL", "https://api.groq.com/openai/v1")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 
 
-async def call_grok(system_prompt: str, user_prompt: str) -> str:
-    """Call Groq/Grok API with a system and user prompt. Returns raw text."""
+async def call_groq(system_prompt: str, user_prompt: str) -> str:
+    """Call Groq API with a system and user prompt. Returns raw text."""
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
-                f"{GROK_BASE_URL}/chat/completions",
+                f"{GROQ_BASE_URL}/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {GROK_API_KEY}",
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
                     "Content-Type": "application/json",
                 },
                 json={
@@ -70,7 +70,7 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
     )
     user_prompt = f"Create a detailed learning roadmap for: {goal_title}"
 
-    raw = await call_grok(system_prompt, user_prompt)
+    raw = await call_groq(system_prompt, user_prompt)
     cleaned = _clean_json(raw)
 
     try:
@@ -91,7 +91,7 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
     )
     user_prompt = f"Generate {count} challenging MCQs about: {topic}"
 
-    raw = await call_grok(system_prompt, user_prompt)
+    raw = await call_groq(system_prompt, user_prompt)
     cleaned = _clean_json(raw)
 
     try:
@@ -125,18 +125,13 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "with 5-8 sub-parts each to cover the entire curriculum depth."
     )
 
-    # Convert schemas/dicts to pure message list if needed, handle here
-    raw = await call_grok(system_prompt, str(messages)) # Simplified, usually better to map Properly
-    # Mapping for call_grok which specifically takes (system, user)
-    # We should probably update call_grok or use it carefully.
-    
-    # Let's use a slightly different approach for the multi-turn chat
+    # Note: Using the multi-turn chat approach
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
-                f"{GROK_BASE_URL}/chat/completions",
+                f"{GROQ_BASE_URL}/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {GROK_API_KEY}",
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
                     "Content-Type": "application/json",
                 },
                 json={

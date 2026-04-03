@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 from database import async_session
 from models import User, Goal, Task, Part, ActiveQuiz
-from services.grok import generate_mcqs
+from services.groq import generate_mcqs
 
 load_dotenv()
 

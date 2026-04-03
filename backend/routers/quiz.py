@@ -8,7 +8,7 @@ from database import get_db
 from models import User, Goal, Part, Task, ActiveQuiz, QuizResult
 from schemas import StartQuizResponse, SubmitAnswerRequest, QuizResultResponse
 from auth import get_current_user
-from services.grok import generate_mcqs
+from services.groq import generate_mcqs
 
 router = APIRouter(prefix="/quiz", tags=["Sudden Death Quiz"])
 
@@ -74,7 +74,7 @@ async def start_quiz(
     if part.status == "locked":
         raise HTTPException(status_code=403, detail="This part is locked. Complete previous parts first.")
 
-    # Generate MCQs via Grok
+    # Generate MCQs via Groq
     mcqs = await generate_mcqs(part.title, count=5)
 
     # Save to active_quizzes

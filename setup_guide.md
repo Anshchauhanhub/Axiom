@@ -45,8 +45,8 @@ cd Axiom
     ```env
     DATABASE_URL=postgresql+asyncpg://user:pass@host/dbname
     TELEGRAM_BOT_TOKEN=your_bot_token
-    GROK_API_KEY=your_groq_key
-    GROK_BASE_URL=https://api.groq.com/openai/v1
+    GROQ_API_KEY=your_groq_key
+    GROQ_BASE_URL=https://api.groq.com/openai/v1
     JWT_SECRET=your_random_secret_string
     ```
 

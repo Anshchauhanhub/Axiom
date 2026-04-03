@@ -10,7 +10,7 @@ from schemas import (
     OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest
 )
 from auth import get_current_user
-from services.grok import generate_roadmap
+from services.groq import generate_roadmap
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
  
@@ -54,7 +54,7 @@ async def gen_roadmap(
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    # Generate roadmap via Grok
+    # Generate roadmap via Groq
     roadmap_data = await generate_roadmap(goal.title)
 
     # Create tasks and parts
@@ -167,7 +167,7 @@ async def onboarding_chat(
 ):
     # Map pydantic models to dicts for the LLM service
     messages = [m.model_dump() for m in req.messages]
-    from services.grok import generate_onboarding_response
+    from services.groq import generate_onboarding_response
     response = await generate_onboarding_response(messages)
     return response
 
