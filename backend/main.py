@@ -48,13 +48,12 @@ async def lifespan(app: FastAPI):
             set_bot(bot_app.bot)
 
             # Start polling with conflict handling
-            await bot_app.start()
             try:
                 await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
             except Exception as polling_err:
                 if "Conflict" in str(polling_err):
-                    logger.warning("⚠️ Bot conflict detected (possibly old instance still shutting down). Retrying in 2s...")
-                    await asyncio.sleep(2)
+                    logger.warning("⚠️ Bot conflict detected. Retrying in 5s (waiting for old instance)...")
+                    await asyncio.sleep(5)
                     await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
                 else:
                     raise polling_err
@@ -114,7 +113,8 @@ app.include_router(telegram_router)
  
 # Serve Static Files (Frontend Build)
 # In production, Vite builds to /frontend/dist. We copy this to /backend/static in Docker.
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
+logger.info(f"📁 Static files directory: {STATIC_DIR}")
 if os.path.exists(STATIC_DIR):
     # Mount assets folder for bundled JS/CSS
     ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
@@ -130,11 +130,24 @@ if os.path.exists(STATIC_DIR):
              
         # Check if requested file exists in STATIC_DIR (like logo.png, favicon.ico)
         file_path = os.path.join(STATIC_DIR, full_path)
+        
         if full_path and os.path.isfile(file_path):
-            return FileResponse(file_path)
+            # Explicitly handle common image types to avoid MIME guessing issues
+            media_type = None
+            if full_path.endswith(".png"):
+                media_type = "image/png"
+            elif full_path.endswith(".svg"):
+                media_type = "image/svg+xml"
+            elif full_path.endswith(".ico"):
+                media_type = "image/x-icon"
+                
+            logger.info(f"Serving static file: {full_path} from {file_path} (MIME: {media_type})")
+            return FileResponse(file_path, media_type=media_type)
 
         # Fallback to index.html for SPA routing
         index_path = os.path.join(STATIC_DIR, "index.html")
+        if not os.path.exists(index_path):
+             logger.error(f"❌ index.html NOT FOUND at {index_path}")
         return FileResponse(index_path)
 
 

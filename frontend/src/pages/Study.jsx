@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { startQuiz, submitQuiz } from '../services/api';
+import { startQuiz, submitQuiz, getPartContent, updateGoalNotes } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 
@@ -9,11 +9,11 @@ const Study = () => {
   const { user, refreshUser } = useAuth();
   const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
-  const [phase, setPhase] = useState('loading'); // loading, select, quiz, result
+  const [phase, setPhase] = useState('loading'); // loading, select, learning, quiz, result
   const [activeTask, setActiveTask] = useState(null);
   const [activeGoal, setActiveGoal] = useState(null);
   const [quizData, setQuizData] = useState(null);
-  const [quizId, setQuizId] = useState(null);
+  const [quizToken, setQuizToken] = useState(null);
   const [partTitle, setPartTitle] = useState('');
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -24,7 +24,14 @@ const Study = () => {
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(15 * 60);
+  const [learningContent, setLearningContent] = useState(null);
+  const [activePartId, setActivePartId] = useState(null);
+  const [loadingContent, setLoadingContent] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const timerRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -32,7 +39,6 @@ const Study = () => {
       let foundTask = null;
       let foundGoal = null;
 
-      // Find the specific roadmap for the current goal (if possible) or use the active goal
       const primaryGoal = goals.find(g => g.status === 'active') || goals[0];
       
       if (roadmap.tasks) {
@@ -40,21 +46,39 @@ const Study = () => {
           if (task.status === 'active') {
             foundTask = task;
             foundGoal = primaryGoal;
-            break; // Stop at first ACTIVE task
+            break; 
           }
           if (task.status === 'locked' && !foundTask) {
             foundTask = task;
             foundGoal = primaryGoal;
-            // Don't break yet, keep looking for an active one later in the list
           }
         }
       }
 
       setActiveTask(foundTask);
       setActiveGoal(foundGoal);
+      setNotes(foundGoal?.notes || '');
       setPhase('select');
     }
-  }, [user, roadmap, goals]);
+  }, [user, roadmap, goals, navigate]);
+
+  useEffect(() => {
+    if (!activeGoal || !showNotes) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      if (notes === activeGoal.notes) return;
+      setIsSaving(true);
+      try {
+        await updateGoalNotes(activeGoal.id, notes);
+        activeGoal.notes = notes; 
+      } catch (e) {
+        console.error('Failed to save notes:', e);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 2000);
+    return () => clearTimeout(saveTimeoutRef.current);
+  }, [notes, activeGoal, showNotes]);
 
   useEffect(() => {
     if (phase === 'quiz') {
@@ -73,26 +97,46 @@ const Study = () => {
     return () => clearInterval(timerRef.current);
   }, [phase]);
 
-  const handleStartQuiz = async (partId, title) => {
+  const handleStartLearning = async (partId, title) => {
+    setLoading(true);
+    setLoadingContent(true);
+    setError('');
+    setActivePartId(partId);
+    setPartTitle(title);
+    try {
+      const data = await getPartContent(partId);
+      setLearningContent(data.content);
+      setPhase('learning');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+      setLoadingContent(false);
+    }
+  };
+
+  const handleStartQuiz = async () => {
+    const partId = activePartId;
+    const title = partTitle;
     setLoading(true);
     setLoadingQuiz(true);
     setError('');
     try {
       const data = await startQuiz(partId);
       setQuizData(data.questions);
-      setQuizId(data.quiz_id);
+      setQuizToken(data.quiz_token);
       setPartTitle(title);
       setCurrentQ(0);
       setAnswers([]);
       setSelectedOption(null);
       setTimeLeft(15 * 60);
-      setLoadingQuiz(false);
       setPhase('quiz');
     } catch (e) {
       setError(e.message);
+    } finally {
       setLoadingQuiz(false);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSelectOption = (idx) => setSelectedOption(idx);
@@ -101,7 +145,6 @@ const Study = () => {
     if (selectedOption === null) return;
     const newAnswers = [...answers, selectedOption];
     setAnswers(newAnswers);
-
     if (currentQ + 1 < quizData.length) {
       setCurrentQ(currentQ + 1);
       setSelectedOption(null);
@@ -115,45 +158,31 @@ const Study = () => {
     setSubmittingQuiz(true);
     clearInterval(timerRef.current);
     try {
-      const res = await submitQuiz(quizId, finalAnswers);
+      const res = await submitQuiz(quizToken, finalAnswers);
       setResult(res);
-      setSubmittingQuiz(false);
       setPhase('result');
       await refreshData();
       refreshUser();
     } catch (e) {
       setError(e.message);
-      setSubmittingQuiz(false);
       setPhase('select');
+    } finally {
+      setSubmittingQuiz(false);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const formatTime = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-
-  if (phase === 'loading') {
-    return (
-      <div className="animate-in fade-in duration-1000 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <span className="material-symbols-outlined text-primary text-6xl animate-pulse">quiz</span>
-          <p className="text-on-surface-variant font-label text-sm mt-4 uppercase tracking-widest">Loading study sessions...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Full-screen loading overlays for LLM operations
   const renderLoaders = () => (
     <>
       {loadingQuiz && (
         <NeuralLoader
-          message="Generating Study Session"
+          message="CREATING NEURAL QUIZ"
           subMessages={[
-            'Analyzing module content',
-            'Crafting intelligent questions',
-            'Calibrating difficulty level',
-            'Building answer options',
-            'Preparing your challenge',
+            'Creating custom challenge',
+            'Calibrating neural depth',
+            'Tapping into node repositories',
+            'Preparing verification parameters',
+            'Finalizing neural synthesis',
           ]}
         />
       )}
@@ -169,213 +198,271 @@ const Study = () => {
           ]}
         />
       )}
+      {loadingContent && (
+        <NeuralLoader
+          message="Synthesizing Knowledge"
+          subMessages={[
+            'Tapping into neural repositories',
+            'Scraping real-time records',
+            'Structuring documentation',
+            'Calibrating educational depth',
+            'Finalizing neural synthesis',
+          ]}
+        />
+      )}
     </>
   );
 
-  // SELECT PHASE (RESTRUCTURED)
-  if (phase === 'select') {
-    return (
-      <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
-        {renderLoaders()}
-        <header className="mb-12 text-center">
-          <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Neural Study Session</h2>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-[10px] font-label tracking-[0.3em] uppercase text-primary font-bold opacity-80">Target:</span>
-            <span className="text-[10px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-bold">{activeGoal?.title || 'Unknown Synthesis'}</span>
+  const renderNotebook = () => (
+    <div className={`flex flex-col bg-[#0b0c10] border-l border-outline-variant/10 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[50%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
+      <div className="h-full flex flex-col p-6 lg:p-10">
+        <header className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-xl font-headline font-black uppercase text-on-surface tracking-widest">Neural Notebook</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              <p className="text-[10px] font-label text-on-surface-variant tracking-widest uppercase truncate max-w-[200px]">{activeGoal?.title}</p>
+            </div>
           </div>
-          <p className="mt-4 text-[9px] text-on-surface-variant font-label tracking-widest uppercase opacity-40 italic">Verification Protocol // Neural Integrity</p>
+          <div className="flex items-center gap-4">
+            {isSaving && <span className="text-[10px] font-label text-primary animate-pulse italic uppercase tracking-tighter">Syncing to Axiom...</span>}
+            <button onClick={() => setShowNotes(false)} className="text-on-surface-variant hover:text-on-surface transition-colors p-2 hover:bg-surface-container-highest rounded-xl bg-surface-container-low/30">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </header>
+        
+        <div className="flex-grow bg-[#faf9f6] text-slate-900 rounded-[2rem] overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] border border-black/5 flex flex-col p-1 transition-all duration-500 hover:shadow-[inset_0_2px_20px_rgba(0,0,0,0.15)]">
+            <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Synthesize your knowledge here..."
+                className="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-xl leading-relaxed text-slate-800 placeholder:text-slate-200 px-12 py-16 scrollbar-thin scrollbar-thumb-slate-200"
+                spellCheck="false"
+            />
+        </div>
+        <p className="text-[9px] font-label tracking-[0.4em] uppercase text-on-surface-variant/20 mt-6 text-center italic">Persistent Neural Record // Bio-Locked</p>
+      </div>
+    </div>
+  );
+
+  const renderNotesToggle = () => (
+    <button
+      onClick={() => setShowNotes(!showNotes)}
+      className={`fixed bottom-10 right-10 z-[200] w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 shadow-[0_20px_50px_rgba(253,184,19,0.3)] ${
+        showNotes ? 'bg-error text-white scale-0 rotate-180 opacity-0 pointer-events-none' : 'bg-primary text-on-primary-container hover:scale-110 active:scale-95 glow-gold'
+      }`}
+    >
+      <span className="material-symbols-outlined text-3xl">
+        {showNotes ? 'close' : 'description'}
+      </span>
+      {!showNotes && (
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full border-[3px] border-background animate-pulse"></div>
+      )}
+    </button>
+  );
+
+  let phaseContent = null;
+
+  if (phase === 'loading') {
+    phaseContent = (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <span className="material-symbols-outlined text-primary text-6xl animate-pulse">quiz</span>
+          <p className="text-on-surface-variant font-label text-sm mt-4 uppercase tracking-widest italic">Initializing neuro-pathways...</p>
+        </div>
+      </div>
+    );
+  } else if (phase === 'select') {
+    phaseContent = (
+      <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
+        <header className="mb-8 text-center">
+          <span className="text-primary font-label text-[10px] tracking-[0.4em] uppercase font-bold mb-2 block animate-in slide-in-from-top-4 duration-700">Neural Gateway</span>
+          <h2 className="text-4xl font-black tracking-tight text-on-surface mb-2 font-headline uppercase leading-none">Study Session</h2>
+          <div className="flex items-center justify-center gap-3">
+             <div className="h-[1px] w-6 bg-outline-variant/30"></div>
+            <span className="text-[9px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-bold opacity-60 italic">{activeGoal?.title || 'Unknown Synthesis'}</span>
+            <div className="h-[1px] w-6 bg-outline-variant/30"></div>
+          </div>
         </header>
 
         {error && (
-          <div className="mb-8 p-4 bg-error-container/20 border border-error/30 rounded-xl max-w-2xl mx-auto">
-            <p className="text-error text-xs font-label font-bold text-center">{error}</p>
+          <div className="mb-10 p-5 bg-error-container/10 border border-error/20 rounded-2xl max-w-2xl mx-auto backdrop-blur-sm">
+            <p className="text-error text-xs font-label font-bold text-center tracking-widest">{error}</p>
           </div>
         )}
 
         {!activeTask ? (
-          <div className="text-center py-16 bg-surface-container-low rounded-3xl border border-outline-variant/10">
-            <span className="material-symbols-outlined text-6xl text-on-surface-variant/30 mb-4">analytics</span>
-            <p className="text-on-surface-variant font-label uppercase tracking-widest text-sm">Initializing mastery protocols...</p>
-            <button onClick={() => navigate('/onboarding')} className="mt-8 px-10 py-4 bg-primary rounded-xl font-label text-xs font-bold uppercase tracking-widest text-on-primary-container shadow-xl shadow-primary/20">
-              Set Goal & Roadmap
-            </button>
+          <div className="text-center py-20 bg-surface-container-low/30 rounded-3xl border border-outline-variant/10 text-on-surface-variant/40 italic font-label text-sm tracking-widest">
+            Calibrating mastery protocols...
           </div>
         ) : (
-          <div className="space-y-8 max-w-3xl mx-auto">
-            {/* Active Module Header Card */}
-            <div className="bg-surface-container-low border border-outline-variant/15 p-10 rounded-[2.5rem] relative overflow-hidden group shadow-2xl shadow-black/20">
-              <div className="absolute top-0 right-0 p-8">
-                 <span className={`px-4 py-1.5 rounded-lg text-[10px] font-label font-black tracking-widest uppercase border ${
-                   activeTask.status === 'active' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-surface-container-highest border-outline-variant/30 text-on-surface-variant'
-                 }`}>
-                   {activeTask.status}
-                 </span>
+          <div className="space-y-12 max-w-4xl mx-auto pb-24">
+            <div className="bg-surface-container-low border border-outline-variant/10 p-12 lg:p-16 rounded-[3.5rem] relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-primary/20">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                <span className="material-symbols-outlined text-8xl">neuroscience</span>
               </div>
               <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                  <span className="text-[10px] font-label font-bold tracking-[0.2em] text-primary uppercase">Active Module</span>
+                <div className="flex items-center gap-4 mb-10">
+                    <div className="w-12 h-[1px] bg-primary"></div>
+                    <h3 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">
+                    {activeTask.title}
+                    </h3>
                 </div>
-                <h3 className="text-4xl font-black font-headline text-on-surface leading-tight md:pr-24">
-                  {activeTask.title}
-                </h3>
-              </div>
-
-              {/* Parts Timeline */}
-              <div className="mt-12 space-y-4 relative">
-                {/* Vertical Line */}
-                <div className="absolute left-6 top-0 bottom-0 w-[1px] bg-outline-variant/20 ml-[-0.5px]"></div>
-
-                {activeTask.parts.map((part, idx) => {
-                  const isActive = part.status === 'active';
-                  const isLocked = part.status === 'locked';
-                  const isPassed = part.status === 'passed';
-
-                  return (
-                    <div 
-                      key={part.id} 
-                      className={`relative flex items-center justify-between p-6 rounded-2xl border transition-all duration-300 ml-12 ${
-                        isActive 
-                        ? 'bg-surface-container-highest/40 border-primary/30 shadow-lg shadow-primary/5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]' 
-                        : 'bg-transparent border-outline-variant/10'
-                      } ${isLocked ? 'opacity-40' : 'opacity-100'}`}
-                      onClick={() => isActive && handleStartQuiz(part.id, part.title)}
-                    >
-                      {/* Timeline Dot */}
-                      <div className={`absolute left-[-31px] w-4 h-4 rounded-full border-4 border-surface-container-low z-20 ${
-                        isActive ? 'bg-secondary animate-pulse shadow-[0_0_12px_rgba(0,179,89,0.4)]' : isPassed ? 'bg-secondary' : 'bg-outline-variant/40'
-                      }`}></div>
-
-                      <div className="flex items-center gap-5">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                          isActive ? 'bg-primary/20 text-primary' : 'bg-surface-container-highest text-on-surface-variant'
-                         }`}>
-                          <span className="material-symbols-outlined text-[20px]">
-                            {isActive ? 'bolt' : isLocked ? 'lock' : 'verified'}
-                          </span>
+                <div className="space-y-6 relative">
+                  <div className="absolute left-[34px] top-4 bottom-4 w-[1px] bg-gradient-to-b from-primary/40 via-secondary/40 to-transparent"></div>
+                  {activeTask.parts.map((part) => {
+                    const isActive = part.status === 'active';
+                    const isPassed = part.status === 'passed';
+                    return (
+                      <div 
+                        key={part.id} 
+                        className={`relative flex items-center justify-between p-7 rounded-[2rem] border transition-all duration-300 ml-16 ${isActive ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : isPassed ? 'bg-secondary/5 border-secondary/20' : 'opacity-20 border-outline-variant/5 grayscale'}`}
+                        onClick={() => isActive && handleStartLearning(part.id, part.title)}
+                      >
+                        <div className={`absolute left-[-42px] w-6 h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
+                        <div className="flex items-center gap-6">
+                          <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container-highest/50 ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant'}`}>
+                             <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
+                          </div>
+                          <div>
+                            <span className={`block text-lg font-bold tracking-tight mb-0.5 ${isActive || isPassed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{part.title}</span>
+                            <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className={`text-sm font-bold ${isActive ? 'text-on-surface' : 'text-on-surface-variant'}`}>
-                            {part.title}
-                          </h4>
-                          <span className={`text-[9px] font-label tracking-widest uppercase font-bold ${isActive ? 'text-primary' : 'text-on-surface-variant/40'}`}>
-                            {part.status}
-                          </span>
-                        </div>
+                        {isActive && <span className="material-symbols-outlined text-primary group-secondary:translate-x-1 transition-transform">arrow_forward_ios</span>}
                       </div>
-
-                      {isActive && (
-                        <span className="material-symbols-outlined text-primary text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
     );
-  }
-
-  // QUIZ PHASE
-  if (phase === 'quiz' && quizData) {
-    const q = quizData[currentQ];
-    return (
-      <div className="animate-in fade-in duration-1000 max-w-5xl mx-auto w-full flex flex-col items-center">
-        {renderLoaders()}
-        {renderLoaders()}
-
-        {/* Question */}
-        <section className="w-full mb-16 space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="font-label text-primary text-[10px] tracking-[0.2em] font-bold uppercase">
-              Q{currentQ + 1}/{quizData.length} // {partTitle}
-            </span>
-            <div className="h-[1px] flex-grow bg-surface-container-highest/30"></div>
+  } else if (phase === 'learning' && learningContent) {
+    phaseContent = (
+      <div className="animate-in slide-in-from-bottom-10 duration-1000 max-w-4xl mx-auto w-full">
+        <header className="mb-8 flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+                <span className="w-6 h-[1px] bg-primary"></span>
+                <span className="text-[9px] font-label tracking-[0.3em] text-primary uppercase font-black">Neural Documentation</span>
+            </div>
+            <h2 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">{partTitle}</h2>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-tight text-on-surface">
-            {q.question}
-          </h1>
-        </section>
+          <button onClick={() => setPhase('select')} className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all duration-300 hover:rotate-90">
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
+        </header>
 
-        {/* Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mb-16">
+        <div className="bg-surface-container-low border border-outline-variant/10 rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative transition-all duration-500 hover:border-primary/10">
+          <div className="prose prose-invert max-w-none text-on-surface-variant/80 font-light leading-loose space-y-8 text-lg">
+            {learningContent.split('\n').map((line, i) => {
+              if (line.startsWith('## ')) return <h2 key={i} className="text-3xl font-black text-on-surface mt-12 mb-6 uppercase tracking-tighter flex items-center gap-4"><div className="w-2 h-2 bg-primary rounded-full"></div>{line.replace('## ', '')}</h2>;
+              if (line.startsWith('### ')) return <h3 key={i} className="text-xl font-bold text-on-surface-variant mt-10 mb-4 italic tracking-wide">{line.replace('### ', '')}</h3>;
+              if (line.startsWith('- ')) return <div key={i} className="flex gap-4 items-start ml-4"><span className="text-primary mt-1">▹</span><p className="flex-1 m-0">{line.replace('- ', '')}</p></div>;
+              if (line.trim() === '') return <div key={i} className="h-4" />;
+              return <p key={i} className="m-0">{line}</p>;
+            })}
+          </div>
+          <div className="mt-20 pt-10 border-t border-outline-variant/10 flex flex-col items-center">
+             <span className="text-[10px] font-label text-on-surface-variant/30 uppercase tracking-[0.3em] mb-8 italic">Neural integrity verification required for progression</span>
+            <button
+              onClick={handleStartQuiz}
+              className="group relative px-16 py-6 bg-gradient-to-br from-primary via-primary to-secondary rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-[0_20px_50px_rgba(253,184,19,0.3)] hover:shadow-primary/40"
+            >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span className="relative font-label font-black tracking-[0.5em] text-on-primary-container text-lg uppercase">Begin Verification</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (phase === 'quiz' && quizData) {
+    const q = quizData[currentQ];
+    phaseContent = (
+      <div className="animate-in fade-in duration-1000 max-w-5xl mx-auto w-full flex flex-col items-center">
+        <section className="w-full mb-20 space-y-6 text-center">
+          <div className="flex flex-col items-center gap-3">
+             <span className="font-label text-primary text-[11px] tracking-[0.5em] font-black uppercase bg-primary/10 px-4 py-1.5 rounded-full">Verification Protocol Q{currentQ + 1}/{quizData.length}</span>
+             <div className="w-48 h-1 bg-surface-container rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all duration-500" style={{ width: `${((currentQ + 1) / quizData.length) * 100}%` }}></div>
+             </div>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-on-surface leading-tight max-w-4xl mx-auto">{q.question}</h1>
+        </section>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-20">
           {q.options.map((opt, i) => (
             <button
               key={i}
               onClick={() => handleSelectOption(i)}
-              className={`group relative flex items-start gap-6 p-8 bg-surface-container-low hover:bg-surface-container text-left transition-all duration-300 border rounded-xl active:scale-[0.98] ${
-                selectedOption === i ? 'border-primary/40 glow-gold' : 'border-transparent hover:border-primary/20'
-              }`}
+              className={`p-10 bg-surface-container-low hover:bg-surface-container text-left transition-all duration-300 border-2 rounded-[2rem] relative group active:scale-[0.98] ${selectedOption === i ? 'border-primary shadow-[0_0_40px_rgba(253,184,19,0.15)] bg-primary/5' : 'border-transparent opacity-60 hover:opacity-100'}`}
             >
-              <div className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg transition-colors ${
-                selectedOption === i ? 'bg-primary/20' : 'bg-surface-container-highest group-hover:bg-primary/10'
-              }`}>
-                <span className={`font-label font-bold text-lg transition-colors ${
-                  selectedOption === i ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary'
-                }`}>{String.fromCharCode(65 + i)}</span>
-              </div>
-              <div className="space-y-1">
-                <p className={`text-on-surface text-sm leading-relaxed ${selectedOption === i ? 'font-bold' : 'font-light opacity-80'}`}>{opt}</p>
-              </div>
-              {selectedOption === i && (
-                <div className="absolute bottom-4 right-6">
-                  <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <div className="flex items-center gap-6">
+                    <div className={`w-12 h-12 flex items-center justify-center rounded-xl font-black text-lg transition-all ${selectedOption === i ? 'bg-primary text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant group-hover:bg-primary/20 group-hover:text-primary'}`}>
+                        {String.fromCharCode(65 + i)}
+                    </div>
+                    <span className="text-lg font-medium leading-relaxed">{opt}</span>
                 </div>
-              )}
             </button>
           ))}
         </div>
-
-        {/* Submit */}
-        <button
-          onClick={handleNext}
-          disabled={selectedOption === null || loading}
-          className="group relative px-12 py-5 bg-gradient-to-br from-primary to-secondary rounded-full overflow-hidden transition-all duration-300 active:scale-95 glow-gold disabled:opacity-40"
-        >
-          <span className="relative font-label font-bold tracking-[0.3em] text-on-primary-container text-lg uppercase">
-            {loading ? 'Processing...' : currentQ + 1 < quizData.length ? 'Next Question' : 'Submit Answers'}
-          </span>
+        <div className="pb-32">
+            <button
+                onClick={handleNext}
+                disabled={selectedOption === null || loading}
+                className="px-16 py-6 bg-gradient-to-br from-primary to-secondary rounded-full font-label font-black tracking-[0.4em] text-on-primary-container text-lg uppercase shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-20 disabled:grayscale"
+            >
+                {currentQ + 1 < quizData.length ? 'Next Question' : 'Seal Submission'}
+            </button>
+        </div>
+      </div>
+    );
+  } else if (phase === 'result' && result) {
+    phaseContent = (
+      <div className="animate-in zoom-in duration-1000 max-w-2xl mx-auto w-full flex flex-col items-center justify-center min-h-[70vh] pb-32">
+        <div className={`w-40 h-40 rounded-[2.5rem] flex items-center justify-center mb-12 shadow-[0_30px_70px_rgba(0,0,0,0.5)] bg-gradient-to-br transition-all duration-1000 ${result.is_passed ? 'from-primary to-secondary rotate-[360deg]' : 'from-error to-error-container'}`}>
+          <span className="material-symbols-outlined text-white text-7xl">{result.is_passed ? 'military_tech' : 'restart_alt'}</span>
+        </div>
+        <div className="text-center mb-16">
+            <h2 className="text-5xl font-black font-headline uppercase mb-4 tracking-tighter">{result.is_passed ? 'Integrity Verified' : 'Sync Incomplete'}</h2>
+            <div className="flex items-center justify-center gap-4">
+                <div className="h-[1px] w-12 bg-outline-variant/30"></div>
+                <p className="text-2xl font-headline italic tracking-widest uppercase opacity-60">Mastery: <span className="font-black text-primary not-italic">{result.score_percent}%</span></p>
+                <div className="h-[1px] w-12 bg-outline-variant/30"></div>
+            </div>
+        </div>
+        <button onClick={() => { setPhase('select'); refreshData(); }} className="px-14 py-6 rounded-full bg-primary text-on-primary-container font-label text-sm font-black uppercase tracking-[0.4em] shadow-xl hover:scale-105 active:scale-95 transition-all">
+          {result.is_passed ? 'Continue Path' : 'Retry Protocol'}
         </button>
       </div>
     );
   }
 
-  // RESULT PHASE
-  if (phase === 'result' && result) {
-    return (
-      <div className="animate-in fade-in duration-1000 max-w-2xl mx-auto w-full flex flex-col items-center justify-center min-h-[60vh]">
-        <div className={`w-28 h-28 rounded-full flex items-center justify-center mb-8 shadow-2xl ${
-          result.is_passed
-            ? 'bg-gradient-to-br from-primary to-secondary shadow-primary/30'
-            : 'bg-gradient-to-br from-error to-error-container shadow-error/30'
-        }`}>
-          <span className="material-symbols-outlined text-white text-6xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-            {result.is_passed ? 'military_tech' : 'restart_alt'}
-          </span>
-        </div>
-        <h2 className="text-4xl font-black font-headline uppercase tracking-tighter mb-4">
-          {result.is_passed ? 'Mastery Verified' : 'Verification Failed'}
-        </h2>
-        <p className="text-xl font-headline text-on-surface-variant mb-2">Score: <span className="text-on-surface font-bold">{result.score_percent}%</span></p>
-        <p className="text-sm text-on-surface-variant font-label mb-12">{result.message}</p>
-        <div className="flex gap-4">
-          {result.is_passed ? (
-            <button onClick={() => navigate('/')} className="px-10 py-4 rounded-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-label text-xs font-bold tracking-widest uppercase shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
-              Continue
-            </button>
-          ) : (
-            <button onClick={() => { setPhase('select'); loadParts(); }} className="px-10 py-4 rounded-full bg-gradient-to-br from-error to-error-container text-white font-label text-xs font-bold tracking-widest uppercase shadow-xl shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all">
-              Try Again
-            </button>
-          )}
-        </div>
+  return (
+    <div className={`transition-all duration-700 ease-in-out min-h-screen ${showNotes ? 'fixed inset-0 z-[100] bg-[#08090b] flex flex-col overflow-hidden' : 'relative'}`}>
+      {renderLoaders()}
+      
+      <div className={`flex w-full h-full relative ${showNotes ? 'flex-1 overflow-hidden' : ''}`}>
+        <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
+          <div className={`max-w-[1400px] mx-auto px-10 py-8 lg:py-12 ${showNotes ? 'p-8' : ''}`}>
+             {phaseContent}
+          </div>
+        </main>
+        {renderNotebook()}
       </div>
-    );
-  }
 
-  return null;
+      {renderNotesToggle()}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(253, 184, 19, 0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(253, 184, 19, 0.2); }
+      `}</style>
+    </div>
+  );
 };
 
 export default Study;

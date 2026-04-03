@@ -7,10 +7,12 @@ from database import get_db
 from models import User, Goal, Task, Part
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
-    OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest
+    PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest,
+    UpdateNotesRequest
 )
 from auth import get_current_user
-from services.grok import generate_roadmap
+from services.groq import generate_roadmap
+from services.synthesis import synthesize_part_content
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
  
@@ -54,7 +56,7 @@ async def gen_roadmap(
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    # Generate roadmap via Grok
+    # Generate roadmap via Groq
     roadmap_data = await generate_roadmap(goal.title)
 
     # Create tasks and parts
@@ -92,7 +94,7 @@ async def gen_roadmap(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -134,7 +136,7 @@ async def get_roadmap(
         ))
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -167,7 +169,7 @@ async def onboarding_chat(
 ):
     # Map pydantic models to dicts for the LLM service
     messages = [m.model_dump() for m in req.messages]
-    from services.grok import generate_onboarding_response
+    from services.groq import generate_onboarding_response
     response = await generate_onboarding_response(messages)
     return response
 
@@ -222,7 +224,7 @@ async def finalize_goal(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -296,7 +298,7 @@ async def quick_activate(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -363,6 +365,66 @@ async def toggle_goal_status(
         await db.flush()
         goal.status = "active"
 
+    await db.commit()
+    await db.refresh(goal)
+    return goal
+
+
+@router.get("/parts/{part_id}/content", response_model=PartContentResponse)
+async def get_part_content(
+    part_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch the synthesized documentation for a roadmap part.
+    Generates it via Neural Synthesis if not already present.
+    """
+    result = await db.execute(
+        select(Part).where(Part.id == part_id)
+    )
+    part = result.scalar_one_or_none()
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    # Check if content already exists
+    if part.content:
+        return PartContentResponse(
+            part_id=part.id,
+            title=part.title,
+            content=part.content
+        )
+
+    # Trigger Neural Synthesis
+    try:
+        content = await synthesize_part_content(part.title)
+        part.content = content
+        await db.commit()
+        
+        return PartContentResponse(
+            part_id=part.id,
+            title=part.title,
+            content=content
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Neural Synthesis failed: {str(e)}")
+
+
+@router.patch("/{goal_id}/notes", response_model=GoalResponse)
+async def update_goal_notes(
+    goal_id: str,
+    req: UpdateNotesRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Goal).where(Goal.id == goal_id, Goal.user_id == user.id)
+    )
+    goal = result.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    goal.notes = req.notes
     await db.commit()
     await db.refresh(goal)
     return goal

@@ -53,9 +53,14 @@ class GoalResponse(BaseModel):
     id: uuid.UUID
     title: str
     status: str
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class UpdateNotesRequest(BaseModel):
+    notes: str
 
 
 # --- Tasks & Parts ---
@@ -63,9 +68,16 @@ class PartResponse(BaseModel):
     id: uuid.UUID
     title: str
     status: str
+    content: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class PartContentResponse(BaseModel):
+    part_id: uuid.UUID
+    title: str
+    content: str
 
 
 class TaskResponse(BaseModel):
@@ -92,13 +104,13 @@ class QuizQuestion(BaseModel):
 
 
 class StartQuizResponse(BaseModel):
-    quiz_id: uuid.UUID
+    quiz_token: str
     part_title: str
     questions: list[dict]  # Options only, no correct_index sent to client
 
 
 class SubmitAnswerRequest(BaseModel):
-    quiz_id: uuid.UUID
+    quiz_token: str
     answers: list[int]  # List of selected option indices
 
 

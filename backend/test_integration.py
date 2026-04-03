@@ -57,8 +57,8 @@ async def test_flow():
         goal_id = res.json()["id"]
         print(f"   ✅ Goal created: {goal_id}")
 
-        # 5. Generate Roadmap (Grok AI)
-        print("\n5. Generating AI Roadmap (Grok)... (this may take 10-30s)")
+        # 5. Generate Roadmap (Groq AI)
+        print("\n5. Generating AI Roadmap (Groq)... (this may take 10-30s)")
         res = await client.post(f"{BASE_URL}/goals/{goal_id}/generate-roadmap", headers=headers)
         if res.status_code != 200:
             print(f"   ❌ Roadmap generation failed: {res.status_code} — {res.text}")
@@ -71,7 +71,7 @@ async def test_flow():
         print(f"      First task: {first_task}")
         print(f"      First part: {first_part['title']} (status: {first_part['status']})")
 
-        # 6. Start Quiz (Grok AI)
+        # 6. Start Quiz (Groq AI)
         part_id = first_part["id"]
         print(f"\n6. Starting Sudden Death Quiz for '{first_part['title']}'... (10-30s)")
         res = await client.post(f"{BASE_URL}/quiz/start/{part_id}", headers=headers)

@@ -19,7 +19,6 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
-    active_quizzes = relationship("ActiveQuiz", back_populates="user", cascade="all, delete-orphan")
     quiz_results = relationship("QuizResult", back_populates="user", cascade="all, delete-orphan")
 
 
@@ -30,6 +29,7 @@ class Goal(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=False)
     status = Column(String, default="active")  # active, completed, paused
+    notes = Column(Text, nullable=True) # Persistent rich text notes
 
     user = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
@@ -56,23 +56,12 @@ class Part(Base):
     title = Column(String, nullable=False)
     order_index = Column(Integer, nullable=False, default=0)
     status = Column(String, default="locked")  # locked, active, passed
+    content = Column(Text, nullable=True)
 
     task = relationship("Task", back_populates="parts")
-    active_quizzes = relationship("ActiveQuiz", back_populates="part", cascade="all, delete-orphan")
     quiz_results = relationship("QuizResult", back_populates="part", cascade="all, delete-orphan")
 
 
-class ActiveQuiz(Base):
-    __tablename__ = "active_quizzes"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    part_id = Column(UUID(as_uuid=True), ForeignKey("parts.id", ondelete="CASCADE"), nullable=False)
-    questions_json = Column(JSONB, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-    user = relationship("User", back_populates="active_quizzes")
-    part = relationship("Part", back_populates="active_quizzes")
 
 
 class QuizResult(Base):

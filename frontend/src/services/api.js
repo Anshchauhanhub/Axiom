@@ -52,11 +52,14 @@ export const generateRoadmap = (goalId) =>
 export const getRoadmap = (goalId) =>
   request('GET', `/goals/${goalId}/roadmap`);
 
+export const getPartContent = (partId) =>
+  request('GET', `/goals/parts/${partId}/content`);
+
 // --- Quiz ---
 export const startQuiz = (partId) => request('POST', `/quiz/start/${partId}`);
 
-export const submitQuiz = (quizId, answers) =>
-  request('POST', '/quiz/submit', { quiz_id: quizId, answers });
+export const submitQuiz = (quizToken, answers) =>
+  request('POST', '/quiz/submit', { quiz_token: quizToken, answers });
 
 export const getActiveQuiz = () => request('GET', '/quiz/active');
 
@@ -78,3 +81,6 @@ export const deleteGoal = (goalId) =>
  
 export const toggleGoalStatus = (goalId) =>
   request('POST', `/goals/${goalId}/toggle`);
+
+export const updateGoalNotes = (goalId, notes) =>
+  request('PATCH', `/goals/${goalId}/notes`, { notes });

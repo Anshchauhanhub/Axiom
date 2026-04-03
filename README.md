@@ -47,7 +47,7 @@ npm run dev
 Axiom/
 ├── backend/
 │   ├── routers/      # FastAPI API Endpoints (Auth, Users, Goals, Quiz)
-│   ├── services/     # Core Logic (Grok integration, Scheduler)
+│   ├── services/     # Core Logic (Groq integration, Scheduler)
 │   ├── models.py     # SQLAlchemy ORM Models
 │   ├── schemas.py    # Pydantic Data Models
 │   └── main.py       # App Entry Point
