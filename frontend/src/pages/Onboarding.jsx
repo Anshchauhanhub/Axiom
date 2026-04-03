@@ -27,6 +27,13 @@ const Onboarding = () => {
   const [isTyping, setIsTyping] = useState(false);
 
   const scrollRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     if (user && messages.length === 0) {
@@ -35,11 +42,23 @@ const Onboarding = () => {
     }
   }, [user, messages.length]);
 
+  // Auto-scroll whenever messages change or typing indicator appears
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    scrollToBottom();
   }, [messages, isTyping]);
+
+  // Also observe DOM mutations inside the chat container for any dynamic content changes
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const observer = new MutationObserver(() => {
+      scrollToBottom();
+    });
+
+    observer.observe(container, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -117,6 +136,13 @@ const Onboarding = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefine = () => {
+    setPhase('refinement');
+    setError('');
+    // Optionally scroll to input
+    scrollToBottom();
   };
 
   const handleSwitchGoal = async (id) => {
@@ -269,20 +295,30 @@ const Onboarding = () => {
                   ))}
                 </div>
 
-                {phase === 'ready' && (
-                  <div className="flex justify-center relative z-10 pt-4 border-t border-outline-variant/10">
+                {draftRoadmap && phase !== 'discovery' && phase !== 'timeline' && phase !== 'syllabus' && (
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
                     <button
                       onClick={handleFinalize}
-                      className="group relative px-12 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40"
+                      className="group relative px-10 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40 w-full sm:w-auto"
                     >
                       <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Activate Neural Path</span>
                       <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </button>
+                    
+                    <button
+                      onClick={handleRefine}
+                      className="px-10 py-5 bg-surface-container-highest/50 text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-full font-label font-bold tracking-[0.3em] uppercase text-[10px] transition-all hover:bg-primary/5 hover:border-primary/30 w-full sm:w-auto"
+                    >
+                      Refine Path
                     </button>
                   </div>
                 )}
               </div>
             </div>
           )}
+
+          {/* Dummy element for scroll-to-bottom anchor */}
+          <div ref={messagesEndRef} className="h-4 w-full opacity-0 pointer-events-none" />
 
         </div>
 
@@ -294,8 +330,8 @@ const Onboarding = () => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                disabled={isTyping || phase === 'ready'}
-                placeholder={phase === 'ready' ? "Roadmap finalized. Press Activate to begin." : "Respond to Axiom..."}
+                disabled={isTyping}
+                placeholder={phase === 'ready' ? "Neural path locked. Click 'Refine Path' to modify." : "Respond to Axiom..."}
                 className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-xl disabled:opacity-50"
               />
               <button
