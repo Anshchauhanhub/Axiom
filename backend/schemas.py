@@ -53,9 +53,14 @@ class GoalResponse(BaseModel):
     id: uuid.UUID
     title: str
     status: str
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class UpdateNotesRequest(BaseModel):
+    notes: str
 
 
 # --- Tasks & Parts ---

@@ -7,7 +7,8 @@ from database import get_db
 from models import User, Goal, Task, Part
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
-    PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest
+    PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest,
+    UpdateNotesRequest
 )
 from auth import get_current_user
 from services.groq import generate_roadmap
@@ -93,7 +94,7 @@ async def gen_roadmap(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -135,7 +136,7 @@ async def get_roadmap(
         ))
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -223,7 +224,7 @@ async def finalize_goal(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -297,7 +298,7 @@ async def quick_activate(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status),
+        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
         tasks=tasks_out,
     )
 
@@ -407,3 +408,23 @@ async def get_part_content(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Neural Synthesis failed: {str(e)}")
+
+
+@router.patch("/{goal_id}/notes", response_model=GoalResponse)
+async def update_goal_notes(
+    goal_id: str,
+    req: UpdateNotesRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Goal).where(Goal.id == goal_id, Goal.user_id == user.id)
+    )
+    goal = result.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    goal.notes = req.notes
+    await db.commit()
+    await db.refresh(goal)
+    return goal

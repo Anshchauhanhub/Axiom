@@ -81,3 +81,6 @@ export const deleteGoal = (goalId) =>
  
 export const toggleGoalStatus = (goalId) =>
   request('POST', `/goals/${goalId}/toggle`);
+
+export const updateGoalNotes = (goalId, notes) =>
+  request('PATCH', `/goals/${goalId}/notes`, { notes });

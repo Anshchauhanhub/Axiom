@@ -29,6 +29,7 @@ class Goal(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=False)
     status = Column(String, default="active")  # active, completed, paused
+    notes = Column(Text, nullable=True) # Persistent rich text notes
 
     user = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
