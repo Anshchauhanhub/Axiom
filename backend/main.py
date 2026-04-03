@@ -149,8 +149,6 @@ if os.path.exists(STATIC_DIR):
         if not os.path.exists(index_path):
              logger.error(f"❌ index.html NOT FOUND at {index_path}")
         return FileResponse(index_path)
-else:
-    logger.warning(f"⚠️ Static directory NOT found at {STATIC_DIR}. Frontend will not be served.")
 
 
 @app.get("/")
