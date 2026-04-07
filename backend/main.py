@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
         try:
             bot_app = create_bot_app()
             await bot_app.initialize()
+            await bot_app.start()  # Critical: Missing in previous version
             set_bot_app(bot_app)
             set_bot(bot_app.bot)
 
@@ -60,7 +61,7 @@ async def lifespan(app: FastAPI):
             
             _bot_started = True
             _bot_app_ref = bot_app
-            logger.info("✅ Telegram bot started with polling.")
+            logger.info("✅ Telegram bot started and polling loop active.")
         except Exception as e:
             logger.warning(f"⚠️ Telegram bot failed to start: {e}")
             _bot_started = False

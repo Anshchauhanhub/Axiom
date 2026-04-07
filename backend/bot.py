@@ -355,6 +355,16 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
     )
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log the error and send a message to notify the developer."""
+    logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    
+    # Try to notify the user if possible
+    if isinstance(update, Update) and update.effective_message:
+        await update.effective_message.reply_text(
+            "⚠️ An internal error occurred. Our engineers have been notified."
+        )
+
 async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /info command — list available commands."""
     commands_text = (
@@ -377,5 +387,8 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("info", info_command))
     app.add_handler(CallbackQueryHandler(handle_quiz_start, pattern=r"^startquiz_"))
     app.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer_"))
+    
+    # Add error handler
+    app.add_error_handler(error_handler)
 
     return app
