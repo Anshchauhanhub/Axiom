@@ -32,6 +32,7 @@ const Study = () => {
   const [isSaving, setIsSaving] = useState(false);
   const timerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const editorRef = useRef(null);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -55,17 +56,25 @@ const Study = () => {
         }
       }
 
+      const prevGoalId = activeGoal?.id;
       setActiveTask(foundTask);
       setActiveGoal(foundGoal);
-      setNotes(foundGoal?.notes || '');
+      
+      // Update notes and editor content ONLY if the goal has changed
+      if (foundGoal && foundGoal.id !== prevGoalId) {
+        const initialNotes = foundGoal.notes || '';
+        setNotes(initialNotes);
+        if (editorRef.current) {
+          editorRef.current.innerHTML = initialNotes;
+        }
+      }
       
       // Fix: Only reset to 'select' if we are in the initial loading state.
-      // This prevents refreshData() calls from kicking the user out of the Result or Learning phases.
       if (phase === 'loading') {
         setPhase('select');
       }
     }
-  }, [user, roadmap, goals, navigate]);
+  }, [user, roadmap, goals, navigate, phase, activeGoal?.id]);
 
   useEffect(() => {
     if (!activeGoal || !showNotes) return;
@@ -175,6 +184,24 @@ const Study = () => {
       setSubmittingQuiz(false);
       setLoading(false);
     }
+  };
+
+  const handleExecCommand = (command, value = null) => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      setNotes(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      setNotes(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleAddLink = () => {
+    const url = prompt('Enter the URL copy:');
+    if (url) handleExecCommand('createLink', url);
   };
 
   const renderLoaders = () => (
@@ -334,13 +361,18 @@ const Study = () => {
               {/* Tool Commands */}
               <div className="flex items-center gap-1 bg-surface-container-highest/30 p-1 rounded-xl border border-outline-variant/5">
                 {[
-                  { icon: 'format_bold', label: 'Bold' },
-                  { icon: 'format_italic', label: 'Italic' },
-                  { icon: 'format_list_bulleted', label: 'Bullets' },
-                  { icon: 'link', label: 'Link' },
-                  { icon: 'image', label: 'Attach' },
+                  { icon: 'format_bold', label: 'Bold', cmd: 'bold' },
+                  { icon: 'format_italic', label: 'Italic', cmd: 'italic' },
+                  { icon: 'format_list_bulleted', label: 'Bullets', cmd: 'insertUnorderedList' },
+                  { icon: 'link', label: 'Link', action: handleAddLink },
+                  { icon: 'format_h1', label: 'Heading 1', cmd: 'formatBlock', val: 'H1' },
                 ].map((cmd, i) => (
-                  <button key={i} className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all duration-200 group relative">
+                  <button 
+                    key={i} 
+                    onMouseDown={(e) => e.preventDefault()} // Prevent losing focus
+                    onClick={() => cmd.action ? cmd.action() : handleExecCommand(cmd.cmd, cmd.val)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all duration-200 group relative"
+                  >
                     <span className="material-symbols-outlined text-[18px]">{cmd.icon}</span>
                     <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-surface-container-highest text-[8px] font-label uppercase tracking-widest text-on-surface rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                       {cmd.label}
@@ -393,12 +425,14 @@ const Study = () => {
               </div>
 
               {/* Editor Area */}
-              <div className="flex-grow flex flex-col relative">
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Begin neural synthesis..."
-                  className="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-[20px] leading-[1.8] text-slate-800 placeholder:text-slate-300 px-16 py-20 selection:bg-primary/20 scrollbar-hide"
+              <div className="flex-grow flex flex-col relative prose prose-slate max-w-none">
+                <div
+                  ref={editorRef}
+                  contentEditable={true}
+                  onInput={handleContentChange}
+                  data-placeholder="Begin neural synthesis..."
+                  className="neural-editor w-full h-full bg-transparent border-none outline-none font-serif text-[20px] leading-[1.8] text-slate-800 px-16 py-20 selection:bg-primary/20 min-h-[1000px]"
+                  style={{ whiteSpace: 'pre-wrap' }}
                   spellCheck="false"
                 />
               </div>
@@ -650,6 +684,17 @@ const Study = () => {
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,700;1,400&display=swap');
         .font-serif { font-family: 'Crimson Pro', serif; }
+        .neural-editor:empty:before {
+          content: attr(data-placeholder);
+          color: #94a3b8;
+          pointer-events: none;
+          display: block;
+          opacity: 0.5;
+        }
+        .neural-editor h1 { font-size: 2.5rem; font-weight: 900; margin-top: 2rem; margin-bottom: 1rem; color: #0f172a; }
+        .neural-editor ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 1rem; }
+        .neural-editor b, .neural-editor strong { font-weight: 800; color: #0f172a; }
+        .neural-editor i, .neural-editor em { font-style: italic; }
       `}</style>
     </div>
   );
