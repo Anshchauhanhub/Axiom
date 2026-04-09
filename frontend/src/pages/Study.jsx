@@ -32,6 +32,7 @@ const Study = () => {
   const [isSaving, setIsSaving] = useState(false);
   const timerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
+  const editorRef = useRef(null);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -55,17 +56,25 @@ const Study = () => {
         }
       }
 
+      const prevGoalId = activeGoal?.id;
       setActiveTask(foundTask);
       setActiveGoal(foundGoal);
-      setNotes(foundGoal?.notes || '');
+      
+      // Update notes and editor content ONLY if the goal has changed
+      if (foundGoal && foundGoal.id !== prevGoalId) {
+        const initialNotes = foundGoal.notes || '';
+        setNotes(initialNotes);
+        if (editorRef.current) {
+          editorRef.current.innerHTML = initialNotes;
+        }
+      }
       
       // Fix: Only reset to 'select' if we are in the initial loading state.
-      // This prevents refreshData() calls from kicking the user out of the Result or Learning phases.
       if (phase === 'loading') {
         setPhase('select');
       }
     }
-  }, [user, roadmap, goals, navigate]);
+  }, [user, roadmap, goals, navigate, phase, activeGoal?.id]);
 
   useEffect(() => {
     if (!activeGoal || !showNotes) return;
@@ -175,6 +184,24 @@ const Study = () => {
       setSubmittingQuiz(false);
       setLoading(false);
     }
+  };
+
+  const handleExecCommand = (command, value = null) => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+      setNotes(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleContentChange = () => {
+    if (editorRef.current) {
+      setNotes(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleAddLink = () => {
+    const url = prompt('Enter the URL copy:');
+    if (url) handleExecCommand('createLink', url);
   };
 
   const renderLoaders = () => (
@@ -311,38 +338,139 @@ const Study = () => {
     return elements;
   };
 
-  const renderNotebook = () => (
-    <div className={`flex flex-col bg-[#0b0c10] border-l border-outline-variant/10 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[50%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
-      <div className="h-full flex flex-col p-6 lg:p-10">
-        <header className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-xl font-headline font-black uppercase text-on-surface tracking-widest">Neural Notebook</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-              <p className="text-[10px] font-label text-on-surface-variant tracking-widest uppercase truncate max-w-[200px]">{activeGoal?.title}</p>
+  const renderNotebook = () => {
+    const wordCount = notes.trim() ? notes.trim().split(/\s+/).length : 0;
+    const readTime = Math.ceil(wordCount / 200);
+
+    return (
+      <div className={`flex flex-col bg-[#12141a] border-l border-outline-variant/10 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[50%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
+        <div className="h-full flex flex-col">
+          {/* Document Header / Toolbar */}
+          <header className="bg-surface-container-low/50 backdrop-blur-xl border-b border-outline-variant/10 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+            <div className="flex items-center gap-6">
+              <div>
+                <h3 className="text-sm font-headline font-black uppercase text-on-surface tracking-widest leading-none">Neural Record</h3>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                  <p className="text-[9px] font-label text-on-surface-variant tracking-[0.2em] uppercase truncate max-w-[150px]">{activeGoal?.title || 'GENERAL_SYNTHESIS'}</p>
+                </div>
+              </div>
+              
+              <div className="h-8 w-[1px] bg-outline-variant/20 mx-2"></div>
+              
+              {/* Tool Commands */}
+              <div className="flex items-center gap-1 bg-surface-container-highest/30 p-1 rounded-xl border border-outline-variant/5">
+                {[
+                  { icon: 'format_bold', label: 'Bold', cmd: 'bold' },
+                  { icon: 'format_italic', label: 'Italic', cmd: 'italic' },
+                  { icon: 'format_list_bulleted', label: 'Bullets', cmd: 'insertUnorderedList' },
+                  { icon: 'link', label: 'Link', action: handleAddLink },
+                  { icon: 'format_h1', label: 'Heading 1', cmd: 'formatBlock', val: 'H1' },
+                ].map((cmd, i) => (
+                  <button 
+                    key={i} 
+                    onMouseDown={(e) => e.preventDefault()} // Prevent losing focus
+                    onClick={() => cmd.action ? cmd.action() : handleExecCommand(cmd.cmd, cmd.val)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all duration-200 group relative"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">{cmd.icon}</span>
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-surface-container-highest text-[8px] font-label uppercase tracking-widest text-on-surface rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      {cmd.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container-highest/50 rounded-lg border border-outline-variant/5">
+                {isSaving ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                    <span className="text-[9px] font-label text-primary font-black uppercase tracking-tighter">Syncing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[14px] text-secondary">cloud_done</span>
+                    <span className="text-[9px] font-label text-secondary font-black uppercase tracking-tighter">Secured</span>
+                  </>
+                )}
+              </div>
+              <button 
+                className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-error/20 hover:text-error rounded-xl transition-all duration-300"
+                onClick={() => setShowNotes(false)}
+              >
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Document Workspace */}
+          <div className="flex-grow overflow-y-auto custom-scrollbar bg-[#1a1c23] p-8 lg:p-12 flex flex-col items-center">
+            
+            {/* The "Paper" Container */}
+            <div className="w-full max-w-[850px] min-h-[1100px] bg-[#faf9f6] shadow-[0_30px_100px_rgba(0,0,0,0.4),0_10px_30px_rgba(0,0,0,0.2)] rounded-sm relative flex flex-col transform transition-transform duration-500 hover:scale-[1.005]">
+              
+              {/* Neural Ruler */}
+              <div className="h-6 w-full bg-slate-100 border-b border-slate-200 flex items-end px-12 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '10px 100%' }}></div>
+                <div className="w-full h-[2px] bg-primary/20 relative z-10">
+                  <div className="absolute left-[10%] right-[10%] h-full bg-primary/40"></div>
+                </div>
+              </div>
+
+              {/* Watermark / Logo */}
+              <div className="absolute top-12 right-12 opacity-[0.03] pointer-events-none select-none">
+                <h1 className="text-6xl font-black font-headline tracking-tighter uppercase">AXIOM</h1>
+              </div>
+
+              {/* Editor Area */}
+              <div className="flex-grow flex flex-col relative prose prose-slate max-w-none">
+                <div
+                  ref={editorRef}
+                  contentEditable={true}
+                  onInput={handleContentChange}
+                  data-placeholder="Begin neural synthesis..."
+                  className="neural-editor w-full h-full bg-transparent border-none outline-none font-serif text-[20px] leading-[1.8] text-slate-800 px-16 py-20 selection:bg-primary/20 min-h-[1000px]"
+                  style={{ whiteSpace: 'pre-wrap' }}
+                  spellCheck="false"
+                />
+              </div>
+
+              {/* Page Footer Deco */}
+              <div className="h-20 border-t border-slate-100/50 mt-10 flex items-center px-16 justify-between opacity-30">
+                 <span className="text-[10px] font-label uppercase tracking-[0.5em] text-slate-400">Section Alpha // Recorded by {user?.name?.split(' ')[0]}</span>
+                 <span className="text-[10px] font-label uppercase tracking-[0.5em] text-slate-400">Page 01</span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            {isSaving && <span className="text-[10px] font-label text-primary animate-pulse italic uppercase tracking-tighter">Syncing to Axiom...</span>}
-            <button onClick={() => setShowNotes(false)} className="text-on-surface-variant hover:text-on-surface transition-colors p-2 hover:bg-surface-container-highest rounded-xl bg-surface-container-low/30">
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </header>
-        
-        <div className="flex-grow bg-[#faf9f6] text-slate-900 rounded-[2rem] overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] border border-black/5 flex flex-col p-1 transition-all duration-500 hover:shadow-[inset_0_2px_20px_rgba(0,0,0,0.15)]">
-            <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Synthesize your knowledge here..."
-                className="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-xl leading-relaxed text-slate-800 placeholder:text-slate-200 px-12 py-16 scrollbar-thin scrollbar-thumb-slate-200"
-                spellCheck="false"
-            />
+
+          {/* Status Bar */}
+          <footer className="bg-surface-container-low border-t border-outline-variant/10 px-8 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-widest">Words:</span>
+                <span className="text-[10px] font-black text-on-surface">{wordCount}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-widest">Synthesis Time:</span>
+                <span className="text-[10px] font-black text-on-surface">{readTime}m</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-2 px-3 py-1 hover:bg-surface-container-highest rounded-lg transition-colors group">
+                <span className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary">download</span>
+                <span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant group-hover:text-on-surface">Export Protocol</span>
+              </button>
+              <div className="h-4 w-[1px] bg-outline-variant/20 mx-1"></div>
+              <p className="text-[9px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 italic">Neural Integrity Guaranteed</p>
+            </div>
+          </footer>
         </div>
-        <p className="text-[9px] font-label tracking-[0.4em] uppercase text-on-surface-variant/20 mt-6 text-center italic">Persistent Neural Record // Bio-Locked</p>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderNotesToggle = () => (
     <button
@@ -552,6 +680,21 @@ const Study = () => {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(253, 184, 19, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(253, 184, 19, 0.2); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,700;1,400&display=swap');
+        .font-serif { font-family: 'Crimson Pro', serif; }
+        .neural-editor:empty:before {
+          content: attr(data-placeholder);
+          color: #94a3b8;
+          pointer-events: none;
+          display: block;
+          opacity: 0.5;
+        }
+        .neural-editor h1 { font-size: 2.5rem; font-weight: 900; margin-top: 2rem; margin-bottom: 1rem; color: #0f172a; }
+        .neural-editor ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 1rem; }
+        .neural-editor b, .neural-editor strong { font-weight: 800; color: #0f172a; }
+        .neural-editor i, .neural-editor em { font-style: italic; }
       `}</style>
     </div>
   );
