@@ -204,6 +204,50 @@ const Study = () => {
     if (url) handleExecCommand('createLink', url);
   };
 
+  const handleExport = () => {
+    if (!editorRef.current) return;
+    
+    const content = editorRef.current.innerHTML;
+    const title = activeGoal?.title || 'Study_Session';
+    const date = new Date().toLocaleDateString();
+    
+    const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${title}</title>
+        <style>
+          body { font-family: 'Georgia', serif; line-height: 1.6; color: #333; padding: 50px; }
+          h1 { color: #000; text-align: center; text-transform: uppercase; margin-bottom: 30px; font-family: sans-serif; }
+          .footer { margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 10px; color: #999; text-align: center; font-family: sans-serif; }
+          b, strong { font-weight: bold; }
+          i, em { font-style: italic; }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div style="font-size: 12pt;">${content}</div>
+        <div class="footer">
+          SYNTHESIZED BY AXIOM AI // ${date} // ${user?.name || 'Neural Subject'}
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', htmlContent], {
+      type: 'application/msword'
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.href = url;
+    link.download = `${title.replace(/\s+/g, '_')}_Synthesis.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderLoaders = () => (
     <>
       {loadingQuiz && (
@@ -459,7 +503,10 @@ const Study = () => {
             </div>
             
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-3 py-1 hover:bg-surface-container-highest rounded-lg transition-colors group">
+              <button 
+                onClick={handleExport}
+                className="flex items-center gap-2 px-3 py-1 hover:bg-surface-container-highest rounded-lg transition-colors group"
+              >
                 <span className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary">download</span>
                 <span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant group-hover:text-on-surface">Export Protocol</span>
               </button>
