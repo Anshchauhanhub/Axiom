@@ -10,7 +10,9 @@ const Study = () => {
   const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
   const [phase, setPhase] = useState('loading'); // loading, select, learning, quiz, result
+  const [viewMode, setViewMode] = useState('task'); // 'task' or 'roadmap'
   const [activeTask, setActiveTask] = useState(null);
+  const activeTaskRef = useRef(false);
   const [activeGoal, setActiveGoal] = useState(null);
   const [quizData, setQuizData] = useState(null);
   const [quizToken, setQuizToken] = useState(null);
@@ -32,7 +34,6 @@ const Study = () => {
   const [isSaving, setIsSaving] = useState(false);
   const timerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
-  const editorRef = useRef(null);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -56,25 +57,21 @@ const Study = () => {
         }
       }
 
-      const prevGoalId = activeGoal?.id;
-      setActiveTask(foundTask);
-      setActiveGoal(foundGoal);
-      
-      // Update notes and editor content ONLY if the goal has changed
-      if (foundGoal && foundGoal.id !== prevGoalId) {
-        const initialNotes = foundGoal.notes || '';
-        setNotes(initialNotes);
-        if (editorRef.current) {
-          editorRef.current.innerHTML = initialNotes;
-        }
+      // Default to the natural progress task if nothing is manually selected
+      if (!activeTaskRef.current) {
+         setActiveTask(foundTask);
+         activeTaskRef.current = true;
       }
+      setActiveGoal(foundGoal);
+      setNotes(foundGoal?.notes || '');
       
       // Fix: Only reset to 'select' if we are in the initial loading state.
+      // This prevents refreshData() calls from kicking the user out of the Result or Learning phases.
       if (phase === 'loading') {
         setPhase('select');
       }
     }
-  }, [user, roadmap, goals, navigate, phase, activeGoal?.id]);
+  }, [user, roadmap, goals, navigate]);
 
   useEffect(() => {
     if (!activeGoal || !showNotes) return;
@@ -127,6 +124,11 @@ const Study = () => {
       setLoading(false);
       setLoadingContent(false);
     }
+  };
+
+  const handleSelectTask = (task) => {
+    setActiveTask(task);
+    setViewMode('task');
   };
 
   const handleStartQuiz = async () => {
@@ -184,68 +186,6 @@ const Study = () => {
       setSubmittingQuiz(false);
       setLoading(false);
     }
-  };
-
-  const handleExecCommand = (command, value = null) => {
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
-      setNotes(editorRef.current.innerHTML);
-    }
-  };
-
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      setNotes(editorRef.current.innerHTML);
-    }
-  };
-
-  const handleAddLink = () => {
-    const url = prompt('Enter the URL copy:');
-    if (url) handleExecCommand('createLink', url);
-  };
-
-  const handleExport = () => {
-    if (!editorRef.current) return;
-    
-    const content = editorRef.current.innerHTML;
-    const title = activeGoal?.title || 'Study_Session';
-    const date = new Date().toLocaleDateString();
-    
-    const htmlContent = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset='utf-8'>
-        <title>${title}</title>
-        <style>
-          body { font-family: 'Georgia', serif; line-height: 1.6; color: #333; padding: 50px; }
-          h1 { color: #000; text-align: center; text-transform: uppercase; margin-bottom: 30px; font-family: sans-serif; }
-          .footer { margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 10px; color: #999; text-align: center; font-family: sans-serif; }
-          b, strong { font-weight: bold; }
-          i, em { font-style: italic; }
-        </style>
-      </head>
-      <body>
-        <h1>${title}</h1>
-        <div style="font-size: 12pt;">${content}</div>
-        <div class="footer">
-          SYNTHESIZED BY AXIOM AI // ${date} // ${user?.name || 'Neural Subject'}
-        </div>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', htmlContent], {
-      type: 'application/msword'
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    
-    link.href = url;
-    link.download = `${title.replace(/\s+/g, '_')}_Synthesis.doc`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const renderLoaders = () => (
@@ -382,142 +322,38 @@ const Study = () => {
     return elements;
   };
 
-  const renderNotebook = () => {
-    const wordCount = notes.trim() ? notes.trim().split(/\s+/).length : 0;
-    const readTime = Math.ceil(wordCount / 200);
-
-    return (
-      <div className={`flex flex-col bg-[#12141a] border-l border-outline-variant/10 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[50%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
-        <div className="h-full flex flex-col">
-          {/* Document Header / Toolbar */}
-          <header className="bg-surface-container-low/50 backdrop-blur-xl border-b border-outline-variant/10 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-            <div className="flex items-center gap-6">
-              <div>
-                <h3 className="text-sm font-headline font-black uppercase text-on-surface tracking-widest leading-none">Neural Record</h3>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                  <p className="text-[9px] font-label text-on-surface-variant tracking-[0.2em] uppercase truncate max-w-[150px]">{activeGoal?.title || 'GENERAL_SYNTHESIS'}</p>
-                </div>
-              </div>
-              
-              <div className="h-8 w-[1px] bg-outline-variant/20 mx-2"></div>
-              
-              {/* Tool Commands */}
-              <div className="flex items-center gap-1 bg-surface-container-highest/30 p-1 rounded-xl border border-outline-variant/5">
-                {[
-                  { icon: 'format_bold', label: 'Bold', cmd: 'bold' },
-                  { icon: 'format_italic', label: 'Italic', cmd: 'italic' },
-                  { icon: 'format_list_bulleted', label: 'Bullets', cmd: 'insertUnorderedList' },
-                  { icon: 'link', label: 'Link', action: handleAddLink },
-                  { icon: 'format_h1', label: 'Heading 1', cmd: 'formatBlock', val: 'H1' },
-                ].map((cmd, i) => (
-                  <button 
-                    key={i} 
-                    onMouseDown={(e) => e.preventDefault()} // Prevent losing focus
-                    onClick={() => cmd.action ? cmd.action() : handleExecCommand(cmd.cmd, cmd.val)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all duration-200 group relative"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">{cmd.icon}</span>
-                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-surface-container-highest text-[8px] font-label uppercase tracking-widest text-on-surface rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      {cmd.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container-highest/50 rounded-lg border border-outline-variant/5">
-                {isSaving ? (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
-                    <span className="text-[9px] font-label text-primary font-black uppercase tracking-tighter">Syncing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-[14px] text-secondary">cloud_done</span>
-                    <span className="text-[9px] font-label text-secondary font-black uppercase tracking-tighter">Secured</span>
-                  </>
-                )}
-              </div>
-              <button 
-                className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-error/20 hover:text-error rounded-xl transition-all duration-300"
-                onClick={() => setShowNotes(false)}
-              >
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
-            </div>
-          </header>
-
-          {/* Document Workspace */}
-          <div className="flex-grow overflow-y-auto custom-scrollbar bg-[#1a1c23] p-8 lg:p-12 flex flex-col items-center">
-            
-            {/* The "Paper" Container */}
-            <div className="w-full max-w-[850px] min-h-[1100px] bg-[#faf9f6] shadow-[0_30px_100px_rgba(0,0,0,0.4),0_10px_30px_rgba(0,0,0,0.2)] rounded-sm relative flex flex-col transform transition-transform duration-500 hover:scale-[1.005]">
-              
-              {/* Neural Ruler */}
-              <div className="h-6 w-full bg-slate-100 border-b border-slate-200 flex items-end px-12 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '10px 100%' }}></div>
-                <div className="w-full h-[2px] bg-primary/20 relative z-10">
-                  <div className="absolute left-[10%] right-[10%] h-full bg-primary/40"></div>
-                </div>
-              </div>
-
-              {/* Watermark / Logo */}
-              <div className="absolute top-12 right-12 opacity-[0.03] pointer-events-none select-none">
-                <h1 className="text-6xl font-black font-headline tracking-tighter uppercase">AXIOM</h1>
-              </div>
-
-              {/* Editor Area */}
-              <div className="flex-grow flex flex-col relative prose prose-slate max-w-none">
-                <div
-                  ref={editorRef}
-                  contentEditable={true}
-                  onInput={handleContentChange}
-                  data-placeholder="Begin neural synthesis..."
-                  className="neural-editor w-full h-full bg-transparent border-none outline-none font-serif text-[20px] leading-[1.8] text-slate-800 px-16 py-20 selection:bg-primary/20 min-h-[1000px]"
-                  style={{ whiteSpace: 'pre-wrap' }}
-                  spellCheck="false"
-                />
-              </div>
-
-              {/* Page Footer Deco */}
-              <div className="h-20 border-t border-slate-100/50 mt-10 flex items-center px-16 justify-between opacity-30">
-                 <span className="text-[10px] font-label uppercase tracking-[0.5em] text-slate-400">Section Alpha // Recorded by {user?.name?.split(' ')[0]}</span>
-                 <span className="text-[10px] font-label uppercase tracking-[0.5em] text-slate-400">Page 01</span>
-              </div>
+  const renderNotebook = () => (
+    <div className={`flex flex-col bg-[#0b0c10] border-l border-outline-variant/10 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[50%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
+      <div className="h-full flex flex-col p-6 lg:p-10">
+        <header className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-xl font-headline font-black uppercase text-on-surface tracking-widest">Neural Notebook</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              <p className="text-[10px] font-label text-on-surface-variant tracking-widest uppercase truncate max-w-[200px]">{activeGoal?.title}</p>
             </div>
           </div>
-
-          {/* Status Bar */}
-          <footer className="bg-surface-container-low border-t border-outline-variant/10 px-8 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-widest">Words:</span>
-                <span className="text-[10px] font-black text-on-surface">{wordCount}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-widest">Synthesis Time:</span>
-                <span className="text-[10px] font-black text-on-surface">{readTime}m</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={handleExport}
-                className="flex items-center gap-2 px-3 py-1 hover:bg-surface-container-highest rounded-lg transition-colors group"
-              >
-                <span className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary">download</span>
-                <span className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant group-hover:text-on-surface">Export Protocol</span>
-              </button>
-              <div className="h-4 w-[1px] bg-outline-variant/20 mx-1"></div>
-              <p className="text-[9px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 italic">Neural Integrity Guaranteed</p>
-            </div>
-          </footer>
+          <div className="flex items-center gap-4">
+            {isSaving && <span className="text-[10px] font-label text-primary animate-pulse italic uppercase tracking-tighter">Syncing to Axiom...</span>}
+            <button onClick={() => setShowNotes(false)} className="text-on-surface-variant hover:text-on-surface transition-colors p-2 hover:bg-surface-container-highest rounded-xl bg-surface-container-low/30">
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </header>
+        
+        <div className="flex-grow bg-[#faf9f6] text-slate-900 rounded-[2rem] overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] border border-black/5 flex flex-col p-1 transition-all duration-500 hover:shadow-[inset_0_2px_20px_rgba(0,0,0,0.15)]">
+            <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Synthesize your knowledge here..."
+                className="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-xl leading-relaxed text-slate-800 placeholder:text-slate-200 px-12 py-16 scrollbar-thin scrollbar-thumb-slate-200"
+                spellCheck="false"
+            />
         </div>
+        <p className="text-[9px] font-label tracking-[0.4em] uppercase text-on-surface-variant/20 mt-6 text-center italic">Persistent Neural Record // Bio-Locked</p>
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderNotesToggle = () => (
     <button
@@ -535,6 +371,107 @@ const Study = () => {
     </button>
   );
 
+  const renderTaskParts = (task) => (
+    <div className="space-y-12 max-w-4xl mx-auto pb-24">
+      <div className="bg-surface-container-low border border-outline-variant/10 p-12 lg:p-16 rounded-[3.5rem] relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-primary/20">
+        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+          <span className="material-symbols-outlined text-8xl">neuroscience</span>
+        </div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-[1px] bg-primary"></div>
+              <h3 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">
+                {task.title}
+              </h3>
+            </div>
+            <button 
+              onClick={() => setViewMode('roadmap')}
+              className="px-6 py-2 rounded-full border border-outline-variant/20 text-[10px] font-label font-black uppercase tracking-widest text-on-surface-variant hover:bg-surface-container-highest transition-all"
+            >
+              Back to Roadmap
+            </button>
+          </div>
+          <div className="space-y-6 relative">
+            <div className="absolute left-[34px] top-4 bottom-4 w-[1px] bg-gradient-to-b from-primary/40 via-secondary/40 to-transparent"></div>
+            {task.parts.map((part) => {
+              const isActive = part.status === 'active';
+              const isPassed = part.status === 'passed';
+              
+              return (
+                <div 
+                  key={part.id} 
+                  className={`relative flex items-center justify-between p-7 rounded-[2rem] border transition-all duration-300 ml-16 ${(isActive || isPassed) ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : 'opacity-20 border-outline-variant/5 grayscale'}`}
+                  onClick={() => (isActive || isPassed) && handleStartLearning(part.id, part.title)}
+                >
+                  <div className={`absolute left-[-42px] w-6 h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
+                  <div className="flex items-center gap-6">
+                    <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container-highest/50 ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant'}`}>
+                       <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
+                    </div>
+                    <div>
+                      <span className={`block text-lg font-bold tracking-tight mb-0.5 ${isActive || isPassed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{part.title}</span>
+                      <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
+                    </div>
+                  </div>
+                  {(isActive || isPassed) && <span className="material-symbols-outlined text-primary group-secondary:translate-x-1 transition-transform">arrow_forward_ios</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRoadmapOverview = () => (
+    <div className="animate-in fade-in duration-700 max-w-5xl mx-auto w-full pb-24">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {roadmap.tasks.map((task, idx) => {
+          const isLocked = task.status === 'locked';
+          const isActive = task.status === 'active';
+          const isPassed = task.status === 'passed';
+          
+          return (
+            <div 
+              key={task.id} 
+              onClick={() => !isLocked && handleSelectTask(task)}
+              className={`p-8 rounded-[2.5rem] border transition-all duration-500 flex flex-col justify-between group h-64 ${
+                !isLocked ? 'bg-surface-container-low border-outline-variant/10 cursor-pointer hover:border-primary/40 hover:bg-surface-container-high' : 'bg-surface-container-low/50 border-transparent opacity-40'
+              }`}
+            >
+              <div>
+                 <div className="flex justify-between items-start mb-6">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                      isActive ? 'bg-primary/20 text-primary shadow-[0_0_20px_rgba(253,184,19,0.2)]' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
+                    }`}>
+                      <span className="material-symbols-outlined text-3xl">
+                        {isPassed ? 'verified' : isActive ? 'play_arrow' : 'lock'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-label font-black text-on-surface-variant/20 group-hover:text-primary/40 transition-colors uppercase tracking-[0.3em]">Module {String(idx + 1).padStart(2, '0')}</span>
+                 </div>
+                 <h4 className="text-xl font-headline font-black uppercase tracking-tight text-on-surface mb-2 leading-none">{task.title}</h4>
+                 <p className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant opacity-60">
+                   {task.parts.filter(p => p.status === 'passed').length} / {task.parts.length} Nodes Verified
+                 </p>
+              </div>
+              
+              <div className="mt-6 flex items-center justify-between">
+                 <span className={`text-[9px] font-label font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${
+                    isActive ? 'bg-primary text-on-primary-container' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
+                 }`}>
+                   {task.status}
+                 </span>
+                 {!isLocked && <span className="material-symbols-outlined text-primary scale-0 group-hover:scale-100 transition-transform">open_in_new</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   let phaseContent = null;
 
   if (phase === 'loading') {
@@ -548,14 +485,16 @@ const Study = () => {
     );
   } else if (phase === 'select') {
     phaseContent = (
-      <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto w-full">
-        <header className="mb-8 text-center">
-          <span className="text-primary font-label text-[10px] tracking-[0.4em] uppercase font-bold mb-2 block animate-in slide-in-from-top-4 duration-700">Neural Gateway</span>
-          <h2 className="text-4xl font-black tracking-tight text-on-surface mb-2 font-headline uppercase leading-none">Study Session</h2>
-          <div className="flex items-center justify-center gap-3">
-             <div className="h-[1px] w-6 bg-outline-variant/30"></div>
-            <span className="text-[9px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-bold opacity-60 italic">{activeGoal?.title || 'Unknown Synthesis'}</span>
-            <div className="h-[1px] w-6 bg-outline-variant/30"></div>
+      <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full">
+        <header className="mb-12 text-center">
+          <span className="text-primary font-label text-[10px] tracking-[0.4em] uppercase font-bold mb-3 block animate-in slide-in-from-top-4 duration-700">Neural Gateway</span>
+          <h2 className="text-5xl font-black tracking-tighter text-on-surface mb-4 font-headline uppercase leading-none">
+            {viewMode === 'task' ? 'Study Session' : 'Roadmap Overview'}
+          </h2>
+          <div className="flex items-center justify-center gap-4">
+             <div className="h-[1px] w-8 bg-outline-variant/30"></div>
+            <span className="text-[11px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-black opacity-40 italic">{activeGoal?.title || 'Unknown Synthesis'}</span>
+            <div className="h-[1px] w-8 bg-outline-variant/30"></div>
           </div>
         </header>
 
@@ -565,52 +504,12 @@ const Study = () => {
           </div>
         )}
 
-        {!activeTask ? (
-          <div className="text-center py-20 bg-surface-container-low/30 rounded-3xl border border-outline-variant/10 text-on-surface-variant/40 italic font-label text-sm tracking-widest">
+        {!activeTask && !roadmap ? (
+          <div className="text-center py-20 bg-surface-container-low/30 rounded-3xl border border-outline-variant/10 text-on-surface-variant/40 italic font-label text-sm tracking-widest uppercase">
             Calibrating mastery protocols...
           </div>
         ) : (
-          <div className="space-y-12 max-w-4xl mx-auto pb-24">
-            <div className="bg-surface-container-low border border-outline-variant/10 p-12 lg:p-16 rounded-[3.5rem] relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-primary/20">
-              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                <span className="material-symbols-outlined text-8xl">neuroscience</span>
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-10">
-                    <div className="w-12 h-[1px] bg-primary"></div>
-                    <h3 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">
-                    {activeTask.title}
-                    </h3>
-                </div>
-                <div className="space-y-6 relative">
-                  <div className="absolute left-[34px] top-4 bottom-4 w-[1px] bg-gradient-to-b from-primary/40 via-secondary/40 to-transparent"></div>
-                  {activeTask.parts.map((part) => {
-                    const isActive = part.status === 'active';
-                    const isPassed = part.status === 'passed';
-                    return (
-                      <div 
-                        key={part.id} 
-                        className={`relative flex items-center justify-between p-7 rounded-[2rem] border transition-all duration-300 ml-16 ${isActive ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : isPassed ? 'bg-secondary/5 border-secondary/20' : 'opacity-20 border-outline-variant/5 grayscale'}`}
-                        onClick={() => isActive && handleStartLearning(part.id, part.title)}
-                      >
-                        <div className={`absolute left-[-42px] w-6 h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
-                        <div className="flex items-center gap-6">
-                          <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container-highest/50 ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant'}`}>
-                             <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
-                          </div>
-                          <div>
-                            <span className={`block text-lg font-bold tracking-tight mb-0.5 ${isActive || isPassed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{part.title}</span>
-                            <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
-                          </div>
-                        </div>
-                        {isActive && <span className="material-symbols-outlined text-primary group-secondary:translate-x-1 transition-transform">arrow_forward_ios</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
+          viewMode === 'task' && activeTask ? renderTaskParts(activeTask) : renderRoadmapOverview()
         )}
       </div>
     );
@@ -636,13 +535,22 @@ const Study = () => {
           </div>
           <div className="mt-20 pt-10 border-t border-outline-variant/10 flex flex-col items-center">
              <span className="text-[10px] font-label text-on-surface-variant/30 uppercase tracking-[0.3em] mb-8 italic text-center">Neural integrity verification required for progression</span>
-            <button
-              onClick={handleStartQuiz}
-              className="group relative px-16 py-6 bg-gradient-to-br from-primary via-primary to-secondary rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-[0_20px_50px_rgba(253,184,19,0.3)] hover:shadow-primary/40"
-            >
-                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <span className="relative font-label font-black tracking-[0.5em] text-on-primary-container text-lg uppercase">TAKE QUIZ</span>
-            </button>
+            {roadmap?.tasks?.flatMap(t => t.parts).find(p => p.id === activePartId)?.status === 'passed' ? (
+              <button
+                onClick={() => setPhase('select')}
+                className="group relative px-16 py-6 bg-surface-container-highest rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-xl hover:bg-surface-container"
+              >
+                <span className="relative font-label font-black tracking-[0.5em] text-on-surface text-lg uppercase">BACK TO TASK</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleStartQuiz}
+                className="group relative px-16 py-6 bg-gradient-to-br from-primary via-primary to-secondary rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-[0_20px_50px_rgba(253,184,19,0.3)] hover:shadow-primary/40"
+              >
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <span className="relative font-label font-black tracking-[0.5em] text-on-primary-container text-lg uppercase">TAKE QUIZ</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -727,21 +635,6 @@ const Study = () => {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(253, 184, 19, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(253, 184, 19, 0.2); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,700;1,400&display=swap');
-        .font-serif { font-family: 'Crimson Pro', serif; }
-        .neural-editor:empty:before {
-          content: attr(data-placeholder);
-          color: #94a3b8;
-          pointer-events: none;
-          display: block;
-          opacity: 0.5;
-        }
-        .neural-editor h1 { font-size: 2.5rem; font-weight: 900; margin-top: 2rem; margin-bottom: 1rem; color: #0f172a; }
-        .neural-editor ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 1rem; }
-        .neural-editor b, .neural-editor strong { font-weight: 800; color: #0f172a; }
-        .neural-editor i, .neural-editor em { font-style: italic; }
       `}</style>
     </div>
   );
