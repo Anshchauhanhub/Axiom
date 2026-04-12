@@ -69,7 +69,11 @@ const Onboarding = () => {
       const res = await fn(email, password);
       await loginUser(res.access_token);
     } catch (e) {
-      setError(e.message);
+      if (mode === 'register' && e.message.includes('already registered')) {
+        setError('This email is already part of the Axiom network. Switch to Login to continue.');
+      } else {
+        setError(e.message);
+      }
     }
     setLoading(false);
   };
@@ -176,6 +180,7 @@ const Onboarding = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
               required
+              autoComplete="email"
             />
           </div>
           <div className="space-y-2">
@@ -186,6 +191,7 @@ const Onboarding = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
               required
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             />
           </div>
           {error && <p className="text-error text-xs font-bold font-label text-center">{error}</p>}

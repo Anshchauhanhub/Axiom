@@ -15,7 +15,7 @@ async function request(method, path, body = null) {
   const opts = { method, headers: headers() };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${API_BASE}${path}`, opts);
-  if (res.status === 401) {
+  if (res.status === 401 && path !== '/auth/login' && path !== '/auth/register') {
     clearToken();
     window.location.href = '/onboarding';
     throw new Error('Session expired');

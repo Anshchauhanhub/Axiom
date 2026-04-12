@@ -6,14 +6,14 @@ from pydantic import BaseModel, EmailStr
 
 # --- Auth ---
 class RegisterRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     timezone: str = "Asia/Kolkata"
     study_schedule: list[str] = ["12:00", "18:00"]
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
