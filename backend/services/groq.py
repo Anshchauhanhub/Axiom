@@ -3,6 +3,7 @@ import json
 import logging
 import httpx
 from dotenv import load_dotenv
+from services.search import search_internet
 
 load_dotenv()
 
@@ -43,8 +44,18 @@ async def call_groq(system_prompt: str, user_prompt: str) -> str:
 
 
 def _clean_json(raw: str) -> str:
-    """Strip markdown code fences from LLM response."""
+    """Extract the first valid JSON object from a potentially messy string."""
+    import re
     cleaned = raw.strip()
+    
+    # Try to find a JSON object using regex if standard strip fails
+    try:
+        match = re.search(r'(\{.*\}|\[.*\])', cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(0)
+    except Exception:
+        pass
+
     if cleaned.startswith("```"):
         # Remove first line (```json or ```)
         if "\n" in cleaned:
@@ -102,10 +113,13 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
 
 
 async def generate_onboarding_response(messages: list[dict]) -> dict:
-    """Handle the conversational onboarding logic with Axiom AI."""
+    """Handle the conversational onboarding logic with Axiom AI, including internet search."""
     system_prompt = (
         "You are Axiom AI, a high-accountability learning coach for the Axiom platform. "
         "Your goal is to help the user define a razor-sharp learning goal and generate a roadmap. "
+        "\n"
+        "### INTERNET CAPABILITY:\n"
+        "You have access to a `search_internet` tool. If a user asks for information you don't know (like recent cut-offs, specific syllabus details, or trends), use this tool immediately to provide accurate data.\n\n"
         "### PHASES OF CONVERSATION:\n"
         "1. **Discovery**: Ask about their current status (College, entrance exams, job prep) and what they want to master.\n"
         "2. **Timeline**: Ask about their desired time period for this learning goal.\n"
@@ -114,50 +128,105 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "5. **Refinement**: Ask if they want to change anything. If they are happy, signal we are ready.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
-        "You MUST return a JSON object with the following fields:\n"
-        "- 'message': Your conversational response to the user. When moving to 'ready' phase, explicitly tell them: 'If you are satisfied with this neural path, please click the \"Activate Neural Path\" button below to begin.'\n"
+        "1. If you need more information, use the `search_internet` tool first.\n"
+        "2. Once you have all required info, return a JSON object with:\n"
+        "- 'message': Your conversational response.\n"
         "- 'phase': Current phase ('discovery', 'timeline', 'syllabus', 'draft', 'refinement', 'ready').\n"
-        "- 'draft_roadmap': (Optional) If you are in 'draft', 'refinement', or 'ready' phase, include a JSON array of tasks "
-        "exactly like generate_roadmap does (each task has: 'title', 'parts' [array of strings]).\n"
+        "- 'draft_roadmap': (Optional) roadmap array for drafting/refinement/ready phases.\n"
         "\n"
-        "Return ONLY the valid JSON object, no explanation outside of the 'message' field. "
-        "When generating 'draft_roadmap', ensure it is exhaustive and high-fidelity, usually 10-15 tasks "
-        "with 5-8 sub-parts each to cover the entire curriculum depth."
+        "Ensure the final output is a valid JSON object."
     )
 
-    # Note: Using the multi-turn chat approach
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "search_internet",
+                "description": "Search the internet for real-time information, syllabus details, or learning trends.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to perform."
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    ]
+
+    current_messages = [{"role": "system", "content": system_prompt}] + messages
+
     async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            response = await client.post(
-                f"{GROQ_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [{"role": "system", "content": system_prompt}] + messages,
-                    "temperature": 0.7,
-                    "response_format": {"type": "json_object"}
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            raw_content = data["choices"][0]["message"]["content"]
-            
-            # Use _clean_json to handle potential markdown wrappers even with json_object format
-            cleaned = _clean_json(raw_content)
+        for _ in range(3):  # Allow up to 2 tool-call rounds
             try:
-                return json.loads(cleaned)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
-                raise ValueError(f"AI response is not valid JSON: {e}")
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error in onboarding chat: {e}")
-            raise
+                # 1. Ask model (with tools enabled)
+                payload = {
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": current_messages,
+                    "temperature": 0.7,
+                    "tools": tools,
+                    "tool_choice": "auto"
+                }
+                
+                # If we've already done tool calls, we might want to enforce JSON at the end
+                # but llama-3.3-70b is good enough to follow JSON instructions even without response_format if tools used.
+                
+                response = await client.post(
+                    f"{GROQ_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+                message = data["choices"][0]["message"]
+
+                # 2. Check for tool calls
+                if message.get("tool_calls"):
+                    tool_calls = message["tool_calls"]
+                    current_messages.append(message)
+                    
+                    for tool_call in tool_calls:
+                        function_name = tool_call["function"]["name"]
+                        arguments = json.loads(tool_call["function"]["arguments"])
+                        
+                        if function_name == "search_internet":
+                            search_results = await search_internet(arguments["query"])
+                            current_messages.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call["id"],
+                                "name": function_name,
+                                "content": search_results
+                            })
+                    
+                    # Continue loop to give results back to LLM
+                    continue
+                else:
+                    # 3. No tool calls? Clean and return JSON
+                    raw_content = message["content"]
+                    cleaned = _clean_json(raw_content)
+                    try:
+                        return json.loads(cleaned)
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
+                        # If still failing, try one more time explicitly forcing JSON
+                        if _ == 2: raise # Give up on last loop
+                        current_messages.append({"role": "user", "content": "You must return valid JSON only."})
+                        continue
+
+            except httpx.HTTPStatusError as e:
+                logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error in onboarding chat: {e}")
+                raise
+
+    raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
 
 async def generate_documentation(topic: str, research_data: str) -> str:

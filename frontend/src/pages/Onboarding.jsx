@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { register, login, onboardingChat, finalizeGoal, quickActivateGoal, activateGoal, deleteGoal, toggleGoalStatus } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
+import MessageBubble from '../components/MessageBubble';
+import { Send, Zap, ChevronRight, Activity, Trash2, Play, Pause, History, BrainCircuit, Search } from 'lucide-react';
 
 const Onboarding = () => {
   const { user, loginUser } = useAuth();
@@ -83,16 +85,39 @@ const Onboarding = () => {
     if (!inputText.trim() || isTyping) return;
 
     const userMsg = { role: 'user', content: inputText };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
 
     try {
-      const res = await onboardingChat(newMessages);
-      setMessages([...newMessages, { role: 'assistant', content: res.message }]);
+      const res = await onboardingChat([...messages, userMsg]);
+      
+      // Simulation of streaming
+      const fullMessage = res.message;
+      let displayedMessage = "";
+      
+      // Update phase and roadmap immediately as they are behind-the-scenes
       setPhase(res.phase);
       if (res.draft_roadmap) setDraftRoadmap(res.draft_roadmap);
+
+      // Create a placeholder assistant message
+      setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase }]);
+
+      const words = fullMessage.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        displayedMessage += (i === 0 ? '' : ' ') + words[i];
+        
+        // Update the last message in the history
+        setMessages(prev => {
+          const newHistory = [...prev];
+          newHistory[newHistory.length - 1].content = displayedMessage;
+          return newHistory;
+        });
+
+        // Small delay to simulate streaming feel
+        await new Promise(r => setTimeout(r, 30 + Math.random() * 40));
+      }
+      
     } catch (e) {
       setError("Neural link interrupted. Please retry.");
     } finally {
@@ -227,17 +252,24 @@ const Onboarding = () => {
       <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
 
         {/* Chat Header */}
-        <div className="w-full p-8 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-secondary animate-pulse"></span>
-              <span className="font-label text-[10px] tracking-[0.3em] text-secondary uppercase font-bold">Bridge Connected</span>
+        <div className="w-full p-6 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50 backdrop-blur-xl sticky top-0 z-20">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 neural-glow">
+              <BrainCircuit className="text-primary" size={24} />
             </div>
-            <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">Axiom AI Coach</h2>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="h-2 w-2 rounded-full bg-secondary animate-pulse shadow-[0_0_10px_rgba(0,179,89,0.5)]"></span>
+                <span className="font-label text-[10px] tracking-[0.3em] text-secondary uppercase font-bold">Neural Link Active</span>
+              </div>
+              <h2 className="text-xl font-black font-headline uppercase tracking-tighter text-on-surface">Axiom Coach</h2>
+            </div>
           </div>
-          <div className="text-right">
-            <span className="text-[9px] font-label uppercase opacity-40 block">System Phase</span>
-            <span className="text-[10px] font-label font-bold text-primary uppercase tracking-widest">{phase}</span>
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] font-label uppercase text-on-surface-variant/40 tracking-widest mb-1">Process Phase</span>
+            <div className="px-3 py-1 bg-surface-container-highest rounded-full border border-outline-variant/20 shadow-inner">
+               <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.2em]">{phase}</span>
+            </div>
           </div>
         </div>
 
@@ -247,14 +279,12 @@ const Onboarding = () => {
           className="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scrollbar"
         >
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-              <div className={`max-w-[85%] p-6 rounded-[2rem] shadow-xl ${m.role === 'user'
-                ? 'bg-primary-container text-on-primary-container border border-primary/20 rounded-tr-none'
-                : 'bg-surface-container-lowest border border-outline-variant/10 shadow-lg rounded-tl-none'
-                }`}>
-                <p className="text-sm leading-relaxed font-light whitespace-pre-wrap">{m.content}</p>
-              </div>
-            </div>
+            <MessageBubble 
+              key={i} 
+              message={m.content} 
+              role={m.role} 
+              phase={m.role === 'assistant' ? (m.phase || phase) : null} 
+            />
           ))}
 
           {isTyping && (
@@ -338,14 +368,14 @@ const Onboarding = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 disabled={isTyping}
                 placeholder={phase === 'ready' ? "Neural path locked. Click 'Refine Path' to modify." : "Respond to Axiom..."}
-                className="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-xl disabled:opacity-50"
+                className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-2xl disabled:opacity-50 placeholder:text-on-surface-variant/30"
               />
               <button
                 type="submit"
                 disabled={!inputText.trim() || isTyping || phase === 'ready'}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-primary text-on-primary-container rounded-xl flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 shadow-lg shadow-primary/20 hover:brightness-110"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-primary text-on-primary-container rounded-xl flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 shadow-lg shadow-primary/20 hover:brightness-110 group-hover:neural-glow"
               >
-                <span className="material-symbols-outlined text-2xl font-bold">arrow_forward</span>
+                {isTyping ? <Activity size={20} className="animate-pulse" /> : <Send size={20} />}
               </button>
             </div>
 

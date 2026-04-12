@@ -42,6 +42,11 @@ async def lifespan(app: FastAPI):
     
     if not disable_telegram and bot_token and bot_token != "your-telegram-bot-token-here":
         try:
+            # Add a small delay for local development reloads to avoid 409 Conflict
+            if os.getenv("APP_ENV") == "development":
+                logger.info("⏳ Waiting for previous bot instance to clear...")
+                await asyncio.sleep(5)
+            
             bot_app = create_bot_app()
             await bot_app.initialize()
             await bot_app.start()  # Critical: Missing in previous version
