@@ -113,13 +113,17 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
 
 
 async def generate_onboarding_response(messages: list[dict]) -> dict:
-    """Handle the conversational onboarding logic with Axiom AI, including internet search."""
+    """Handle the conversational onboarding logic with Axiom AI, including manual internet search."""
+    import re
+    
     system_prompt = (
         "You are Axiom AI, a high-accountability learning coach for the Axiom platform. "
         "Your goal is to help the user define a razor-sharp learning goal and generate a roadmap. "
         "\n"
         "### INTERNET CAPABILITY:\n"
-        "You have access to a `search_internet` tool. If a user asks for information you don't know (like recent cut-offs, specific syllabus details, or trends), use this tool immediately to provide accurate data.\n\n"
+        "If you need information you don't have (like recent cut-offs, specific syllabus details, or trends), "
+        "you can perform a search by outputting the specific tag: <axiom_search>your query here</axiom_search>. "
+        "When you use this tag, the system will provide you with the search results in the next turn.\n\n"
         "### PHASES OF CONVERSATION:\n"
         "1. **Discovery**: Ask about their current status (College, entrance exams, job prep) and what they want to master.\n"
         "2. **Timeline**: Ask about their desired time period for this learning goal.\n"
@@ -128,51 +132,26 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "5. **Refinement**: Ask if they want to change anything. If they are happy, signal we are ready.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
-        "1. If you need more information, use the `search_internet` tool first.\n"
-        "2. Once you have all required info, return a JSON object with:\n"
+        "You must return a JSON object. If you are searching, return ONLY the search tag. "
+        "Otherwise, return the JSON object with:\n"
         "- 'message': Your conversational response.\n"
         "- 'phase': Current phase ('discovery', 'timeline', 'syllabus', 'draft', 'refinement', 'ready').\n"
         "- 'draft_roadmap': (Optional) roadmap array for drafting/refinement/ready phases.\n"
         "\n"
-        "Ensure the final output is a valid JSON object."
+        "Return ONLY valid JSON (or the search tag), no conversational fillers outside the JSON."
     )
-
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "search_internet",
-                "description": "Search the internet for real-time information, syllabus details, or learning trends.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to perform."
-                        }
-                    },
-                    "required": ["query"]
-                }
-            }
-        }
-    ]
 
     current_messages = [{"role": "system", "content": system_prompt}] + messages
 
     async with httpx.AsyncClient(timeout=60.0) as client:
-        for _ in range(3):  # Allow up to 2 tool-call rounds
+        for _ in range(3):  # Allow up to 2 search rounds
             try:
-                # 1. Ask model (with tools enabled)
+                # 1. Ask model (manual tools, no native tools parameter)
                 payload = {
                     "model": "llama-3.3-70b-versatile",
                     "messages": current_messages,
                     "temperature": 0.7,
-                    "tools": tools,
-                    "tool_choice": "auto"
                 }
-                
-                # If we've already done tool calls, we might want to enforce JSON at the end
-                # but llama-3.3-70b is good enough to follow JSON instructions even without response_format if tools used.
                 
                 response = await client.post(
                     f"{GROQ_BASE_URL}/chat/completions",
@@ -184,39 +163,37 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
                 )
                 response.raise_for_status()
                 data = response.json()
-                message = data["choices"][0]["message"]
-
-                # 2. Check for tool calls
-                if message.get("tool_calls"):
-                    tool_calls = message["tool_calls"]
-                    current_messages.append(message)
+                raw_content = data["choices"][0]["message"]["content"]
+                
+                # 2. Check for manual search tag: <axiom_search>query</axiom_search>
+                search_match = re.search(r'<axiom_search>(.*?)</axiom_search>', raw_content, re.IGNORECASE | re.DOTALL)
+                
+                if search_match:
+                    query = search_match.group(1).strip()
+                    logger.info(f"🔍 Manual Search Triggered: '{query}'")
                     
-                    for tool_call in tool_calls:
-                        function_name = tool_call["function"]["name"]
-                        arguments = json.loads(tool_call["function"]["arguments"])
-                        
-                        if function_name == "search_internet":
-                            search_results = await search_internet(arguments["query"])
-                            current_messages.append({
-                                "role": "tool",
-                                "tool_call_id": tool_call["id"],
-                                "name": function_name,
-                                "content": search_results
-                            })
+                    # Execute search
+                    results = await search_internet(query)
+                    
+                    # Add AI's "thought" and the results to history
+                    current_messages.append({"role": "assistant", "content": raw_content})
+                    current_messages.append({
+                        "role": "user", 
+                        "content": f"SEARCH_RESULTS for '{query}':\n\n{results}\n\nNow, please provide your response in the required JSON format."
+                    })
                     
                     # Continue loop to give results back to LLM
                     continue
                 else:
-                    # 3. No tool calls? Clean and return JSON
-                    raw_content = message["content"]
+                    # 3. No search? Clean and return JSON
                     cleaned = _clean_json(raw_content)
                     try:
                         return json.loads(cleaned)
                     except json.JSONDecodeError as e:
                         logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
                         # If still failing, try one more time explicitly forcing JSON
-                        if _ == 2: raise # Give up on last loop
-                        current_messages.append({"role": "user", "content": "You must return valid JSON only."})
+                        if _ == 2: raise 
+                        current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object now."})
                         continue
 
             except httpx.HTTPStatusError as e:
@@ -225,6 +202,8 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
             except Exception as e:
                 logger.error(f"Unexpected error in onboarding chat: {e}")
                 raise
+
+    raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
     raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
