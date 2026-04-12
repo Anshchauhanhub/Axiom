@@ -1,1 +1,43 @@
-/* CSS is now handled by Tailwind CDN in index.html */
+/* Shared Design System Utilities */
+@layer utilities {
+  .neural-glow {
+    box-shadow: 0 0 20px -5px rgba(253, 184, 19, 0.3);
+  }
+  .neural-glow-secondary {
+    box-shadow: 0 0 20px -5px rgba(0, 179, 89, 0.3);
+  }
+}
+
+/* Markdown Content Styling */
+.prose-invert {
+  --tw-prose-body: #e5e1e4;
+  --tw-prose-headings: #fdb813;
+  --tw-prose-links: #fdb813;
+  --tw-prose-bold: #fdb813;
+  --tw-prose-bullets: #fdb813;
+}
+
+/* Animations */
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; filter: blur(8px); }
+  50% { opacity: 0.8; filter: blur(12px); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}

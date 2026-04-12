@@ -3,6 +3,7 @@ import json
 import logging
 import httpx
 from dotenv import load_dotenv
+from services.search import search_internet
 
 load_dotenv()
 
@@ -43,8 +44,18 @@ async def call_groq(system_prompt: str, user_prompt: str) -> str:
 
 
 def _clean_json(raw: str) -> str:
-    """Strip markdown code fences from LLM response."""
+    """Extract the first valid JSON object from a potentially messy string."""
+    import re
     cleaned = raw.strip()
+    
+    # Try to find a JSON object using regex if standard strip fails
+    try:
+        match = re.search(r'(\{.*\}|\[.*\])', cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(0)
+    except Exception:
+        pass
+
     if cleaned.startswith("```"):
         # Remove first line (```json or ```)
         if "\n" in cleaned:
@@ -102,10 +113,17 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
 
 
 async def generate_onboarding_response(messages: list[dict]) -> dict:
-    """Handle the conversational onboarding logic with Axiom AI."""
+    """Handle the conversational onboarding logic with Axiom AI, including manual internet search."""
+    import re
+    
     system_prompt = (
         "You are Axiom AI, a high-accountability learning coach for the Axiom platform. "
         "Your goal is to help the user define a razor-sharp learning goal and generate a roadmap. "
+        "\n"
+        "### INTERNET CAPABILITY:\n"
+        "If you need information you don't have (like recent cut-offs, specific syllabus details, or trends), "
+        "you can perform a search by outputting the specific tag: <axiom_search>your query here</axiom_search>. "
+        "When you use this tag, the system will provide you with the search results in the next turn.\n\n"
         "### PHASES OF CONVERSATION:\n"
         "1. **Discovery**: Ask about their current status (College, entrance exams, job prep) and what they want to master.\n"
         "2. **Timeline**: Ask about their desired time period for this learning goal.\n"
@@ -114,50 +132,80 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "5. **Refinement**: Ask if they want to change anything. If they are happy, signal we are ready.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
-        "You MUST return a JSON object with the following fields:\n"
-        "- 'message': Your conversational response to the user. When moving to 'ready' phase, explicitly tell them: 'If you are satisfied with this neural path, please click the \"Activate Neural Path\" button below to begin.'\n"
+        "You must return a JSON object. If you are searching, return ONLY the search tag. "
+        "Otherwise, return the JSON object with:\n"
+        "- 'message': Your conversational response.\n"
         "- 'phase': Current phase ('discovery', 'timeline', 'syllabus', 'draft', 'refinement', 'ready').\n"
-        "- 'draft_roadmap': (Optional) If you are in 'draft', 'refinement', or 'ready' phase, include a JSON array of tasks "
-        "exactly like generate_roadmap does (each task has: 'title', 'parts' [array of strings]).\n"
+        "- 'draft_roadmap': (Optional) roadmap array for drafting/refinement/ready phases.\n"
         "\n"
-        "Return ONLY the valid JSON object, no explanation outside of the 'message' field. "
-        "When generating 'draft_roadmap', ensure it is exhaustive and high-fidelity, usually 10-15 tasks "
-        "with 5-8 sub-parts each to cover the entire curriculum depth."
+        "Return ONLY valid JSON (or the search tag), no conversational fillers outside the JSON."
     )
 
-    # Note: Using the multi-turn chat approach
+    current_messages = [{"role": "system", "content": system_prompt}] + messages
+
     async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            response = await client.post(
-                f"{GROQ_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [{"role": "system", "content": system_prompt}] + messages,
-                    "temperature": 0.7,
-                    "response_format": {"type": "json_object"}
-                },
-            )
-            response.raise_for_status()
-            data = response.json()
-            raw_content = data["choices"][0]["message"]["content"]
-            
-            # Use _clean_json to handle potential markdown wrappers even with json_object format
-            cleaned = _clean_json(raw_content)
+        for _ in range(3):  # Allow up to 2 search rounds
             try:
-                return json.loads(cleaned)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
-                raise ValueError(f"AI response is not valid JSON: {e}")
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error in onboarding chat: {e}")
-            raise
+                # 1. Ask model (manual tools, no native tools parameter)
+                payload = {
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": current_messages,
+                    "temperature": 0.7,
+                }
+                
+                response = await client.post(
+                    f"{GROQ_BASE_URL}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                response.raise_for_status()
+                data = response.json()
+                raw_content = data["choices"][0]["message"]["content"]
+                
+                # 2. Check for manual search tag: <axiom_search>query</axiom_search>
+                search_match = re.search(r'<axiom_search>(.*?)</axiom_search>', raw_content, re.IGNORECASE | re.DOTALL)
+                
+                if search_match:
+                    query = search_match.group(1).strip()
+                    logger.info(f"🔍 Manual Search Triggered: '{query}'")
+                    
+                    # Execute search
+                    results = await search_internet(query)
+                    
+                    # Add AI's "thought" and the results to history
+                    current_messages.append({"role": "assistant", "content": raw_content})
+                    current_messages.append({
+                        "role": "user", 
+                        "content": f"SEARCH_RESULTS for '{query}':\n\n{results}\n\nNow, please provide your response in the required JSON format."
+                    })
+                    
+                    # Continue loop to give results back to LLM
+                    continue
+                else:
+                    # 3. No search? Clean and return JSON
+                    cleaned = _clean_json(raw_content)
+                    try:
+                        return json.loads(cleaned)
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
+                        # If still failing, try one more time explicitly forcing JSON
+                        if _ == 2: raise 
+                        current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object now."})
+                        continue
+
+            except httpx.HTTPStatusError as e:
+                logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error in onboarding chat: {e}")
+                raise
+
+    raise ValueError("Failed to get valid response from AI after multiple attempts.")
+
+    raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
 
 async def generate_documentation(topic: str, research_data: str) -> str:
