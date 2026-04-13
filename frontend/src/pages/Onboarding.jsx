@@ -92,16 +92,19 @@ const Onboarding = () => {
     try {
       const res = await onboardingChat([...messages, userMsg]);
       
-      // Simulation of streaming
-      const fullMessage = res.message;
+      // Safely extract message — fallback if missing
+      const fullMessage = res.message || "I'm preparing your learning path...";
       let displayedMessage = "";
       
       // Update phase and roadmap immediately as they are behind-the-scenes
-      setPhase(res.phase);
+      if (res.phase) setPhase(res.phase);
       if (res.draft_roadmap) setDraftRoadmap(res.draft_roadmap);
 
+      // Clear any previous errors on success
+      setError('');
+
       // Create a placeholder assistant message
-      setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase || phase }]);
 
       const words = fullMessage.split(' ');
       for (let i = 0; i < words.length; i++) {
@@ -110,7 +113,7 @@ const Onboarding = () => {
         // Update the last message in the history
         setMessages(prev => {
           const newHistory = [...prev];
-          newHistory[newHistory.length - 1].content = displayedMessage;
+          newHistory[newHistory.length - 1] = { ...newHistory[newHistory.length - 1], content: displayedMessage };
           return newHistory;
         });
 
@@ -119,6 +122,7 @@ const Onboarding = () => {
       }
       
     } catch (e) {
+      console.error('Onboarding chat error:', e);
       setError("Neural link interrupted. Please retry.");
     } finally {
       setIsTyping(false);
@@ -299,8 +303,8 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Draft Roadmap Display */}
-          {draftRoadmap && (
+          {/* Draft Roadmap Display — only show once we reach draft phase */}
+          {draftRoadmap && (phase === 'draft' || phase === 'refinement' || phase === 'ready') && (
             <div className="w-full mt-12 animate-in zoom-in duration-700">
               <div className="bg-gradient-to-br from-[#0e0e10] to-[#1c1b1d] border border-primary/30 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-10 opacity-5">
@@ -317,13 +321,13 @@ const Onboarding = () => {
                     <div key={tidx} className="p-6 bg-surface-container-lowest/50 border border-outline-variant/10 rounded-2xl hover:border-primary/30 transition-all group">
                       <h4 className="font-bold text-sm text-primary mb-3 uppercase tracking-wide flex items-center gap-2">
                         <span className="text-[10px] opacity-40">0{tidx + 1}</span>
-                        {task.title}
+                        {task.title || task}
                       </h4>
                       <ul className="space-y-2">
-                        {task.parts?.slice(0, 3).map((p, pidx) => (
+                        {(Array.isArray(task.parts) ? task.parts : []).slice(0, 3).map((p, pidx) => (
                           <li key={pidx} className="flex items-center gap-3 text-xs text-on-surface-variant font-light">
                             <span className="w-1 h-1 bg-primary/40 rounded-full"></span>
-                            {p}
+                            {typeof p === 'string' ? p : p?.title || String(p)}
                           </li>
                         ))}
                       </ul>
