@@ -13,7 +13,7 @@ const MessageBubble = ({ message, role, phase }) => {
         </div>
       )}
 
-      <div className={`max-w-[85%] px-6 py-4 rounded-[2rem] shadow-2xl relative group ${
+      <div className={`max-w-[85%] px-4 py-3 rounded-[2rem] shadow-2xl relative group ${
         isAI 
           ? 'bg-surface-container-low border border-outline-variant/10 text-on-surface rounded-tl-none' 
           : 'bg-primary border border-primary/20 text-on-primary-container rounded-tr-none'
@@ -29,10 +29,10 @@ const MessageBubble = ({ message, role, phase }) => {
         <div className="prose prose-sm prose-invert max-w-none">
           <ReactMarkdown
             components={{
-              p: ({ node, ...props }) => <p className="text-sm leading-relaxed font-light m-0" {...props} />,
+              p: ({ node, ...props }) => <p className="text-xs leading-relaxed font-light m-0" {...props} />,
               strong: ({ node, ...props }) => <strong className="font-bold text-primary" {...props} />,
               ul: ({ node, ...props }) => <ul className="list-disc ml-4 space-y-1 mt-2" {...props} />,
-              li: ({ node, ...props }) => <li className="text-sm font-light" {...props} />,
+              li: ({ node, ...props }) => <li className="text-xs font-light" {...props} />,
               code: ({ node, inline, ...props }) => 
                 inline 
                   ? <code className="bg-surface-container-highest px-1.5 py-0.5 rounded text-xs font-mono" {...props} />
@@ -43,10 +43,7 @@ const MessageBubble = ({ message, role, phase }) => {
           </ReactMarkdown>
         </div>
 
-        {/* Small timestamp/status */}
-        <div className={`mt-2 flex opacity-0 group-hover:opacity-40 transition-opacity ${isAI ? 'justify-start' : 'justify-end'}`}>
-          <span className="text-[8px] font-label uppercase tracking-widest">Verified by Axiom Neural</span>
-        </div>
+
       </div>
 
       {!isAI && (

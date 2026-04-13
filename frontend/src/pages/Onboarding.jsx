@@ -280,7 +280,7 @@ const Onboarding = () => {
         {/* Message Area */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scrollbar"
+          className="flex-1 overflow-y-auto px-8 py-8 space-y-4 custom-scrollbar"
         >
           {messages.map((m, i) => (
             <MessageBubble 
@@ -372,7 +372,7 @@ const Onboarding = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 disabled={isTyping}
                 placeholder={phase === 'ready' ? "Neural path locked. Click 'Refine Path' to modify." : "Respond to Axiom..."}
-                className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-2xl disabled:opacity-50 placeholder:text-on-surface-variant/30"
+                className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-2xl disabled:opacity-50 placeholder:text-on-surface-variant/30"
               />
               <button
                 type="submit"
