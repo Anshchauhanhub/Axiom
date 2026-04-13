@@ -47,14 +47,6 @@ def _clean_json(raw: str) -> str:
     """Extract the first valid JSON object from a potentially messy string."""
     import re
     cleaned = raw.strip()
-    
-    # Try to find a JSON object using regex if standard strip fails
-    try:
-        match = re.search(r'(\{.*\}|\[.*\])', cleaned, re.DOTALL)
-        if match:
-            cleaned = match.group(0)
-    except Exception:
-        pass
 
     if cleaned.startswith("```"):
         # Remove first line (```json or ```)
@@ -66,6 +58,44 @@ def _clean_json(raw: str) -> str:
         if cleaned.endswith("```"):
             cleaned = cleaned[:-3]
         cleaned = cleaned.strip()
+    
+    # Try to find a JSON object using regex if standard strip fails
+    try:
+        match = re.search(r'(\{.*\}|\[.*\])', cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(0)
+    except Exception:
+        pass
+
+    # Fix unescaped newlines inside JSON string values.
+    # This is the #1 cause of parse failures from LLMs.
+    # Replace literal newlines that appear inside quoted strings with \n
+    def _fix_newlines(s: str) -> str:
+        result = []
+        in_string = False
+        escape = False
+        for ch in s:
+            if escape:
+                result.append(ch)
+                escape = False
+                continue
+            if ch == '\\':
+                escape = True
+                result.append(ch)
+                continue
+            if ch == '"':
+                in_string = not in_string
+                result.append(ch)
+                continue
+            if in_string and ch == '\n':
+                result.append('\\n')
+                continue
+            if in_string and ch == '\r':
+                continue  # strip carriage returns
+            result.append(ch)
+        return ''.join(result)
+
+    cleaned = _fix_newlines(cleaned)
     return cleaned
 
 
@@ -112,6 +142,39 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
         raise ValueError(f"Failed to parse AI response as JSON: {e}")
 
 
+def _normalize_draft_roadmap(roadmap):
+    """Normalize draft_roadmap to always be a list of {title, parts} objects.
+    
+    The LLM sometimes returns flat strings like ["Topic A", "Topic B"]
+    instead of the required [{"title": "Topic A", "parts": [...]}, ...].
+    """
+    if not roadmap or not isinstance(roadmap, list):
+        return roadmap
+    
+    normalized = []
+    for item in roadmap:
+        if isinstance(item, str):
+            # Flat string → convert to object
+            normalized.append({"title": item, "parts": []})
+        elif isinstance(item, dict):
+            # Ensure it has the required keys
+            if "title" not in item:
+                item["title"] = item.get("name", item.get("topic", "Untitled"))
+            if "parts" not in item:
+                # Check for alternative keys the LLM might use
+                item["parts"] = item.get("subtopics", item.get("sub_topics", item.get("topics", [])))
+            # Ensure parts is a list of strings
+            if isinstance(item["parts"], list):
+                item["parts"] = [
+                    p if isinstance(p, str) else p.get("title", p.get("name", str(p)))
+                    for p in item["parts"]
+                ]
+            normalized.append(item)
+        else:
+            normalized.append({"title": str(item), "parts": []})
+    return normalized
+
+
 async def generate_onboarding_response(messages: list[dict]) -> dict:
     """Handle the conversational onboarding logic with Axiom AI, including manual internet search."""
     import re
@@ -132,19 +195,28 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "5. **Refinement**: Ask if they want to change anything. If they are happy, signal we are ready.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
-        "You must return a JSON object. If you are searching, return ONLY the search tag. "
+        "You MUST return a single-line JSON object with NO literal newlines inside strings. "
+        "Use \\n for newlines inside string values. "
+        "If you are searching, return ONLY the search tag. "
         "Otherwise, return the JSON object with:\n"
-        "- 'message': Your conversational response.\n"
+        "- 'message': Your conversational response (short, no numbered lists — keep it conversational).\n"
         "- 'phase': Current phase ('discovery', 'timeline', 'syllabus', 'draft', 'refinement', 'ready').\n"
-        "- 'draft_roadmap': (Optional) roadmap array for drafting/refinement/ready phases.\n"
+        "- 'draft_roadmap': (Required in 'draft', 'refinement', and 'ready' phases) "
+        "An array of objects, each with: {\"title\": \"Task Name\", \"parts\": [\"subtopic1\", \"subtopic2\", ...]}. "
+        "Generate 6-10 tasks with 3-6 parts each.\n"
         "\n"
-        "Return ONLY valid JSON (or the search tag), no conversational fillers outside the JSON."
+        "EXAMPLE of correct output for draft phase:\n"
+        '{"message": "Here is your condensed ML Ops roadmap for 1 week.", "phase": "draft", '
+        '"draft_roadmap": [{"title": "Introduction to ML Ops", "parts": ["What is MLOps", "CI/CD for ML", "Tools overview"]}, '
+        '{"title": "Model Deployment", "parts": ["Docker basics", "Cloud deploy", "API serving"]}]}\n'
+        "\n"
+        "Return ONLY valid JSON (or the search tag), no markdown, no explanation outside the JSON."
     )
 
     current_messages = [{"role": "system", "content": system_prompt}] + messages
 
     async with httpx.AsyncClient(timeout=60.0) as client:
-        for _ in range(3):  # Allow up to 2 search rounds
+        for attempt in range(3):  # Allow up to 2 search rounds
             try:
                 # 1. Ask model (manual tools, no native tools parameter)
                 payload = {
@@ -188,13 +260,29 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
                     # 3. No search? Clean and return JSON
                     cleaned = _clean_json(raw_content)
                     try:
-                        return json.loads(cleaned)
+                        result = json.loads(cleaned)
                     except json.JSONDecodeError as e:
-                        logger.error(f"JSON Parse Error in onboarding chat: {e}\nRaw Content: {raw_content[:500]}...")
-                        # If still failing, try one more time explicitly forcing JSON
-                        if _ == 2: raise 
-                        current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object now."})
+                        logger.error(f"JSON Parse Error in onboarding chat (attempt {attempt+1}): {e}\nRaw Content: {raw_content[:500]}...")
+                        if attempt == 2:
+                            # Last attempt failed — return a safe fallback
+                            return {
+                                "message": "I've processed your request. Could you tell me more about what you'd like to focus on?",
+                                "phase": "discovery",
+                            }
+                        current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object with no literal newlines inside string values. Use \\n for line breaks."})
                         continue
+                    
+                    # Normalize draft_roadmap if present
+                    if "draft_roadmap" in result and result["draft_roadmap"]:
+                        result["draft_roadmap"] = _normalize_draft_roadmap(result["draft_roadmap"])
+                    
+                    # Ensure required fields exist
+                    if "message" not in result:
+                        result["message"] = "Let me help you build your learning path."
+                    if "phase" not in result:
+                        result["phase"] = "discovery"
+                    
+                    return result
 
             except httpx.HTTPStatusError as e:
                 logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
@@ -202,8 +290,6 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
             except Exception as e:
                 logger.error(f"Unexpected error in onboarding chat: {e}")
                 raise
-
-    raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
     raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
