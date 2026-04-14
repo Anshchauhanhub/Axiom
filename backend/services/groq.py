@@ -202,7 +202,7 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
         "(bold, lists, code blocks) when explaining concepts.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
-        "Return a single-line JSON object with NO literal newlines inside strings (use \\\\n for line breaks). "
+        "Return a single-line JSON object. Ensure all newlines in the 'message' field are escaped as \\n. "
         "If searching, return ONLY the search tag.\n"
         "Fields:\n"
         "- 'message': Your response (use markdown formatting for rich answers).\n"
@@ -281,6 +281,10 @@ async def generate_onboarding_response(messages: list[dict]) -> dict:
                     if "draft_roadmap" in result and result["draft_roadmap"]:
                         result["draft_roadmap"] = _normalize_draft_roadmap(result["draft_roadmap"])
                     
+                    # Fix any double-escaped newlines that might have survived
+                    if "message" in result and isinstance(result["message"], str):
+                        result["message"] = result["message"].replace("\\n", "\n")
+
                     # Ensure required fields exist
                     if "message" not in result:
                         result["message"] = "Let me help you build your learning path."

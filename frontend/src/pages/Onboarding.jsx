@@ -106,9 +106,9 @@ const Onboarding = () => {
       // Create a placeholder assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase || phase }]);
 
-      const words = fullMessage.split(' ');
-      for (let i = 0; i < words.length; i++) {
-        displayedMessage += (i === 0 ? '' : ' ') + words[i];
+      const tokens = fullMessage.split(/(\s+)/);
+      for (let i = 0; i < tokens.length; i++) {
+        displayedMessage += tokens[i];
         
         // Update the last message in the history
         setMessages(prev => {
@@ -117,8 +117,10 @@ const Onboarding = () => {
           return newHistory;
         });
 
-        // Small delay to simulate streaming feel
-        await new Promise(r => setTimeout(r, 30 + Math.random() * 40));
+        // Small delay if the token is descriptive text (not just spaces)
+        if (tokens[i].trim()) {
+          await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
+        }
       }
       
     } catch (e) {
