@@ -31,7 +31,7 @@ const Study = () => {
   const [activePartId, setActivePartId] = useState(null);
   const [loadingContent, setLoadingContent] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const timerRef = useRef(null);
   const saveTimeoutRef = useRef(null);

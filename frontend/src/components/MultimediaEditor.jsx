@@ -15,17 +15,18 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user }) =
   const editorRefs = useRef({});
   const isInitialized = useRef(false);
 
-  // Only initialize blocks from props on mount or when content is first available
   useEffect(() => {
-    if (initialContent && !isInitialized.current) {
+    if (!isInitialized.current) {
       if (Array.isArray(initialContent)) {
         setBlocks(initialContent);
+        isInitialized.current = true;
       } else if (typeof initialContent === 'string' && initialContent.trim()) {
         setBlocks([{ id: 'block-' + Math.random().toString(36).substr(2, 9), type: 'text', content: initialContent }]);
-      } else {
+        isInitialized.current = true;
+      } else if (!initialContent || (typeof initialContent === 'object' && Object.keys(initialContent).length === 0)) {
         setBlocks([{ id: 'block-' + Math.random().toString(36).substr(2, 9), type: 'text', content: '' }]);
+        isInitialized.current = true;
       }
-      isInitialized.current = true;
     }
   }, [initialContent]);
 
@@ -220,7 +221,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user }) =
             <div className="hidden sm:flex items-center gap-2 text-slate-400">
               {isSaving ? (
                 <>
-                  <CloudLightning size={14} className="animate-pulse text-primary" />
+                  <Save size={14} className="animate-pulse text-primary" />
                   <span className="text-[10px] font-label uppercase tracking-widest font-black">Syncing</span>
                 </>
               ) : (

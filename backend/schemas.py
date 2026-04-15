@@ -53,14 +53,14 @@ class GoalResponse(BaseModel):
     id: uuid.UUID
     title: str
     status: str
-    notes: Optional[Union[dict, str]] = None
+    notes: Optional[Union[list, dict, str]] = None
 
     class Config:
         from_attributes = True
 
 
 class UpdateNotesRequest(BaseModel):
-    notes: Optional[Union[dict, str]] = None
+    notes: Optional[Union[list, dict, str]] = None
 
 
 # --- Tasks & Parts ---
@@ -68,7 +68,7 @@ class PartResponse(BaseModel):
     id: uuid.UUID
     title: str
     status: str
-    content: Optional[str] = None
+    content: Optional[Union[list, str]] = None
 
     class Config:
         from_attributes = True
@@ -77,7 +77,7 @@ class PartResponse(BaseModel):
 class PartContentResponse(BaseModel):
     part_id: uuid.UUID
     title: str
-    content: str
+    content: Union[list, str]
 
 
 class TaskResponse(BaseModel):
@@ -149,7 +149,7 @@ class FinalizeGoalRequest(BaseModel):
 # --- Social ---
 class PostCreateRequest(BaseModel):
     goal_id: Optional[uuid.UUID] = None
-    content: Union[dict, str]
+    content: Union[list, dict, str]
     post_type: str = "lesson"
 
 
@@ -157,7 +157,7 @@ class PostResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     goal_id: Optional[uuid.UUID] = None
-    content: Union[dict, str]
+    content: Union[list, dict, str]
     post_type: str
     created_at: datetime
     user_email: Optional[str] = None
