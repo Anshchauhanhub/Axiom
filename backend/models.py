@@ -29,10 +29,24 @@ class Goal(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=False)
     status = Column(String, default="active")  # active, completed, paused
-    notes = Column(Text, nullable=True) # Persistent rich text notes
+    notes = Column(JSONB, nullable=True) # Block-based multimedia notes
 
     user = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
+
+
+class SocialPost(Base):
+    __tablename__ = "social_posts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    goal_id = Column(UUID(as_uuid=True), ForeignKey("goals.id", ondelete="SET NULL"), nullable=True)
+    content = Column(JSONB, nullable=False)  # Multimedia content blocks
+    post_type = Column(String, default="lesson")  # lesson, achievement, roadmap
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User")
+    goal = relationship("Goal")
 
 
 class Task(Base):

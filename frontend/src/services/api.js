@@ -84,3 +84,10 @@ export const toggleGoalStatus = (goalId) =>
 
 export const updateGoalNotes = (goalId, notes) =>
   request('PATCH', `/goals/${goalId}/notes`, { notes });
+
+// --- Social ---
+export const createSocialPost = (postData) =>
+  request('POST', '/social/', postData);
+
+export const getSocialFeed = () =>
+  request('GET', '/social/feed');
