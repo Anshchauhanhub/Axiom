@@ -430,7 +430,7 @@ const Study = () => {
               >
                 <span className="material-symbols-outlined text-base">close</span>
           </button>
-            <div className="w-full max-w-[850px] min-h-full">
+          <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col items-center w-full">
               {activeGoal && (
                 <MultimediaEditor 
                   key={activeGoal.id}
@@ -441,7 +441,7 @@ const Study = () => {
                   user={user}
                 />
               )}
-            </div>
+          </div>
         </div>
       </div>
     );

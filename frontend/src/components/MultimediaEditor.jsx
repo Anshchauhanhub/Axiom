@@ -174,7 +174,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user }) =
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col min-h-screen">
+    <div className="w-full flex flex-col min-h-full">
       
       {/* PROFESSIONAL RIBBON TOOLBAR */}
       <div className="sticky top-0 z-[100] w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-6 py-2 mb-10">
