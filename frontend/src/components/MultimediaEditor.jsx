@@ -105,6 +105,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user }) =
               ref={el => editorRefs.current[block.id] = el}
               contentEditable
               onFocus={() => setActiveBlockId(block.id)}
+              onInput={(e) => handleUpdateBlock(block.id, { content: e.target.innerHTML })}
               onBlur={(e) => handleUpdateBlock(block.id, { content: e.target.innerHTML })}
               onKeyDown={(e) => handleKeyDown(e, block.id)}
               dangerouslySetInnerHTML={{ __html: block.content }}

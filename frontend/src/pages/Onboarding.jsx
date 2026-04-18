@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { register, login, onboardingChat, finalizeGoal, quickActivateGoal, activateGoal, deleteGoal, toggleGoalStatus } from '../services/api';
+import { register, login, onboardingChat, finalizeGoal, quickActivateGoal, activateGoal, deleteGoal, toggleGoalStatus, getChatHistory } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MessageBubble from '../components/MessageBubble';
@@ -38,11 +38,30 @@ const Onboarding = () => {
   };
 
   useEffect(() => {
-    if (user && messages.length === 0) {
-      setMessages([{ role: 'assistant', content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" }]);
-      setAuthStep(false);
-    }
-  }, [user, messages.length]);
+    const loadHistory = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const res = await getChatHistory();
+          if (res.messages && res.messages.length > 0) {
+            setMessages(res.messages);
+          } else {
+            // Only set initial greeting if NO history exists
+            setMessages([{ 
+              role: 'assistant', 
+              content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
+            }]);
+          }
+        } catch (e) {
+          console.error("Failed to load history:", e);
+        } finally {
+          setLoading(false);
+        }
+        setAuthStep(false);
+      }
+    };
+    loadHistory();
+  }, [user]);
 
   // Auto-scroll whenever messages change or typing indicator appears
   useEffect(() => {

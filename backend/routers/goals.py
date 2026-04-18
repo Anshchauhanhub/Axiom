@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import User, Goal, Task, Part
+from models import User, Goal, Task, Part, ChatMessage
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
     PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest,
@@ -162,16 +162,66 @@ async def list_goals(
     return goals
 
 
+@router.get("/chat/history", response_model=list[OnboardingChatRequest])
+async def get_chat_history(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatMessage)
+        .where(ChatMessage.user_id == user.id)
+        .order_by(ChatMessage.created_at.asc())
+    )
+    messages = result.scalars().all()
+    return {"messages": [{"role": m.role, "content": m.content} for m in messages]}
+
+
 @router.post("/chat", response_model=OnboardingChatResponse)
 async def onboarding_chat(
     req: OnboardingChatRequest,
     user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    # Map pydantic models to dicts for the LLM service
-    messages = [m.model_dump() for m in req.messages]
+    # 1. Save the new user message to DB
+    user_msg = ChatMessage(
+        user_id=user.id,
+        role="user",
+        content=req.messages[-1].content
+    )
+    db.add(user_msg)
+    await db.commit()
+
+    # 2. Fetch active goal context
+    goal_result = await db.execute(
+        select(Goal).where(Goal.user_id == user.id, Goal.status == "active")
+    )
+    active_goal = goal_result.scalar_one_or_none()
+    goal_context = f"Current active study goal: {active_goal.title}" if active_goal else "No active goal yet."
+
+    # 3. Fetch last 15 messages for context
+    history_msgs = history_result.scalars().all()
+    history_msgs.reverse() # Chronological order
+
+    # 3. Format messages for LLM
+    formatted_messages = [
+        {"role": m.role, "content": m.content}
+        for m in history_msgs
+    ]
+
+    # 5. Generate AI response
     from services.groq import generate_onboarding_response
-    response = await generate_onboarding_response(messages)
-    return response
+    response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
+
+    # 5. Save AI response to DB
+    assistant_msg = ChatMessage(
+        user_id=user.id,
+        role="assistant",
+        content=response_data["message"]
+    )
+    db.add(assistant_msg)
+    await db.commit()
+
+    return response_data
 
 
 @router.post("/finalize", response_model=RoadmapResponse)

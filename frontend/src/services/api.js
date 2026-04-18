@@ -91,3 +91,6 @@ export const createSocialPost = (postData) =>
 
 export const getSocialFeed = () =>
   request('GET', '/social/feed');
+
+export const getChatHistory = () =>
+  request('GET', '/goals/chat/history');
