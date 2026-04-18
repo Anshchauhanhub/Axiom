@@ -440,6 +440,7 @@ const Study = () => {
                   onShare={handleShare}
                   isSaving={isSaving}
                   user={user}
+                  activeGoalTitle={activeGoal.title}
                 />
               )}
           </div>
