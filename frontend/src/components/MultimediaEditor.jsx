@@ -12,6 +12,51 @@ import {
   Highlighter, Palette, Plus, Download, FileText, File
 } from 'lucide-react';
 
+const EditableContent = ({ content, onUpdate, onSlashCommand, onKeyDown, onFocus, className, placeholder, editorRef }) => {
+  const localRef = useRef(null);
+  const contentRef = useRef(content);
+
+  useEffect(() => {
+    if (editorRef) editorRef(localRef.current);
+  }, [editorRef]);
+
+  useEffect(() => {
+    if (localRef.current && content !== contentRef.current) {
+      localRef.current.innerHTML = content;
+      contentRef.current = content;
+    }
+  }, [content]);
+
+  useEffect(() => {
+    if (localRef.current && localRef.current.innerHTML === '') {
+       localRef.current.innerHTML = content;
+    }
+  }, []);
+
+  return (
+    <div
+      ref={localRef}
+      contentEditable
+      suppressContentEditableWarning
+      onFocus={onFocus}
+      onInput={(e) => {
+        const html = e.currentTarget.innerHTML;
+        contentRef.current = html;
+        onUpdate(html);
+        if (html.endsWith('/')) {
+           const rect = e.currentTarget.getBoundingClientRect();
+           if (onSlashCommand) onSlashCommand({ x: rect.left, y: rect.bottom });
+        } else {
+           if (onSlashCommand) onSlashCommand(null);
+        }
+      }}
+      onKeyDown={onKeyDown}
+      className={className}
+      data-placeholder={placeholder}
+    />
+  );
+};
+
 const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, activeGoalTitle }) => {
   const [blocks, setBlocks] = useState([]);
   const [activeBlockId, setActiveBlockId] = useState(null);
@@ -190,24 +235,18 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
       case 'text':
         return (
           <div className="relative group/block py-2">
-            <div 
-              ref={el => editorRefs.current[block.id] = el}
-              contentEditable
-              onFocus={() => setActiveBlockId(block.id)}
-              onInput={(e) => {
-                const html = e.target.innerHTML;
-                handleUpdateBlock(block.id, { content: html });
-                if (html.endsWith('/')) {
-                   const rect = e.target.getBoundingClientRect();
-                   setSlashMenuContext({ id: block.id, x: rect.left, y: rect.bottom });
-                } else {
-                   setSlashMenuContext(null);
-                }
+            <EditableContent
+              editorRef={el => editorRefs.current[block.id] = el}
+              content={block.content}
+              onUpdate={(html) => handleUpdateBlock(block.id, { content: html })}
+              onSlashCommand={(rect) => {
+                if (rect) setSlashMenuContext({ id: block.id, x: rect.x, y: rect.y });
+                else setSlashMenuContext(null);
               }}
+              onFocus={() => setActiveBlockId(block.id)}
               onKeyDown={(e) => handleKeyDown(e, block.id)}
-              dangerouslySetInnerHTML={{ __html: block.content }}
               className={`outline-none min-h-[1.5em] text-slate-800 font-serif text-lg leading-relaxed whitespace-pre-wrap selection:bg-primary/20 text-${block.alignment || 'left'}`}
-              data-placeholder="Start typing or press '/' for commands..."
+              placeholder="Start typing or press '/' for commands..."
             />
           </div>
         );
@@ -230,14 +269,13 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
               {icons[block.calloutType || 'info']}
             </div>
             <div className="flex-1">
-               <div 
-                ref={el => editorRefs.current[block.id] = el}
-                contentEditable
+               <EditableContent
+                editorRef={el => editorRefs.current[block.id] = el}
+                content={block.content}
+                onUpdate={(html) => handleUpdateBlock(block.id, { content: html })}
                 onFocus={() => setActiveBlockId(block.id)}
-                onInput={(e) => handleUpdateBlock(block.id, { content: e.target.innerHTML })}
-                dangerouslySetInnerHTML={{ __html: block.content }}
                 className="outline-none min-h-[1.5em] font-serif text-lg leading-relaxed whitespace-pre-wrap"
-                data-placeholder="Enter callout note..."
+                placeholder="Enter callout note..."
               />
             </div>
             {/* Callout type switcher on hover */}
