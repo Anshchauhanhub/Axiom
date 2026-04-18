@@ -544,7 +544,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
       </div>
       
       {/* Sticky Bottom Stats Bar */}
-      <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-3 flex justify-between items-center z-[100] text-xs font-label uppercase tracking-widest text-slate-500">
+      <div className="sticky bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-3 flex justify-between items-center z-[100] text-xs font-label uppercase tracking-widest text-slate-500">
         <div className="flex gap-6">
           <span>{wordCount} Words</span>
           <span>{blocks.length} Blocks</span>
