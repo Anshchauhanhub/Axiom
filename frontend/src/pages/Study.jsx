@@ -86,7 +86,8 @@ const Study = () => {
     if (!activeGoal || !showNotes) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
-      if (notes === activeGoal.notes) return;
+      // Use JSON.stringify for a deep comparison since notes is an array of objects
+      if (JSON.stringify(notes) === JSON.stringify(activeGoal.notes)) return;
       setIsSaving(true);
       try {
         await updateGoalNotes(activeGoal.id, notes);
@@ -430,7 +431,7 @@ const Study = () => {
               >
                 <span className="material-symbols-outlined text-base">close</span>
           </button>
-            <div className="w-full max-w-[850px] min-h-full">
+          <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col items-center w-full">
               {activeGoal && (
                 <MultimediaEditor 
                   key={activeGoal.id}
@@ -441,7 +442,7 @@ const Study = () => {
                   user={user}
                 />
               )}
-            </div>
+          </div>
         </div>
       </div>
     );
