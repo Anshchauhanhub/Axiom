@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import html2pdf from 'html2pdf.js';
 import { 
   Bold, Italic, Underline, Strikethrough, 
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
@@ -8,13 +9,15 @@ import {
   Heading1, Heading2, Heading3, Type,
   Save, AlertCircle, Info, AlertTriangle, CheckCircle,
   Code, Minus, CheckSquare, Table as TableIcon, Sigma,
-  Highlighter, Palette, Plus
+  Highlighter, Palette, Plus, Download, FileText, File
 } from 'lucide-react';
 
 const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, activeGoalTitle }) => {
   const [blocks, setBlocks] = useState([]);
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [slashMenuContext, setSlashMenuContext] = useState(null); // { id, x, y }
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const documentRef = useRef(null);
   
   const editorRefs = useRef({});
   const isInitialized = useRef(false);
@@ -150,6 +153,36 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
     const command = isBg ? 'hiliteColor' : 'foreColor';
     // Use hiliteColor for non-IE, backColor for IE. hiliteColor works in modern browsers.
     applyFormatting(isBg ? 'backColor' : 'foreColor', color);
+  };
+
+  const handleDownloadPDF = () => {
+    if (!documentRef.current) return;
+    const element = documentRef.current;
+    const opt = {
+      margin:       10,
+      filename:     `${(activeGoalTitle || 'Neural_Notes').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+    setShowDownloadMenu(false);
+  };
+
+  const handleDownloadWord = () => {
+    if (!documentRef.current) return;
+    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export</title></head><body>";
+    const footer = "</body></html>";
+    const sourceHTML = header + documentRef.current.innerHTML + footer;
+    
+    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+    const fileDownload = document.createElement("a");
+    document.body.appendChild(fileDownload);
+    fileDownload.href = source;
+    fileDownload.download = `${(activeGoalTitle || 'Neural_Notes').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.doc`;
+    fileDownload.click();
+    document.body.removeChild(fileDownload);
+    setShowDownloadMenu(false);
   };
 
   const renderBlock = (block) => {
@@ -425,17 +458,9 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
             </div>
 
             {/* Colors */}
-            <div className="flex items-center gap-0.5 pr-2 mr-2 border-r border-slate-200 shrink-0 group relative">
+            <div className="flex items-center gap-0.5 pr-2 mr-2 shrink-0 group relative">
               <ToolbarButton icon={Highlighter} title="Highlight Text" onClick={() => applyColor('#fef08a', true)} iconColor="text-yellow-500" />
               <ToolbarButton icon={Palette} title="Text Color" onClick={() => applyColor('#ef4444')} iconColor="text-rose-500" />
-            </div>
-
-            {/* Quick Insert */}
-            <div className="flex items-center gap-0.5 shrink-0">
-              <ToolbarButton icon={Info} title="Callout" onClick={() => handleAddBlock('callout')} />
-              <ToolbarButton icon={CheckSquare} title="Checklist" onClick={() => handleAddBlock('checklist')} />
-              <ToolbarButton icon={TableIcon} title="Table" onClick={() => handleAddBlock('table')} />
-              <ToolbarButton icon={Code} title="Code snippet" onClick={() => handleAddBlock('code')} />
             </div>
           </div>
 
@@ -447,17 +472,47 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
                 <><Save size={14} className="text-emerald-500" /><span className="text-[10px] font-label uppercase tracking-widest text-emerald-600 font-bold">Secured</span></>
               )}
             </div>
-            <button onClick={onShare} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">
-              <Share2 size={14} />
-              <span className="text-[10px] font-label font-black uppercase tracking-widest">Share Note</span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowDownloadMenu(!showDownloadMenu)} 
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all active:scale-95"
+              >
+                <Download size={14} />
+                <span className="text-[10px] font-label font-black uppercase tracking-widest">Download Note</span>
+              </button>
+              
+              {showDownloadMenu && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in duration-200">
+                  <button 
+                    onClick={handleDownloadPDF}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 text-left transition-colors"
+                  >
+                    <FileText size={16} className="text-rose-500" />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-700">PDF Document</span>
+                      <span className="text-[9px] text-slate-400">Best for printing</span>
+                    </div>
+                  </button>
+                  <button 
+                    onClick={handleDownloadWord}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 text-left transition-colors border-t border-slate-100"
+                  >
+                    <File size={16} className="text-blue-500" />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-700">Word Document</span>
+                      <span className="text-[9px] text-slate-400">Editable format</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* DOCUMENT PAGE */}
       <div className="flex-grow flex flex-col items-center pb-40 px-4">
-        <div className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-10 sm:px-20 py-16 sm:py-24 flex flex-col">
+        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-10 sm:px-20 py-16 sm:py-24 flex flex-col">
           
           {/* Subtle Document Header */}
           <div className="mb-12 border-b border-slate-100 pb-8 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
