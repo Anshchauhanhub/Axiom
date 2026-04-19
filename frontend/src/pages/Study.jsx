@@ -426,7 +426,7 @@ const Study = () => {
         <div className="h-full flex flex-col relative">
           {/* Close button - overlay since editor has its own header */}
           <button 
-                className="absolute top-3 right-6 z-[200] w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                className="absolute top-3 right-4 z-[200] w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                 onClick={() => setShowNotes(false)}
               >
                 <span className="material-symbols-outlined text-base">close</span>

@@ -470,7 +470,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
     <div className="w-full flex flex-col min-h-full bg-slate-50 relative">
       
       {/* PROFESSIONAL RIBBON TOOLBAR */}
-      <div className="sticky top-0 z-[100] w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-6 py-2 mb-6">
+      <div className="sticky top-0 z-[100] w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm pl-6 pr-16 py-2 mb-6">
         <div className="max-w-[1000px] mx-auto flex items-center justify-between">
           
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
@@ -513,10 +513,10 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
             <div className="relative">
               <button 
                 onClick={() => setShowDownloadMenu(!showDownloadMenu)} 
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all active:scale-95"
+                className="flex items-center justify-center p-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all active:scale-95"
+                title="Download Note"
               >
-                <Download size={14} />
-                <span className="text-[10px] font-label font-black uppercase tracking-widest">Download Note</span>
+                <Download size={20} />
               </button>
               
               {showDownloadMenu && (
