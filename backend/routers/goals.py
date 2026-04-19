@@ -17,7 +17,16 @@ from services.synthesis import synthesize_part_content
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
  
 async def deactivate_all_goals(user_id, db: AsyncSession):
-    from sqlalchemy import update
+    from sqlalchemy import update, delete
+    from models import Goal, ChatMessage
+    
+    # 1. Clear chat history so LLM memory is isolated to the new active session
+    await db.execute(
+        delete(ChatMessage)
+        .where(ChatMessage.user_id == user_id)
+    )
+    
+    # 2. Deactivate all goals
     await db.execute(
         update(Goal)
         .where(Goal.user_id == user_id)
@@ -162,7 +171,7 @@ async def list_goals(
     return goals
 
 
-@router.get("/chat/history", response_model=list[OnboardingChatRequest])
+@router.get("/chat/history")
 async def get_chat_history(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -176,52 +185,83 @@ async def get_chat_history(
     return {"messages": [{"role": m.role, "content": m.content} for m in messages]}
 
 
-@router.post("/chat", response_model=OnboardingChatResponse)
+@router.delete("/chat/history")
+async def clear_chat_history(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Wipe all chat messages for the current user to start a fresh session."""
+    from sqlalchemy import delete
+    await db.execute(
+        delete(ChatMessage)
+        .where(ChatMessage.user_id == user.id)
+    )
+    await db.commit()
+    return {"message": "Chat history cleared"}
+
+
+@router.post("/chat")
 async def onboarding_chat(
     req: OnboardingChatRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Save the new user message to DB
-    user_msg = ChatMessage(
-        user_id=user.id,
-        role="user",
-        content=req.messages[-1].content
-    )
-    db.add(user_msg)
-    await db.commit()
+    import logging
+    logger = logging.getLogger("axiom.chat")
+    
+    try:
+        # 1. Save the new user message to DB
+        user_msg = ChatMessage(
+            user_id=user.id,
+            role="user",
+            content=req.messages[-1].content
+        )
+        db.add(user_msg)
+        await db.commit()
 
-    # 2. Fetch active goal context
-    goal_result = await db.execute(
-        select(Goal).where(Goal.user_id == user.id, Goal.status == "active")
-    )
-    active_goal = goal_result.scalar_one_or_none()
-    goal_context = f"Current active study goal: {active_goal.title}" if active_goal else "No active goal yet."
+        # 2. Fetch active goal context
+        goal_result = await db.execute(
+            select(Goal).where(Goal.user_id == user.id, Goal.status == "active")
+        )
+        active_goal = goal_result.scalar_one_or_none()
+        goal_context = f"Current active study goal: {active_goal.title}" if active_goal else "No active goal yet."
 
-    # 3. Fetch last 15 messages for context
-    history_msgs = history_result.scalars().all()
-    history_msgs.reverse() # Chronological order
+        # 3. Fetch last 15 messages for context
+        history_result = await db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.user_id == user.id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(15)
+        )
+        history_msgs = history_result.scalars().all()
+        history_msgs.reverse()  # Chronological order
 
-    # 3. Format messages for LLM
-    formatted_messages = [
-        {"role": m.role, "content": m.content}
-        for m in history_msgs
-    ]
+        # 4. Format messages for LLM
+        formatted_messages = [
+            {"role": m.role, "content": m.content}
+            for m in history_msgs
+        ]
 
-    # 5. Generate AI response
-    from services.groq import generate_onboarding_response
-    response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
+        # 5. Generate AI response
+        from services.groq import generate_onboarding_response
+        response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
 
-    # 5. Save AI response to DB
-    assistant_msg = ChatMessage(
-        user_id=user.id,
-        role="assistant",
-        content=response_data["message"]
-    )
-    db.add(assistant_msg)
-    await db.commit()
+        # 6. Save AI response to DB
+        assistant_msg = ChatMessage(
+            user_id=user.id,
+            role="assistant",
+            content=response_data["message"]
+        )
+        db.add(assistant_msg)
+        await db.commit()
 
-    return response_data
+        return response_data
+    
+    except Exception as e:
+        logger.error(f"Chat endpoint error: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Chat error: {type(e).__name__}: {str(e)[:200]}")
 
 
 @router.post("/finalize", response_model=RoadmapResponse)

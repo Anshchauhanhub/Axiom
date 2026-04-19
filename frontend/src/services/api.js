@@ -94,3 +94,6 @@ export const getSocialFeed = () =>
 
 export const getChatHistory = () =>
   request('GET', '/goals/chat/history');
+
+export const clearChatHistory = () =>
+  request('DELETE', '/goals/chat/history');
