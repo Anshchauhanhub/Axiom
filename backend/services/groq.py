@@ -186,9 +186,11 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
         f"### CURRENT CONTEXT:\n{goal_context}\n"
         "\n"
         "### HOW TO BEHAVE:\n"
-        "1. **Answer naturally**: When the user asks a question, give a clear, well-structured answer using markdown. "
-        "Do NOT force every answer to be about the current active goal. Answer what they actually asked.\n"
-        "2. **Suggest roadmaps**: If the user asks about a NEW topic/skill, after explaining it briefly, "
+        "1. **Give DETAILED answers**: When the user asks a question (phase=chat), provide a THOROUGH, "
+        "comprehensive explanation. Use markdown headings, bullet points, bold for key terms, code blocks, "
+        "and tables where helpful. Your chat answers should be long and educational, like a textbook explanation. "
+        "Do NOT give one-line answers. Aim for at least 200 words for concept explanations.\n"
+        "2. **Suggest roadmaps**: If the user asks about a NEW topic/skill, after explaining it in detail, "
         "ask: Would you like me to create a learning roadmap for this topic?\n"
         "3. **Roadmap creation flow**:\n"
         "   - discovery: Ask what they want to learn and their current level\n"
@@ -196,19 +198,18 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
         "Keep message to 1-2 sentences like 'Here is your roadmap for X. Review and activate when ready.' "
         "Do NOT write the roadmap content inside the message field.\n"
         "   - ready: Same as draft but user confirmed activation.\n"
-        "4. **Keep it concise**: Do not repeat yourself.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
         "Return ONLY a single-line JSON object. Escape all newlines as \\\\n.\n"
         "Fields:\n"
-        "- message: Your response. MUST be SHORT (1-2 sentences) when phase is draft or ready.\n"
+        "- message: Your response. For chat phase, give DETAILED thorough answers. For draft/ready phase, keep it SHORT (1-2 sentences).\n"
         "- phase: One of chat, discovery, draft, ready\n"
-        "- draft_roadmap: Include when phase is draft or ready. Array of objects: "
+        "- draft_roadmap: Include ONLY when phase is draft or ready. Array of objects: "
         '[{"title": "Task Name", "parts": ["sub1", "sub2"]}]. Generate 6-10 tasks with 4-6 parts each.\n'
-        "- goal_title: Include when phase is draft or ready. Short topic name like Django or Docker.\n"
+        "- goal_title: Include ONLY when phase is draft or ready. Short topic name like Django or Docker.\n"
         "\n"
-        "CRITICAL: When phase is draft or ready, put roadmap data ONLY in draft_roadmap, NOT in message. "
-        "The UI renders the roadmap card automatically from draft_roadmap.\n"
+        "CRITICAL: When phase is draft or ready, put roadmap data ONLY in draft_roadmap, NOT in message.\n"
+        "CRITICAL: When phase is chat, give LONG DETAILED answers with examples and explanations.\n"
         "IMPORTANT: For normal conversation, set phase to chat.\n"
         "IMPORTANT: Do NOT start responses with 'I see you are studying X'."
     )
@@ -223,6 +224,7 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                     "model": "llama-3.3-70b-versatile",
                     "messages": current_messages,
                     "temperature": 0.7,
+                    "max_tokens": 4096,
                 }
                 
                 response = await client.post(
