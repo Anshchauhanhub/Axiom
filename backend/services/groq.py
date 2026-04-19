@@ -206,6 +206,7 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
         "- 'message': Your markdown-formatted response\n"
         "- 'phase': One of 'chat' (normal conversation), 'discovery', 'draft', 'ready'\n"
         "- 'draft_roadmap': ONLY include when phase is 'ready'. Array of {title, parts} objects.\n"
+        "- 'goal_title': ONLY include when phase is 'draft' or 'ready'. A short clean topic name (e.g. 'Django', 'Docker', 'Machine Learning'). NOT a task name like 'Introduction to X'.\n"
         "\n"
         "IMPORTANT: For normal Q&A, set phase to 'chat'. Only use roadmap phases when actively building a roadmap.\n"
         "IMPORTANT: Do NOT start every response with 'I see you are studying X'. Just answer the question."

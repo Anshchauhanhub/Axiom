@@ -26,6 +26,7 @@ const Onboarding = () => {
   const [inputText, setInputText] = useState('');
   const [phase, setPhase] = useState('discovery');
   const [draftRoadmap, setDraftRoadmap] = useState(null);
+  const [goalTitle, setGoalTitle] = useState('');  // The real topic name for the goal
   const [isTyping, setIsTyping] = useState(false);
 
   const scrollRef = useRef(null);
@@ -115,7 +116,16 @@ const Onboarding = () => {
       
       // Update phase and roadmap immediately as they are behind-the-scenes
       if (res.phase) setPhase(res.phase);
-      if (res.draft_roadmap) setDraftRoadmap(res.draft_roadmap);
+      if (res.draft_roadmap) {
+        setDraftRoadmap(res.draft_roadmap);
+        // Capture the real goal title from the AI response or from the user's message
+        if (res.goal_title) {
+          setGoalTitle(res.goal_title);
+        } else {
+          // Fallback: use the user's last message as the topic
+          setGoalTitle(inputText || userMsg.content);
+        }
+      }
 
       // Clear any previous errors on success
       setError('');
@@ -194,7 +204,7 @@ const Onboarding = () => {
     if (!draftRoadmap) return;
     setLoading(true);
     try {
-      const title = draftRoadmap[0]?.title || "My Mastery Goal";
+      const title = goalTitle || draftRoadmap[0]?.title || "My Mastery Goal";
       await finalizeGoal(title, draftRoadmap);
       await refreshData();
       navigate('/');
