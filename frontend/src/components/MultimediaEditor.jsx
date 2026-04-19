@@ -6,7 +6,7 @@ import {
   List as ListIcon, ListOrdered, 
   Image as ImageIcon, Video, Share2, 
   Trash2, GripVertical, ChevronDown, 
-  Heading1, Heading2, Heading3, Type,
+  Heading1, Heading2, Heading3, Heading4, Type,
   Save, AlertCircle, Info, AlertTriangle, CheckCircle,
   Code, Minus, CheckSquare, Table as TableIcon, Sigma,
   Highlighter, Palette, Plus, Download, FileText, File
@@ -62,7 +62,12 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [slashMenuContext, setSlashMenuContext] = useState(null); // { id, x, y }
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [currentFont, setCurrentFont] = useState('Arial');
+  const [currentSize, setCurrentSize] = useState(3); // 1-7 scale
   const documentRef = useRef(null);
+
+  const fonts = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Trebuchet MS'];
+  const sizeMap = { 1: 10, 2: 12, 3: 14, 4: 16, 5: 18, 6: 24, 7: 32 };
   
   const editorRefs = useRef({});
   const isInitialized = useRef(false);
@@ -183,6 +188,14 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
     }
   };
 
+  const handleSizeChange = (delta) => {
+    let newSize = currentSize + delta;
+    if (newSize < 1) newSize = 1;
+    if (newSize > 7) newSize = 7;
+    setCurrentSize(newSize);
+    applyFormatting('fontSize', newSize);
+  };
+
   const handleKeyDown = (e, id) => {
     if (e.ctrlKey || e.metaKey) {
       if (e.key === 'b') { e.preventDefault(); applyFormatting('bold'); }
@@ -275,7 +288,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
               }}
               onFocus={() => setActiveBlockId(block.id)}
               onKeyDown={(e) => handleKeyDown(e, block.id)}
-              className={`outline-none min-h-[1.5em] text-slate-800 font-serif text-lg leading-relaxed whitespace-pre-wrap selection:bg-primary/20 text-${block.alignment || 'left'}`}
+              className={`outline-none min-h-[1.5em] text-slate-800 font-serif text-[14px] leading-relaxed whitespace-pre-wrap selection:bg-primary/20 text-${block.alignment || 'left'}`}
               placeholder="Start typing or press '/' for commands..."
             />
           </div>
@@ -504,6 +517,45 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
         <div className="max-w-[1000px] mx-auto flex items-center justify-between">
           
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+            {/* Font Family & Size */}
+            <div className="flex items-center gap-1 pr-2 mr-2 border-r border-slate-200 shrink-0">
+              <select 
+                className="bg-transparent border-none outline-none text-xs text-slate-700 font-medium cursor-pointer hover:bg-slate-100 p-1.5 rounded-md w-24 truncate"
+                value={currentFont}
+                onChange={(e) => {
+                  setCurrentFont(e.target.value);
+                  applyFormatting('fontName', e.target.value);
+                }}
+                title="Font Family"
+              >
+                {fonts.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+
+              <div className="w-px h-4 bg-slate-200 mx-1"></div>
+
+              <div className="flex items-center">
+                <button 
+                  onMouseDown={(e) => { e.preventDefault(); handleSizeChange(-1); }}
+                  className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                  title="Decrease Font Size"
+                >
+                  <Minus size={14} />
+                </button>
+                
+                <div className="w-8 text-center text-xs font-medium text-slate-700 border border-slate-200 rounded px-1 py-0.5 mx-1 cursor-default select-none">
+                  {sizeMap[currentSize] || 14}
+                </div>
+
+                <button 
+                  onMouseDown={(e) => { e.preventDefault(); handleSizeChange(1); }}
+                  className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                  title="Increase Font Size"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+
             {/* Font Styles */}
             <div className="flex items-center gap-0.5 pr-2 mr-2 border-r border-slate-200 shrink-0">
               <ToolbarButton icon={Bold} title="Bold" onClick={() => applyFormatting('bold')} />
@@ -516,6 +568,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
               <ToolbarButton icon={Heading1} title="H1" onClick={() => applyFormatting('formatBlock', 'H1')} />
               <ToolbarButton icon={Heading2} title="H2" onClick={() => applyFormatting('formatBlock', 'H2')} />
               <ToolbarButton icon={Heading3} title="H3" onClick={() => applyFormatting('formatBlock', 'H3')} />
+              <ToolbarButton icon={Heading4} title="H4" onClick={() => applyFormatting('formatBlock', 'H4')} />
             </div>
 
             {/* Alignment & Lists */}
@@ -588,7 +641,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
           </div>
 
           {/* BLOCK FEED */}
-          <div className="flex-grow flex flex-col">
+          <div className="flex-grow flex flex-col neural-editor">
             {blocks.map((block) => (
               <div key={block.id} className="relative group/wrapper min-h-[1.5rem]">
                 {/* Drag / Remove Controls */}
