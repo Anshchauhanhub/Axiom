@@ -513,10 +513,10 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
             <div className="relative">
               <button 
                 onClick={() => setShowDownloadMenu(!showDownloadMenu)} 
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all active:scale-95"
+                className="flex items-center justify-center p-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all active:scale-95"
+                title="Download Note"
               >
-                <Download size={14} />
-                <span className="text-[10px] font-label font-black uppercase tracking-widest">Download Note</span>
+                <Download size={20} />
               </button>
               
               {showDownloadMenu && (
