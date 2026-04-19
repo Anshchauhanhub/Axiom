@@ -550,18 +550,11 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
 
       {/* DOCUMENT PAGE */}
       <div className="flex-grow flex flex-col items-center pb-40 px-4">
-        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-10 sm:px-20 py-16 sm:py-24 flex flex-col">
+        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-6 sm:px-12 py-8 sm:py-12 flex flex-col">
           
           {/* Subtle Document Header */}
-          <div className="mb-12 border-b border-slate-100 pb-8 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Neural Notes"}</h1>
-              <p className="text-[10px] font-label tracking-[0.3em] text-slate-400 uppercase ml-5">Mastery Protocol // {new Date().toLocaleDateString()}</p>
-            </div>
-            <div className="flex flex-col items-start sm:items-end gap-1">
-              <span className="text-[9px] font-label tracking-[0.4em] text-slate-400 uppercase italic">Subject: {user?.email?.split('@')[0]}</span>
-              <span className="w-16 h-1 bg-gradient-to-r from-primary to-secondary rounded-full mt-1"></span>
-            </div>
+          <div className="mb-8 border-b border-slate-100 pb-6 transition-opacity duration-500 opacity-60 hover:opacity-100">
+            <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Neural Notes"}</h1>
           </div>
 
           {/* BLOCK FEED */}
