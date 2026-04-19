@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { register, login, onboardingChat, finalizeGoal, quickActivateGoal, activateGoal, deleteGoal, toggleGoalStatus, getChatHistory } from '../services/api';
+import { register, login, onboardingChat, finalizeGoal, quickActivateGoal, activateGoal, deleteGoal, toggleGoalStatus, getChatHistory, clearChatHistory } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MessageBubble from '../components/MessageBubble';
