@@ -74,6 +74,17 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
         setBlocks(initialContent);
         isInitialized.current = true;
       } else if (typeof initialContent === 'string' && initialContent.trim()) {
+        try {
+          // Attempt to parse if it's a stringified JSON array
+          const parsed = JSON.parse(initialContent);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setBlocks(parsed);
+            isInitialized.current = true;
+            return;
+          }
+        } catch (e) {
+          // Not valid JSON, fall back to treating it as raw text
+        }
         setBlocks([{ id: 'block-' + Math.random().toString(36).substr(2, 9), type: 'text', content: initialContent }]);
         isInitialized.current = true;
       } else {
