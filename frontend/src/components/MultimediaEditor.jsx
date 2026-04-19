@@ -83,6 +83,25 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
     }
   }, [initialContent]);
 
+  // Prevent backspace from navigating away (browser "go back") when not editing text
+  useEffect(() => {
+    const preventBackspaceNavigation = (e) => {
+      if (e.key === 'Backspace') {
+        const el = document.activeElement;
+        const isEditable = el && (
+          el.tagName === 'INPUT' || 
+          el.tagName === 'TEXTAREA' || 
+          el.isContentEditable
+        );
+        if (!isEditable) {
+          e.preventDefault();
+        }
+      }
+    };
+    document.addEventListener('keydown', preventBackspaceNavigation);
+    return () => document.removeEventListener('keydown', preventBackspaceNavigation);
+  }, []);
+
   const handleUpdateBlock = (id, updates) => {
     setBlocks(prev => {
       const newBlocks = prev.map(b => b.id === id ? { ...b, ...updates } : b);
