@@ -588,7 +588,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
           </div>
 
           {/* BLOCK FEED */}
-          <div className="flex-grow flex flex-col">
+          <div className="flex-grow flex flex-col neural-editor">
             {blocks.map((block) => (
               <div key={block.id} className="relative group/wrapper min-h-[1.5rem]">
                 {/* Drag / Remove Controls */}
