@@ -38,29 +38,27 @@ const Onboarding = () => {
   };
 
   useEffect(() => {
-    const loadHistory = async () => {
+    const startFreshSession = async () => {
       if (user) {
         setLoading(true);
         try {
-          const res = await getChatHistory();
-          if (res.messages && res.messages.length > 0) {
-            setMessages(res.messages);
-          } else {
-            // Only set initial greeting if NO history exists
-            setMessages([{ 
-              role: 'assistant', 
-              content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
-            }]);
-          }
+          // Auto-clear old chat history on every page load for a fresh session
+          await clearChatHistory();
         } catch (e) {
-          console.error("Failed to load history:", e);
-        } finally {
-          setLoading(false);
+          console.error("Failed to clear history:", e);
         }
+        // Always start with a fresh greeting
+        setMessages([{ 
+          role: 'assistant', 
+          content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
+        }]);
+        setPhase('discovery');
+        setDraftRoadmap(null);
+        setLoading(false);
         setAuthStep(false);
       }
     };
-    loadHistory();
+    startFreshSession();
   }, [user]);
 
   // Auto-scroll whenever messages change or typing indicator appears
@@ -147,6 +145,21 @@ const Onboarding = () => {
       setError("Neural link interrupted. Please retry.");
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleNewChat = async () => {
+    try {
+      await clearChatHistory();
+      setMessages([{ 
+        role: 'assistant', 
+        content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
+      }]);
+      setPhase('discovery');
+      setDraftRoadmap(null);
+      setError('');
+    } catch (e) {
+      console.error('Failed to clear chat:', e);
     }
   };
 
@@ -386,7 +399,15 @@ const Onboarding = () => {
         {/* Chat Input */}
         <div className="p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
           <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleNewChat}
+                title="New Chat"
+                className="w-12 h-12 bg-surface-container-highest/80 border border-outline-variant/20 rounded-xl flex items-center justify-center hover:bg-error/10 hover:border-error/30 transition-all group shrink-0"
+              >
+                <Trash2 size={18} className="text-on-surface-variant/50 group-hover:text-error transition-colors" />
+              </button>
               <input
                 type="text"
                 value={inputText}
