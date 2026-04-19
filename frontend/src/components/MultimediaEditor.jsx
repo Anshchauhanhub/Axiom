@@ -74,6 +74,17 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
         setBlocks(initialContent);
         isInitialized.current = true;
       } else if (typeof initialContent === 'string' && initialContent.trim()) {
+        try {
+          // Attempt to parse if it's a stringified JSON array
+          const parsed = JSON.parse(initialContent);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setBlocks(parsed);
+            isInitialized.current = true;
+            return;
+          }
+        } catch (e) {
+          // Not valid JSON, fall back to treating it as raw text
+        }
         setBlocks([{ id: 'block-' + Math.random().toString(36).substr(2, 9), type: 'text', content: initialContent }]);
         isInitialized.current = true;
       } else {
@@ -82,6 +93,25 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
       }
     }
   }, [initialContent]);
+
+  // Prevent backspace from navigating away (browser "go back") when not editing text
+  useEffect(() => {
+    const preventBackspaceNavigation = (e) => {
+      if (e.key === 'Backspace') {
+        const el = document.activeElement;
+        const isEditable = el && (
+          el.tagName === 'INPUT' || 
+          el.tagName === 'TEXTAREA' || 
+          el.isContentEditable
+        );
+        if (!isEditable) {
+          e.preventDefault();
+        }
+      }
+    };
+    document.addEventListener('keydown', preventBackspaceNavigation);
+    return () => document.removeEventListener('keydown', preventBackspaceNavigation);
+  }, []);
 
   const handleUpdateBlock = (id, updates) => {
     setBlocks(prev => {
@@ -550,18 +580,11 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
 
       {/* DOCUMENT PAGE */}
       <div className="flex-grow flex flex-col items-center pb-40 px-4">
-        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-10 sm:px-20 py-16 sm:py-24 flex flex-col">
+        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-6 sm:px-12 py-8 sm:py-12 flex flex-col">
           
           {/* Subtle Document Header */}
-          <div className="mb-12 border-b border-slate-100 pb-8 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Neural Notes"}</h1>
-              <p className="text-[10px] font-label tracking-[0.3em] text-slate-400 uppercase ml-5">Mastery Protocol // {new Date().toLocaleDateString()}</p>
-            </div>
-            <div className="flex flex-col items-start sm:items-end gap-1">
-              <span className="text-[9px] font-label tracking-[0.4em] text-slate-400 uppercase italic">Subject: {user?.email?.split('@')[0]}</span>
-              <span className="w-16 h-1 bg-gradient-to-r from-primary to-secondary rounded-full mt-1"></span>
-            </div>
+          <div className="mb-4 border-b border-slate-100 pb-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
+            <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Neural Notes"}</h1>
           </div>
 
           {/* BLOCK FEED */}
