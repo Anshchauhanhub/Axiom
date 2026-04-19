@@ -6,7 +6,7 @@ import {
   List as ListIcon, ListOrdered, 
   Image as ImageIcon, Video, Share2, 
   Trash2, GripVertical, ChevronDown, 
-  Heading1, Heading2, Heading3, Type,
+  Heading1, Heading2, Heading3, Heading4, Type,
   Save, AlertCircle, Info, AlertTriangle, CheckCircle,
   Code, Minus, CheckSquare, Table as TableIcon, Sigma,
   Highlighter, Palette, Plus, Download, FileText, File
@@ -516,6 +516,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
               <ToolbarButton icon={Heading1} title="H1" onClick={() => applyFormatting('formatBlock', 'H1')} />
               <ToolbarButton icon={Heading2} title="H2" onClick={() => applyFormatting('formatBlock', 'H2')} />
               <ToolbarButton icon={Heading3} title="H3" onClick={() => applyFormatting('formatBlock', 'H3')} />
+              <ToolbarButton icon={Heading4} title="H4" onClick={() => applyFormatting('formatBlock', 'H4')} />
             </div>
 
             {/* Alignment & Lists */}
