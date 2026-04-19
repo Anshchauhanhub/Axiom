@@ -583,7 +583,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
         <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-6 sm:px-12 py-8 sm:py-12 flex flex-col">
           
           {/* Subtle Document Header */}
-          <div className="mb-8 border-b border-slate-100 pb-6 transition-opacity duration-500 opacity-60 hover:opacity-100">
+          <div className="mb-4 border-b border-slate-100 pb-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
             <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Neural Notes"}</h1>
           </div>
 
