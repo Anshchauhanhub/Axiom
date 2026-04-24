@@ -8,6 +8,7 @@ import Onboarding from './pages/Onboarding';
 import Study from './pages/Study';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import Social from './pages/Social';
 import ScrollToTop from './components/ScrollToTop';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
               <Route path="/study" element={<Study />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/social" element={<Social />} />
             </Routes>
           </Layout>
         </Router>

@@ -8,6 +8,7 @@ const Sidebar = () => {
 
   const navItems = [
     { name: 'Home', icon: 'home', path: '/' },
+    { name: 'Social Feed', icon: 'public', path: '/social' },
     { name: 'Onboarding', icon: 'person_add', path: '/onboarding' },
     { name: 'Study', icon: 'menu_book', path: '/study' },
     { name: 'Analytics', icon: 'insights', path: '/analytics' },
