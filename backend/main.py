@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from middleware import SecurityHeadersMiddleware, RateLimitMiddleware, RequestSizeLimitMiddleware
+
 from database import init_db
 from routers.users import router as auth_router, profile_router
 from routers.goals import router as goals_router
@@ -95,20 +97,36 @@ async def lifespan(app: FastAPI):
     logger.info("👋 Axiom AI Backend shut down.")
 
 
+# Conditionally disable API docs in production
+_is_dev = os.getenv("APP_ENV", "development") == "development"
+
 app = FastAPI(
     title="Axiom AI",
     description="High-Accountability AI Learning Coach Backend",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _is_dev else None,
+    redoc_url="/redoc" if _is_dev else None,
+    openapi_url="/openapi.json" if _is_dev else None,
 )
 
-# CORS for frontend
+# ─── Security Middleware (order matters: outermost runs first) ────────
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
+
+# ─── CORS — locked to explicit origins ────────────────────────────────
+_allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in _allowed_origins],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Register routers
