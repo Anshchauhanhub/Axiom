@@ -11,6 +11,22 @@ const headers = () => ({
   ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
 });
 
+// --- Sanitized error messages ---
+const SAFE_ERROR_MAP = {
+  'Failed to fetch': 'Unable to connect to server. Please check your internet connection.',
+  'NetworkError': 'Network error. Please try again.',
+};
+
+function sanitizeError(message) {
+  // Return mapped safe message, or the server message if it's short and non-technical
+  if (SAFE_ERROR_MAP[message]) return SAFE_ERROR_MAP[message];
+  // Don't expose stack traces or internal details
+  if (message && message.length < 200 && !message.includes('Traceback') && !message.includes('Error:')) {
+    return message;
+  }
+  return 'Something went wrong. Please try again.';
+}
+
 async function request(method, path, body = null) {
   const opts = { method, headers: headers() };
   if (body) opts.body = JSON.stringify(body);
@@ -20,14 +36,32 @@ async function request(method, path, body = null) {
     window.location.href = '/onboarding';
     throw new Error('Session expired');
   }
+  if (res.status === 429) {
+    throw new Error('Too many requests. Please wait a moment and try again.');
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Request failed');
+  if (!res.ok) throw new Error(sanitizeError(data.detail || 'Request failed'));
   return data;
 }
 
+// --- Password Validation (mirrors backend rules) ---
+export function validatePassword(password) {
+  const errors = [];
+  if (password.length < 8) errors.push('At least 8 characters');
+  if (!/[A-Z]/.test(password)) errors.push('At least one uppercase letter');
+  if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter');
+  if (!/[0-9]/.test(password)) errors.push('At least one digit');
+  return errors;
+}
+
 // --- Auth ---
-export const register = (email, password, timezone = 'Asia/Kolkata', schedule = ['12:00', '18:00']) =>
-  request('POST', '/auth/register', { email, password, timezone, study_schedule: schedule });
+export const register = (email, password, timezone = 'Asia/Kolkata', schedule = ['12:00', '18:00']) => {
+  const pwErrors = validatePassword(password);
+  if (pwErrors.length > 0) {
+    return Promise.reject(new Error(`Password requirements: ${pwErrors.join(', ')}`));
+  }
+  return request('POST', '/auth/register', { email, password, timezone, study_schedule: schedule });
+};
 
 export const login = (email, password) =>
   request('POST', '/auth/login', { email, password });
@@ -97,3 +131,4 @@ export const getChatHistory = () =>
 
 export const clearChatHistory = () =>
   request('DELETE', '/goals/chat/history');
+

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -33,7 +33,7 @@ async def create_post(
 @router.get("/feed", response_model=list[PostResponse])
 async def get_feed(
     db: AsyncSession = Depends(get_db),
-    limit: int = 20
+    limit: int = Query(default=20, ge=1, le=50, description="Max posts to return (1-50)"),
 ):
     result = await db.execute(
         select(SocialPost)

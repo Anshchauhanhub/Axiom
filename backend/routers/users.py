@@ -40,8 +40,17 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     email = req.email.lower().strip()
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
-    if not user or not verify_password(req.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user:
+        # Constant-time: still run bcrypt to prevent timing-based user enumeration
+        # This is a pre-computed bcrypt hash of "dummy" — the value doesn't matter,
+        # we just need bcrypt to run so the response time is indistinguishable.
+        _dummy_hash = "$2b$12$YUio9T2I8Hjf/nw/Pi2hO.cJb/o7sHMtJJc8ClMMbk98KkWqKBuDS"
+        verify_password(req.password, _dummy_hash)
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not verify_password(req.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_token(str(user.id))
     return TokenResponse(access_token=token)

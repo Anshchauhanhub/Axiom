@@ -258,10 +258,8 @@ async def onboarding_chat(
         return response_data
     
     except Exception as e:
-        logger.error(f"Chat endpoint error: {type(e).__name__}: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Chat error: {type(e).__name__}: {str(e)[:200]}")
+        logger.error(f"Chat endpoint error: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred. Please try again later.")
 
 
 @router.post("/finalize", response_model=RoadmapResponse)
@@ -350,8 +348,9 @@ async def quick_activate(
     try:
         roadmap_data = await generate_roadmap(goal.title)
     except Exception as e:
+        logger.error(f"Roadmap generation failed: {e}", exc_info=True)
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Neural generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate roadmap. Please try again later.")
 
     # 3. Create Tasks and Parts
     tasks_out = []
@@ -469,9 +468,14 @@ async def get_part_content(
     """
     Fetch the synthesized documentation for a roadmap part.
     Generates it via Neural Synthesis if not already present.
+    Verifies the requesting user owns the parent goal.
     """
+    # Join Part → Task → Goal and verify ownership
     result = await db.execute(
-        select(Part).where(Part.id == part_id)
+        select(Part)
+        .join(Task, Part.task_id == Task.id)
+        .join(Goal, Task.goal_id == Goal.id)
+        .where(Part.id == part_id, Goal.user_id == user.id)
     )
     part = result.scalar_one_or_none()
     if not part:
@@ -497,7 +501,9 @@ async def get_part_content(
             content=content
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Neural Synthesis failed: {str(e)}")
+        import logging
+        logging.getLogger("axiom.goals").error(f"Neural Synthesis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
 @router.patch("/{goal_id}/notes", response_model=GoalResponse)

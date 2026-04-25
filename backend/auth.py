@@ -1,4 +1,6 @@
 import os
+import uuid
+import logging
 import bcrypt
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
@@ -13,16 +15,34 @@ from models import User
 
 load_dotenv()
 
-JWT_SECRET = os.getenv("JWT_SECRET", "axiom-ai-secret")
+logger = logging.getLogger("axiom.auth")
+
+# ─── JWT Configuration ───────────────────────────────────────────────
+JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_MINUTES = int(os.getenv("JWT_EXPIRATION_MINUTES", "1440"))
 
+# Fail loudly if the secret is missing or still the placeholder
+_WEAK_SECRETS = {None, "", "axiom-ai-secret", "axiom-ai-super-secret-change-me-in-production"}
+if JWT_SECRET in _WEAK_SECRETS:
+    if os.getenv("APP_ENV") != "development":
+        raise RuntimeError(
+            "FATAL: JWT_SECRET is not set or is using a weak default. "
+            "Set a strong, random JWT_SECRET in your .env before running in production."
+        )
+    else:
+        JWT_SECRET = JWT_SECRET or "dev-only-insecure-secret"
+        logger.warning("⚠️  Using weak JWT_SECRET — acceptable in development only.")
+
 security = HTTPBearer()
+
+# Explicit bcrypt work factor (2^12 = 4096 iterations)
+BCRYPT_ROUNDS = 12
 
 
 def hash_password(password: str) -> str:
     pwd_bytes = password.encode("utf-8")
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
     return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
@@ -31,8 +51,14 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_token(user_id: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRATION_MINUTES)
-    payload = {"sub": user_id, "exp": expire}
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=JWT_EXPIRATION_MINUTES)
+    payload = {
+        "sub": user_id,
+        "exp": expire,
+        "iat": now,
+        "jti": str(uuid.uuid4()),  # Unique token ID for auditing
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
