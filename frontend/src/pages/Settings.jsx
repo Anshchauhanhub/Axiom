@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { linkTelegram, updateSchedule } from '../services/api';
+import { linkTelegram, updateSchedule, updateProfile, uploadProfileImage } from '../services/api';
+
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
 
 const Settings = () => {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  
   const [chatId, setChatId] = useState('');
   const [schedule, setSchedule] = useState(user?.study_schedule || ['12:00', '18:00']);
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  
+  // Profile state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState(user?.full_name || user?.email?.split('@')[0] || '');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   if (!user) {
     return (
@@ -34,6 +43,38 @@ const Settings = () => {
       setMessage(`❌ ${e.message}`);
     }
     setSaving(false);
+  };
+
+  const handleSaveName = async () => {
+    if (!newName.trim() || newName === user.full_name) {
+      setIsEditingName(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateProfile({ full_name: newName });
+      setMessage('✅ Profile name updated!');
+      await refreshUser();
+      setIsEditingName(false);
+    } catch (e) {
+      setMessage(`❌ ${e.message}`);
+    }
+    setSaving(false);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingImage(true);
+    try {
+      await uploadProfileImage(file);
+      setMessage('✅ Profile image updated!');
+      await refreshUser();
+    } catch (err) {
+      setMessage(`❌ ${err.message}`);
+    }
+    setUploadingImage(false);
   };
 
   const handleSaveSchedule = async () => {
@@ -75,11 +116,67 @@ const Settings = () => {
             <span className="h-[1px] w-8 bg-secondary/30"></span> Profile Identity
           </h3>
           <div className="bg-surface-container-low rounded-[2rem] p-8 border border-outline-variant/10 flex flex-col md:flex-row items-center gap-8">
-            <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 p-1 bg-surface-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-4xl">person</span>
+            <div 
+              className="relative group cursor-pointer h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 p-1 bg-surface-container flex items-center justify-center"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {user?.profile_image_url ? (
+                <img 
+                  src={`${API_BASE}${user.profile_image_url}`} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-primary text-4xl">person</span>
+              )}
+              
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                <span className="material-symbols-outlined text-white text-xl">
+                  {uploadingImage ? 'hourglass_empty' : 'photo_camera'}
+                </span>
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
             </div>
+            
             <div className="flex-1 text-center md:text-left">
-              <h4 className="text-2xl font-black font-headline text-on-surface uppercase">{user.email.split('@')[0]}</h4>
+              <div className="flex items-center justify-center md:justify-start gap-3">
+                {isEditingName ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="bg-surface-container border-none rounded-lg px-3 py-1 text-on-surface font-headline text-xl focus:ring-1 focus:ring-primary w-48"
+                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                    />
+                    <button onClick={handleSaveName} disabled={saving} className="text-primary hover:text-primary/80">
+                      <span className="material-symbols-outlined text-xl">check_circle</span>
+                    </button>
+                    <button onClick={() => { setIsEditingName(false); setNewName(user.full_name || user.email.split('@')[0]); }} className="text-error hover:text-error/80">
+                      <span className="material-symbols-outlined text-xl">cancel</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <h4 className="text-2xl font-black font-headline text-on-surface uppercase">
+                      {user?.full_name || user?.email.split('@')[0]}
+                    </h4>
+                    <button 
+                      onClick={() => setIsEditingName(true)}
+                      className="text-on-surface-variant opacity-60 hover:opacity-100 hover:text-primary transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                    </button>
+                  </>
+                )}
+              </div>
               <p className="text-on-surface-variant text-sm font-label mt-1">{user.email} • Streak: {user.current_streak}D</p>
             </div>
           </div>
