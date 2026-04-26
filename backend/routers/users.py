@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -7,6 +8,7 @@ from models import User
 from schemas import (
     RegisterRequest, LoginRequest, TokenResponse,
     LinkTelegramRequest, UserResponse, UpdateScheduleRequest,
+    UpdateProfileRequest
 )
 from auth import hash_password, verify_password, create_token, get_current_user
 
@@ -104,3 +106,45 @@ async def update_schedule(
     user.study_schedule = req.study_schedule
     await db.commit()
     return {"message": "Schedule updated", "schedule": req.study_schedule, "timezone": req.timezone}
+
+
+@profile_router.patch("/profile", response_model=UserResponse)
+async def update_profile(
+    req: UpdateProfileRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if req.full_name is not None:
+        user.full_name = req.full_name
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@profile_router.post("/profile/image")
+async def upload_profile_image(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File provided is not an image.")
+
+    # Create static/profiles directory if not exists
+    static_dir = os.path.join("static", "profiles")
+    os.makedirs(static_dir, exist_ok=True)
+
+    # Save file
+    file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    file_name = f"{user.id}.{file_extension}"
+    file_path = os.path.join(static_dir, file_name)
+
+    content = await file.read()
+    with open(file_path, 'wb') as out_file:
+        out_file.write(content)
+
+    # Update user
+    user.profile_image_url = f"/static/profiles/{file_name}"
+    await db.commit()
+
+    return {"message": "Profile image updated successfully", "profile_image_url": user.profile_image_url}

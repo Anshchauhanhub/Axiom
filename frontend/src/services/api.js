@@ -72,6 +72,32 @@ export const linkTelegram = (chatId) =>
 // --- User ---
 export const getProfile = () => request('GET', '/users/me');
 
+export const updateProfile = (data) => request('PATCH', '/users/profile', data);
+
+export const uploadProfileImage = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const res = await fetch(`${API_BASE}/users/profile/image`, {
+    method: 'POST',
+    headers: {
+      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      // Do NOT set Content-Type header manually here; the browser sets it with the boundary for FormData
+    },
+    body: formData,
+  });
+
+  if (res.status === 401) {
+    clearToken();
+    window.location.href = '/onboarding';
+    throw new Error('Session expired');
+  }
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+};
+
 export const updateSchedule = (timezone, schedule) =>
   request('PUT', '/users/schedule', { timezone, study_schedule: schedule });
 

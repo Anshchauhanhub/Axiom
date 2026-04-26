@@ -44,6 +44,8 @@ class LinkTelegramRequest(BaseModel):
 class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
+    full_name: Optional[str] = None
+    profile_image_url: Optional[str] = None
     telegram_chat_id: Optional[int] = None
     timezone: str
     study_schedule: list[str]
@@ -56,6 +58,10 @@ class UserResponse(BaseModel):
 class UpdateScheduleRequest(BaseModel):
     timezone: str
     study_schedule: list[str]
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: Optional[str] = None
 
 
 # --- Goals ---
