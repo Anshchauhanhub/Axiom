@@ -95,7 +95,7 @@ const Dashboard = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">
-              Welcome, {user.email.split('@')[0]}
+              Welcome, {user.full_name || user.email.split('@')[0]}
             </h2>
             <p className="text-on-surface-variant font-label tracking-wide uppercase text-xs opacity-60">
               System Status: Operational | {goals.length} Active Goal{goals.length !== 1 ? 's' : ''}
