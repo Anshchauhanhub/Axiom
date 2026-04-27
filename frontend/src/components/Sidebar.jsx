@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
+
 const Sidebar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -42,12 +44,16 @@ const Sidebar = () => {
         <div className="mt-auto px-4 space-y-6">
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border border-outline-variant/30 bg-surface-container flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-lg">person</span>
+              <div className="w-10 h-10 rounded-full border border-outline-variant/30 bg-surface-container flex items-center justify-center overflow-hidden">
+                {user.profile_image_url ? (
+                  <img src={`${API_BASE}${user.profile_image_url}`} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-primary text-lg">person</span>
+                )}
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-on-surface">{user.email.split('@')[0]}</span>
-                <button onClick={logout} className="text-[10px] text-error font-label uppercase text-left hover:underline">Logout</button>
+              <div className="flex flex-col truncate">
+                <span className="text-xs font-bold text-on-surface truncate pr-2">{user.full_name || user.email.split('@')[0]}</span>
+                <button onClick={logout} className="text-[10px] text-error font-label uppercase text-left hover:underline w-fit mt-0.5">Logout</button>
               </div>
             </div>
           ) : (
