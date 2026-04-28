@@ -131,7 +131,8 @@ async def upload_profile_image(
         raise HTTPException(status_code=400, detail="File provided is not an image.")
 
     # Create static/profiles directory if not exists
-    static_dir = os.path.join("static", "profiles")
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    static_dir = os.path.join(base_dir, "static", "profiles")
     os.makedirs(static_dir, exist_ok=True)
 
     # Save file
