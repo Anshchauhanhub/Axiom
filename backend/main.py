@@ -146,6 +146,12 @@ if os.path.exists(STATIC_DIR):
     ASSETS_DIR = os.path.join(STATIC_DIR, "assets")
     if os.path.exists(ASSETS_DIR):
         app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+
+    # Mount profiles folder for user uploads
+    PROFILES_DIR = os.path.join(STATIC_DIR, "profiles")
+    if not os.path.exists(PROFILES_DIR):
+        os.makedirs(PROFILES_DIR, exist_ok=True)
+    app.mount("/static/profiles", StaticFiles(directory=PROFILES_DIR), name="profiles")
     
     # Catch-all for SPA routing (React Router)
     @app.get("/{full_path:path}", response_class=FileResponse)
