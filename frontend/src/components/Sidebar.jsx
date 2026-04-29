@@ -46,7 +46,7 @@ const Sidebar = () => {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full border border-outline-variant/30 bg-surface-container flex items-center justify-center overflow-hidden">
                 {user.profile_image_url ? (
-                  <img src={`${API_BASE}${user.profile_image_url}`} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={user.profile_image_url.startsWith('http') ? user.profile_image_url : `${API_BASE}${user.profile_image_url}`} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <span className="material-symbols-outlined text-primary text-lg">person</span>
                 )}
