@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 import os
+import cloudinary
+import cloudinary.uploader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -11,6 +13,13 @@ from schemas import (
     UpdateProfileRequest
 )
 from auth import hash_password, verify_password, create_token, get_current_user
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 profile_router = APIRouter(prefix="/users", tags=["Users"])
@@ -130,22 +139,19 @@ async def upload_profile_image(
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File provided is not an image.")
 
-    # Create static/profiles directory if not exists
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    static_dir = os.path.join(base_dir, "static", "profiles")
-    os.makedirs(static_dir, exist_ok=True)
+    try:
+        # Upload directly to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            file.file,
+            folder="axiom/profiles/",
+            public_id=str(user.id),
+            overwrite=True
+        )
+        
+        # Update user with the secure URL from Cloudinary
+        user.profile_image_url = upload_result.get("secure_url")
+        await db.commit()
 
-    # Save file
-    file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    file_name = f"{user.id}.{file_extension}"
-    file_path = os.path.join(static_dir, file_name)
-
-    content = await file.read()
-    with open(file_path, 'wb') as out_file:
-        out_file.write(content)
-
-    # Update user
-    user.profile_image_url = f"/static/profiles/{file_name}"
-    await db.commit()
-
-    return {"message": "Profile image updated successfully", "profile_image_url": user.profile_image_url}
+        return {"message": "Profile image updated successfully", "profile_image_url": user.profile_image_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {str(e)}")
