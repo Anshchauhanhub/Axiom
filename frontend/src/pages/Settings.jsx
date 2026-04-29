@@ -122,7 +122,7 @@ const Settings = () => {
             >
               {user?.profile_image_url ? (
                 <img 
-                  src={`${API_BASE}${user.profile_image_url}`} 
+                  src={user.profile_image_url.startsWith('http') ? user.profile_image_url : `${API_BASE}${user.profile_image_url}`} 
                   alt="Profile" 
                   className="w-full h-full object-cover rounded-full"
                 />
