@@ -24,6 +24,7 @@ const Social = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState('');
   const [activeCommentsPostId, setActiveCommentsPostId] = useState(null);
+  const [isEditingPost, setIsEditingPost] = useState(false);
   const [commentsMap, setCommentsMap] = useState({}); // { postId: [comments] }
   const [newCommentText, setNewCommentText] = useState('');
 
@@ -161,6 +162,7 @@ const Social = () => {
 
       setNewPostContent('');
       setSelectedGoalId('');
+      setIsEditingPost(false);
       showToast("Post published!");
       // Fallback refresh to ensure user sees their post even if WS fails
       fetchFeed();
@@ -269,7 +271,7 @@ const Social = () => {
                  )}
                </div>
                <button 
-                onClick={() => document.getElementById('post-modal')?.focus()}
+                onClick={() => setIsEditingPost(true)}
                 className="flex-1 bg-white/5 border border-white/10 rounded-full px-5 text-left text-sm text-slate-500 hover:bg-white/10 transition-all font-medium"
                >
                  Start a post on your journey...
@@ -296,7 +298,7 @@ const Social = () => {
           </div>
 
           {/* New Post Editor (Inline for now) */}
-          {newPostContent && (
+          {isEditingPost && (
             <div className="glass-panel rounded-xl p-4 border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
                <textarea
                 id="post-modal"
@@ -315,7 +317,7 @@ const Social = () => {
                   {goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
                 </select>
                 <div className="flex gap-2">
-                   <button onClick={() => setNewPostContent('')} className="px-4 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white">Cancel</button>
+                   <button onClick={() => setNewPostContent(''); setIsEditingPost(false);} className="px-4 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white">Cancel</button>
                    <button 
                     onClick={handleCreatePost}
                     disabled={isSubmitting}
