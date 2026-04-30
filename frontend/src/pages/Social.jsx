@@ -31,20 +31,26 @@ const Social = () => {
     fetchFeed();
     fetchGoals();
     fetchProfile();
+  }, []);
 
+  useEffect(() => {
     // WebSocket for real-time updates
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host.includes('localhost') ? '127.0.0.1:8000' : window.location.host}/ws/social/`;
+    const host = window.location.host.includes('localhost') ? '127.0.0.1:8000' : window.location.host;
+    const wsUrl = `${protocol}//${host}/ws/social/`;
     const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'new_post') {
-        setPosts(prev => [data.post, ...prev]);
+        setPosts(prev => {
+          if (prev.some(p => p.id === data.post.id)) return prev;
+          return [data.post, ...prev];
+        });
       } else if (data.type === 'like_update') {
         setPosts(prev => prev.map(p => p.id === data.post_id ? { ...p, likes_count: data.likes_count } : p));
       } else if (data.type === 'new_comment') {
-        setPosts(prev => prev.map(p => p.id === data.post_id ? { ...p, comments_count: p.comments_count + 1 } : p));
+        setPosts(prev => prev.map(p => p.id === data.post_id ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p));
         if (activeCommentsPostId === data.post_id) {
           setCommentsMap(prev => ({
             ...prev,
@@ -55,7 +61,7 @@ const Social = () => {
     };
 
     return () => socket.close();
-  }, [activeCommentsPostId]);
+  }, [activeCommentsPostId]); // We still need activeCommentsPostId to know which comment section to update if open
 
   const fetchFeed = async () => {
     try {
@@ -156,6 +162,8 @@ const Social = () => {
       setNewPostContent('');
       setSelectedGoalId('');
       showToast("Post published!");
+      // Fallback refresh to ensure user sees their post even if WS fails
+      fetchFeed();
     } catch (err) {
       showToast("Failed to publish post", "error");
     } finally {

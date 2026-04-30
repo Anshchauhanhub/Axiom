@@ -8,6 +8,7 @@ from database import get_db
 from models import User, SocialPost, Goal, PostLike, SocialComment
 from schemas import PostCreateRequest, PostResponse, CommentCreateRequest, CommentResponse
 from auth import get_current_user
+from fastapi.encoders import jsonable_encoder
 from routers.social_ws import manager
 
 router = APIRouter(prefix="/social", tags=["Social Feed"])
@@ -32,11 +33,14 @@ async def create_post(
     post.user_email = user.email
     post.user_full_name = user.full_name
     post.user_profile_image = user.profile_image_url
+    post.likes_count = 0
+    post.comments_count = 0
+    post.is_liked_by_me = False
     
     # Broadcast new post
     await manager.broadcast({
         "type": "new_post",
-        "post": PostResponse.from_orm(post).dict()
+        "post": jsonable_encoder(PostResponse.from_orm(post))
     })
     
     return post
@@ -157,7 +161,7 @@ async def add_comment(
     await manager.broadcast({
         "type": "new_comment",
         "post_id": str(post_id),
-        "comment": CommentResponse.from_orm(comment).dict()
+        "comment": jsonable_encoder(CommentResponse.from_orm(comment))
     })
     
     return comment
