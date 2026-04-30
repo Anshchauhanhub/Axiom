@@ -42,6 +42,21 @@
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Document Word Processor Styling */
 .neural-editor h1 {
   @apply text-[20px] font-black text-slate-900 mb-4 mt-6 uppercase tracking-tighter border-l-4 border-primary pl-4;
