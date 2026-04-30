@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { linkTelegram, updateSchedule, updateProfile, uploadProfileImage } from '../services/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
@@ -9,12 +10,12 @@ const Settings = () => {
   const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const { showToast } = useToast();
   
   const [chatId, setChatId] = useState('');
   const [schedule, setSchedule] = useState(user?.study_schedule || ['12:00', '18:00']);
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
   
   // Profile state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -36,11 +37,11 @@ const Settings = () => {
     setSaving(true);
     try {
       await linkTelegram(parseInt(chatId));
-      setMessage('✅ Telegram linked successfully!');
+      showToast('Telegram linked successfully!');
       refreshUser();
       setChatId('');
     } catch (e) {
-      setMessage(`❌ ${e.message}`);
+      showToast(e.message, 'error');
     }
     setSaving(false);
   };
@@ -53,11 +54,11 @@ const Settings = () => {
     setSaving(true);
     try {
       await updateProfile({ full_name: newName });
-      setMessage('✅ Profile name updated!');
+      showToast('Profile name updated!');
       await refreshUser();
       setIsEditingName(false);
     } catch (e) {
-      setMessage(`❌ ${e.message}`);
+      showToast(e.message, 'error');
     }
     setSaving(false);
   };
@@ -69,10 +70,10 @@ const Settings = () => {
     setUploadingImage(true);
     try {
       await uploadProfileImage(file);
-      setMessage('✅ Profile image updated!');
+      showToast('Profile image updated!');
       await refreshUser();
     } catch (err) {
-      setMessage(`❌ ${err.message}`);
+      showToast(err.message, 'error');
     }
     setUploadingImage(false);
   };
@@ -83,10 +84,10 @@ const Settings = () => {
       const sortedSchedule = [...schedule].sort();
       await updateSchedule(timezone, sortedSchedule);
       setSchedule(sortedSchedule);
-      setMessage('✅ Schedule updated!');
+      showToast('Schedule updated!');
       refreshUser();
     } catch (e) {
-      setMessage(`❌ ${e.message}`);
+      showToast(e.message, 'error');
     }
     setSaving(false);
   };
@@ -102,12 +103,6 @@ const Settings = () => {
         <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Control Center</h2>
         <p className="text-on-surface-variant font-label tracking-wide uppercase text-[10px] opacity-60">System Configuration</p>
       </header>
-
-      {message && (
-        <div className="mb-8 p-4 bg-surface-container-low border border-outline-variant/20 rounded-xl">
-          <p className="text-sm font-label font-bold">{message}</p>
-        </div>
-      )}
 
       <div className="space-y-12">
         {/* Profile Section */}
