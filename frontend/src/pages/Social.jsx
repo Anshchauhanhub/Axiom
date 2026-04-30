@@ -317,7 +317,7 @@ const Social = () => {
                   {goals.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
                 </select>
                 <div className="flex gap-2">
-                   <button onClick={() => setNewPostContent(''); setIsEditingPost(false);} className="px-4 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white">Cancel</button>
+                   <button onClick={() => { setNewPostContent(''); setIsEditingPost(false); }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white">Cancel</button>
                    <button 
                     onClick={handleCreatePost}
                     disabled={isSubmitting}
