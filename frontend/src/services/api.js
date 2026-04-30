@@ -152,6 +152,15 @@ export const createSocialPost = (postData) =>
 export const getSocialFeed = () =>
   request('GET', '/social/feed');
 
+export const toggleSocialLike = (postId) =>
+  request('POST', `/social/posts/${postId}/toggle-like`);
+
+export const getSocialComments = (postId) =>
+  request('GET', `/social/posts/${postId}/comments`);
+
+export const addSocialComment = (postId, content) =>
+  request('POST', `/social/posts/${postId}/comments`, { content });
+
 export const getChatHistory = () =>
   request('GET', '/goals/chat/history');
 

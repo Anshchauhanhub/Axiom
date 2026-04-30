@@ -410,14 +410,7 @@ const Onboarding = () => {
         <div className="p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
           <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
             <div className="relative flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleNewChat}
-                title="New Chat"
-                className="w-12 h-12 bg-surface-container-highest/80 border border-outline-variant/20 rounded-xl flex items-center justify-center hover:bg-error/10 hover:border-error/30 transition-all group shrink-0"
-              >
-                <Trash2 size={18} className="text-on-surface-variant/50 group-hover:text-error transition-colors" />
-              </button>
+
               <input
                 type="text"
                 value={inputText}
