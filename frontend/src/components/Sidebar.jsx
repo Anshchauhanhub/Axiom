@@ -13,7 +13,6 @@ const Sidebar = () => {
     { name: 'Social Feed', icon: 'public', path: '/social' },
     { name: 'Onboarding', icon: 'person_add', path: '/onboarding' },
     { name: 'Study', icon: 'menu_book', path: '/study' },
-    { name: 'Analytics', icon: 'insights', path: '/analytics' },
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
 
@@ -68,16 +67,21 @@ const Sidebar = () => {
       </aside>
 
       {/* BottomNavBar (Mobile Only) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-6 pt-3 bg-[#131315]/90 backdrop-blur-lg border-t border-[#353437]/15">
-        {navItems.slice(0, 3).map((item) => (
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe pt-2 bg-[#131315]/95 backdrop-blur-xl border-t border-[#353437]/20 shadow-[0_-10px_40px_rgba(0,0,0,0.4)]">
+        {navItems.filter(item => ['Home', 'Social Feed', 'Study', 'Settings'].includes(item.name)).map((item) => (
           <Link
             key={item.name}
             to={item.path}
-            className={`flex flex-col items-center justify-center transition-all duration-200 ${isActive(item.path) ? 'text-secondary bg-[#201f22] rounded-xl px-4 py-1' : 'text-[#353437]'
+            className={`flex flex-col items-center justify-center py-2 px-1 transition-all duration-300 relative group ${isActive(item.path) ? 'text-primary' : 'text-[#8c909f]'
               }`}
           >
-            <span className="material-symbols-outlined">{item.icon}</span>
-            <span className="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-widest">{item.name}</span>
+            <div className={`mb-1 p-1.5 rounded-xl transition-all duration-300 ${isActive(item.path) ? 'bg-primary/10 scale-110' : 'group-hover:bg-[#1c1b1d]'}`}>
+              <span className={`material-symbols-outlined text-[24px] ${isActive(item.path) ? 'fill-1' : ''}`}>{item.icon}</span>
+            </div>
+            <span className="font-['Space_Grotesk'] text-[9px] uppercase font-bold tracking-[0.1em]">{item.name === 'Social Feed' ? 'Social' : item.name}</span>
+            {isActive(item.path) && (
+              <div className="absolute -top-2 w-1 h-1 bg-primary rounded-full shadow-[0_0_10px_#fdb813]"></div>
+            )}
           </Link>
         ))}
       </nav>

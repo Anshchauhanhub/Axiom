@@ -87,11 +87,11 @@ const Study = () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
       // Use JSON.stringify for a deep comparison since notes is an array of objects
-      if (JSON.stringify(notes) === JSON.stringify(activeGoal.notes)) return;
       setIsSaving(true);
       try {
         await updateGoalNotes(activeGoal.id, notes);
         activeGoal.notes = notes; 
+        refreshData(); // Sync with global state
       } catch (e) {
         console.error('Failed to save notes:', e);
       } finally {

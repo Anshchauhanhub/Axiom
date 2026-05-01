@@ -6,7 +6,8 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary/30 flex flex-col">
       <Sidebar />
-      <main className="flex-1 flex flex-col items-center justify-start pt-8 pb-12 px-4 lg:pl-72 max-w-7xl mx-auto w-full">
+      <TopNav />
+      <main className="flex-1 flex flex-col items-center justify-start pt-24 pb-32 px-4 lg:pt-8 lg:pb-12 lg:pl-72 max-w-7xl mx-auto w-full">
         {children}
       </main>
       {/* Ambient Glow Effects */}
