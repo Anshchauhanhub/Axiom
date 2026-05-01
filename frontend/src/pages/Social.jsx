@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { 
   getSocialFeed, createSocialPost, listGoals, getProfile,
-  toggleSocialLike, getSocialComments, addSocialComment 
+  toggleSocialLike, getSocialComments, addSocialComment,
+  API_BASE
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -36,9 +37,17 @@ const Social = () => {
 
   useEffect(() => {
     // WebSocket for real-time updates
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host.includes('localhost') ? '127.0.0.1:8000' : window.location.host;
-    const wsUrl = `${protocol}//${host}/ws/social/`;
+    let wsUrl;
+    if (API_BASE && (API_BASE.startsWith('http://') || API_BASE.startsWith('https://'))) {
+      const wsProtocol = API_BASE.startsWith('https://') ? 'wss:' : 'ws:';
+      const wsHost = API_BASE.replace(/^https?:\/\//, '');
+      wsUrl = `${wsProtocol}//${wsHost}/ws/social/`;
+    } else {
+      // Fallback for relative paths or same-origin
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host.includes('localhost') ? '127.0.0.1:8000' : window.location.host;
+      wsUrl = `${protocol}//${host}/ws/social/`;
+    }
     const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {

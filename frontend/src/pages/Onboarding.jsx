@@ -88,6 +88,7 @@ const Onboarding = () => {
       const fn = mode === 'register' ? register : login;
       const res = await fn(email, password);
       await loginUser(res.access_token);
+      window.location.reload();
     } catch (e) {
       if (mode === 'register' && e.message.includes('already registered')) {
         setError('This email is already part of the Axiom network. Switch to Login to continue.');
