@@ -6,6 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Railway/Render usually require SSL, but local dev might not.
+# We'll use ssl=True if 'railway' or 'render' is in the URL, or if specified.
+use_ssl = "railway" in DATABASE_URL or "render" in DATABASE_URL if DATABASE_URL else False
 
 engine = create_async_engine(
     DATABASE_URL,
@@ -13,7 +19,7 @@ engine = create_async_engine(
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    connect_args={"ssl": True}
+    connect_args={"ssl": True} if use_ssl else {}
 )
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
