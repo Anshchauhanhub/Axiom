@@ -173,32 +173,6 @@ const Onboarding = () => {
     }
   };
 
-  const handleToggleStatus = async (goalId) => {
-    setLoading(true);
-    try {
-      await toggleGoalStatus(goalId);
-      await refreshData();
-      // If we activated it, navigate to home. If we paused it, stay here.
-      // We can check the actual state if we want, but for now let's just refresh.
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteGoal = async (goalId) => {
-    if (!window.confirm("Permanently purge this neural path? This cannot be undone.")) return;
-    setLoading(true);
-    try {
-      await deleteGoal(goalId);
-      await refreshData();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFinalize = async () => {
     if (!draftRoadmap) return;
@@ -222,18 +196,6 @@ const Onboarding = () => {
     scrollToBottom();
   };
 
-  const handleSwitchGoal = async (id) => {
-    setLoading(true);
-    try {
-      await activateGoal(id);
-      await refreshData();
-      navigate('/');
-    } catch (e) {
-      setError("Failed to switch neural path.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (authStep) {
     return (
@@ -282,7 +244,7 @@ const Onboarding = () => {
   }
 
   return (
-    <div className="w-full flex-1 min-h-[500px] flex flex-col lg:flex-row gap-6 animate-in fade-in duration-1000">
+    <div className="w-full flex-1 min-h-[500px] flex flex-col animate-in fade-in duration-1000">
       {loading && (
         <NeuralLoader 
           message="SYNTHESIZING NEURAL PATH" 
@@ -296,7 +258,7 @@ const Onboarding = () => {
         />
       )}
 
-      {/* Main Chat Area */}
+      {/* Main Chat Area - Now Full Width */}
       <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
 
         {/* Chat Header */}
@@ -447,81 +409,6 @@ const Onboarding = () => {
           {error && <p className="text-error text-[10px] font-label font-bold uppercase tracking-widest text-center mt-4 animate-bounce">{error}</p>}
         </div>
       </div>
-
-      {/* Side Panel: Neural Archive */}
-      <aside className="w-full lg:w-80 flex flex-col gap-6 animate-in slide-in-from-right-8 duration-700">
-        <div className="h-full bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 p-8 flex flex-col backdrop-blur-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-30"></div>
-
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-              <span className="material-symbols-outlined text-primary text-xl">history</span>
-            </div>
-            <div>
-              <h3 className="font-headline font-black text-xs uppercase tracking-tighter">Neural Archive</h3>
-              <p className="text-[9px] font-label text-on-surface-variant uppercase tracking-widest opacity-40">Previous Goals</p>
-            </div>
-          </div>
-
-          <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-            {goals.length === 0 ? (
-              <div className="text-center py-12 opacity-30">
-                <span className="material-symbols-outlined text-4xl mb-2">folder_open</span>
-                <p className="text-[10px] font-label uppercase tracking-widest">Archive Empty</p>
-              </div>
-            ) : (
-              goals.map((goal) => (
-                <div key={goal.id} className={`group p-4 rounded-2xl border transition-all cursor-default relative overflow-hidden ${goal.status === 'active'
-                    ? 'bg-primary/5 border-primary/30 shadow-[0_0_20px_rgba(77,142,255,0.05)]'
-                    : 'bg-surface-container-lowest/50 border-outline-variant/10 opacity-70 hover:opacity-100'
-                  }`}>
-                  <div className="flex justify-between items-start mb-3">
-                    <h4 className="text-[12px] font-bold text-on-surface uppercase tracking-tight line-clamp-1 pr-2">
-                      {goal.title}
-                    </h4>
-                    <button
-                      onClick={() => handleDeleteGoal(goal.id)}
-                      className="text-on-surface-variant/40 hover:text-error transition-colors p-1 rounded-md"
-                      title="Purge Path"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${goal.status === 'active' ? 'bg-primary animate-pulse' : 'bg-on-surface-variant'}`}></div>
-                      <span className={`text-[8px] font-label font-bold uppercase tracking-widest ${goal.status === 'active' ? 'text-primary' : 'text-on-surface-variant opacity-40'}`}>
-                        {goal.status}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleToggleStatus(goal.id)}
-                      className={`px-3 py-1.5 rounded-lg font-label font-bold text-[8px] tracking-widest uppercase transition-all flex items-center gap-1.5 ${goal.status === 'active'
-                          ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                          : 'bg-surface-container-highest text-on-surface-variant hover:bg-primary/10 hover:text-primary border border-outline-variant/20'
-                        }`}
-                    >
-                      <span className="material-symbols-outlined text-[12px]">
-                        {goal.status === 'active' ? 'pause' : 'play_arrow'}
-                      </span>
-                      {goal.status === 'active' ? 'Pause' : 'Activate'}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-outline-variant/10">
-            <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
-              <p className="text-[9px] text-on-surface-variant leading-relaxed italic opacity-60">
-                Neural Archive suggests previous paths based on your learned patterns.
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
     </div>
   );
 };
