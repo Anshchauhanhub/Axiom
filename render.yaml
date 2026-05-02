@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: axiom-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: axiom-db
+          property: connectionString
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:5173" # Update this in Render dashboard after Vercel deployment
+
+databases:
+  - name: axiom-db
+    databaseName: axiom
+    user: axiom_user
+    plan: free
