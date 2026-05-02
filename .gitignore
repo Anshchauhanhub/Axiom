@@ -27,3 +27,4 @@ __pycache__
 *.sln
 *.sw?
 .pytest_cache/
+.vercel
