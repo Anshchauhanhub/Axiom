@@ -40,34 +40,34 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("✅ Database tables created/verified.")
 
-    # Initialize Telegram bot
+    # Start nudge scheduler
+    start_scheduler()
+    logger.info("✅ Nudge scheduler started.")
+
+    # Launch Telegram bot in background so it doesn't block port binding
     disable_telegram = os.getenv("DISABLE_TELEGRAM", "false").lower() in ("true", "1", "yes", "t")
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    
-    if not disable_telegram and bot_token and bot_token != "your-telegram-bot-token-here":
+
+    async def _start_bot():
+        """Background task to start Telegram bot without blocking the server."""
+        global _bot_started, _bot_app_ref
         try:
-            # Add a small delay for local development reloads to avoid 409 Conflict
-            if os.getenv("APP_ENV") == "development":
-                logger.info("⏳ Waiting for previous bot instance to clear...")
-                await asyncio.sleep(5)
-            
+            # Wait a moment for the server to fully bind its port first
+            await asyncio.sleep(3)
+
             bot_app = create_bot_app()
             await bot_app.initialize()
-            await bot_app.start()  # Critical: Missing in previous version
+            await bot_app.start()
             set_bot_app(bot_app)
             set_bot(bot_app.bot)
 
-            # Start polling with conflict handling
-            try:
-                await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
-            except Exception as polling_err:
-                if "Conflict" in str(polling_err):
-                    logger.warning("⚠️ Bot conflict detected. Retrying in 5s (waiting for old instance)...")
-                    await asyncio.sleep(5)
-                    await bot_app.updater.start_polling(drop_pending_updates=True, timeout=10)
-                else:
-                    raise polling_err
-            
+            # Start polling — drop old updates to avoid conflict
+            await bot_app.updater.start_polling(
+                drop_pending_updates=True,
+                timeout=10,
+                allowed_updates=["message", "callback_query"],
+            )
+
             _bot_started = True
             _bot_app_ref = bot_app
             logger.info("✅ Telegram bot started and polling loop active.")
@@ -75,19 +75,24 @@ async def lifespan(app: FastAPI):
             logger.warning(f"⚠️ Telegram bot failed to start: {e}")
             _bot_started = False
             _bot_app_ref = None
+
+    bot_task = None
+    if not disable_telegram and bot_token and bot_token != "your-telegram-bot-token-here":
+        bot_task = asyncio.create_task(_start_bot())
+        logger.info("🤖 Telegram bot startup scheduled (background).")
     else:
         if disable_telegram:
             logger.info("⚠️ Telegram bot disabled via DISABLE_TELEGRAM environment variable.")
         else:
             logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set. Bot disabled.")
 
-    # Start nudge scheduler
-    start_scheduler()
-    logger.info("✅ Nudge scheduler started.")
-
     yield
 
-    # Shutdown — only stop what was actually started
+    # Shutdown — cancel background task if still running
+    if bot_task and not bot_task.done():
+        bot_task.cancel()
+
+    # Stop what was actually started
     if _bot_started and _bot_app_ref:
         try:
             await _bot_app_ref.updater.stop()
