@@ -67,20 +67,20 @@ const Sidebar = () => {
       </aside>
 
       {/* BottomNavBar (Mobile Only) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe pt-2 bg-[#131315]/95 backdrop-blur-xl border-t border-[#353437]/20 shadow-[0_-10px_40px_rgba(0,0,0,0.4)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-1 pb-safe pt-1.5 bg-[#131315]/95 backdrop-blur-xl border-t border-[#353437]/20 shadow-[0_-10px_40px_rgba(0,0,0,0.4)]">
         {navItems.filter(item => ['Home', 'Onboarding', 'Study', 'Settings'].includes(item.name)).map((item) => (
           <Link
             key={item.name}
             to={item.path}
-            className={`flex flex-col items-center justify-center py-2 px-1 transition-all duration-300 relative group ${isActive(item.path) ? 'text-primary' : 'text-[#8c909f]'
+            className={`flex flex-col items-center justify-center py-1.5 px-2 min-w-[60px] transition-all duration-300 relative group ${isActive(item.path) ? 'text-primary' : 'text-[#8c909f]'
               }`}
           >
-            <div className={`mb-1 p-1.5 rounded-xl transition-all duration-300 ${isActive(item.path) ? 'bg-primary/10 scale-110' : 'group-hover:bg-[#1c1b1d]'}`}>
-              <span className={`material-symbols-outlined text-[24px] ${isActive(item.path) ? 'fill-1' : ''}`}>{item.icon}</span>
+            <div className={`mb-0.5 p-1 rounded-lg transition-all duration-300 ${isActive(item.path) ? 'bg-primary/10 scale-110' : 'group-hover:bg-[#1c1b1d]'}`}>
+              <span className={`material-symbols-outlined text-[20px] ${isActive(item.path) ? 'fill-1' : ''}`}>{item.icon}</span>
             </div>
-            <span className="font-['Space_Grotesk'] text-[9px] uppercase font-bold tracking-[0.1em]">{item.name === 'Social Feed' ? 'Social' : item.name}</span>
+            <span className="font-['Space_Grotesk'] text-[8px] uppercase font-bold tracking-[0.05em]">{item.name}</span>
             {isActive(item.path) && (
-              <div className="absolute -top-2 w-1 h-1 bg-primary rounded-full shadow-[0_0_10px_#fdb813]"></div>
+              <div className="absolute -top-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_10px_#fdb813]"></div>
             )}
           </Link>
         ))}

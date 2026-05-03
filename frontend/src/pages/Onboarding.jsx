@@ -200,14 +200,14 @@ const Onboarding = () => {
 
   if (authStep) {
     return (
-      <div className="w-full max-w-md mx-auto mt-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-primary/20">
-            <span className="material-symbols-outlined text-primary text-3xl">neurology</span>
+      <div className="w-full max-w-md mx-auto mt-6 sm:mt-12 lg:mt-20 px-2 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 border border-primary/20">
+            <span className="material-symbols-outlined text-primary text-2xl sm:text-3xl">neurology</span>
           </div>
-          <h2 className="text-3xl font-black font-headline uppercase tracking-tighter text-on-surface">Initialize Session</h2>
+          <h2 className="text-2xl sm:text-3xl font-black font-headline uppercase tracking-tighter text-on-surface">Initialize Session</h2>
         </div>
-        <form onSubmit={handleAuth} className="space-y-6 bg-surface-container-low p-8 rounded-[2rem] border border-outline-variant/10 shadow-2xl">
+        <form onSubmit={handleAuth} className="space-y-5 sm:space-y-6 bg-surface-container-low p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-outline-variant/10 shadow-2xl">
           <div className="space-y-2">
             <label className="text-[10px] font-label font-bold text-primary uppercase tracking-widest ml-1">Email Identifier</label>
             <input
@@ -260,10 +260,10 @@ const Onboarding = () => {
       )}
 
       {/* Main Chat Area - Now Full Width */}
-      <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
+      <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
 
         {/* Chat Header */}
-        <div className="w-full p-6 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50 backdrop-blur-xl sticky top-0 z-20">
+        <div className="w-full p-3 sm:p-6 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50 backdrop-blur-xl sticky top-0 z-20">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 neural-glow">
               <BrainCircuit className="text-primary" size={24} />
@@ -273,7 +273,7 @@ const Onboarding = () => {
                 <span className="h-2 w-2 rounded-full bg-secondary animate-pulse shadow-[0_0_10px_rgba(0,179,89,0.5)]"></span>
                 <span className="font-label text-[10px] tracking-[0.3em] text-secondary uppercase font-bold">Neural Link Active</span>
               </div>
-              <h2 className="text-xl font-black font-headline uppercase tracking-tighter text-on-surface">Axiom Coach</h2>
+              <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">Axiom Coach</h2>
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -287,7 +287,7 @@ const Onboarding = () => {
         {/* Message Area */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-8 py-8 space-y-4 custom-scrollbar"
+          className="flex-1 overflow-y-auto px-3 py-4 sm:px-8 sm:py-8 space-y-4 custom-scrollbar"
         >
           {messages.map((m, i) => (
             <MessageBubble 
@@ -313,7 +313,7 @@ const Onboarding = () => {
           {/* Draft Roadmap Display — only show once we reach draft phase */}
           {draftRoadmap && (phase === 'draft' || phase === 'refinement' || phase === 'ready') && (
             <div className="w-full mt-12 animate-in zoom-in duration-700">
-              <div className="bg-gradient-to-br from-[#0e0e10] to-[#1c1b1d] border border-primary/30 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+              <div className="bg-gradient-to-br from-[#0e0e10] to-[#1c1b1d] border border-primary/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-10 opacity-5">
                   <span className="material-symbols-outlined text-[120px]">neurology</span>
                 </div>
@@ -370,7 +370,7 @@ const Onboarding = () => {
         </div>
 
         {/* Chat Input */}
-        <div className="p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
+        <div className="p-3 sm:p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
           <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
             <div className="relative flex items-center gap-2">
 
@@ -380,12 +380,12 @@ const Onboarding = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 disabled={isTyping}
                 placeholder={phase === 'ready' ? "Neural path locked. Click 'Refine Path' to modify." : "Respond to Axiom..."}
-                className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-2xl px-8 py-5 pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-2xl disabled:opacity-50 placeholder:text-on-surface-variant/30"
+                className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl px-4 py-3.5 sm:px-8 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-2xl disabled:opacity-50 placeholder:text-on-surface-variant/30"
               />
               <button
                 type="submit"
                 disabled={!inputText.trim() || isTyping || phase === 'ready'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-primary text-on-primary-container rounded-xl flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 shadow-lg shadow-primary/20 hover:brightness-110 group-hover:neural-glow"
+                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 shadow-lg shadow-primary/20 hover:brightness-110 group-hover:neural-glow"
               >
                 {isTyping ? <Activity size={20} className="animate-pulse" /> : <Send size={20} />}
               </button>

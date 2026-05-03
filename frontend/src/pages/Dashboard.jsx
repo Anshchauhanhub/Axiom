@@ -151,7 +151,7 @@ const Dashboard = () => {
       <section className="mb-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">
               Welcome, {user.full_name || user.email.split('@')[0]}
             </h2>
             <p className="text-on-surface-variant font-label tracking-wide uppercase text-xs opacity-60">
@@ -159,7 +159,7 @@ const Dashboard = () => {
             </p>
           </div>
           {/* Streak Widget */}
-          <div className="bg-surface-container-low p-1 rounded-2xl flex items-center gap-4 pr-6 glow-blue border border-outline-variant/10">
+          <div className="bg-surface-container-low p-1 rounded-2xl flex items-center gap-3 sm:gap-4 pr-4 sm:pr-6 glow-blue border border-outline-variant/10">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
               <span className="material-symbols-outlined text-on-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
             </div>
@@ -174,7 +174,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Next Up Session */}
         <div className="lg:col-span-8 group">
-          <div className="relative overflow-hidden rounded-[2rem] bg-surface-container-low border border-outline-variant/10 h-full p-8 transition-all duration-500 hover:border-primary/30">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-surface-container-low border border-outline-variant/10 h-full p-5 sm:p-8 transition-all duration-500 hover:border-primary/30">
             <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-[80px]"></div>
             <div className="relative z-10 h-full flex flex-col justify-between">
               <div>
@@ -182,7 +182,7 @@ const Dashboard = () => {
                   <span className="h-2 w-2 rounded-full bg-secondary animate-pulse"></span>
                   <span className="font-label text-[10px] uppercase tracking-[0.2em] text-secondary font-bold">Priority Session</span>
                 </div>
-                <h3 className="text-3xl font-black tracking-tight mb-2 font-headline">
+                <h3 className="text-xl sm:text-3xl font-black tracking-tight mb-2 font-headline">
                   {activePartTitle || 'No active part'}
                 </h3>
                 <div className="flex items-center gap-4 text-on-surface-variant font-label text-sm uppercase tracking-wider">
@@ -196,7 +196,7 @@ const Dashboard = () => {
                   </span>
                 </div>
               </div>
-              <div className="mt-12 flex flex-wrap items-center gap-6">
+              <div className="mt-8 sm:mt-12 flex flex-wrap items-center gap-4 sm:gap-6">
                 {activePartId ? (
                   <button
                     onClick={() => navigate('/study')}
@@ -219,7 +219,7 @@ const Dashboard = () => {
 
         {/* Side widgets */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="rounded-[2rem] bg-gradient-to-br from-secondary/20 to-transparent border border-secondary/30 p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
+          <div className="rounded-2xl sm:rounded-[2rem] bg-gradient-to-br from-secondary/20 to-transparent border border-secondary/30 p-5 sm:p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
             onClick={() => navigate('/settings')}
           >
             <div className="relative z-10">
@@ -239,7 +239,7 @@ const Dashboard = () => {
           </div>
 
           {/* Progress Widget */}
-          <div className="rounded-[2rem] bg-surface-container border border-outline-variant/10 p-8 flex-1">
+          <div className="rounded-2xl sm:rounded-[2rem] bg-surface-container border border-outline-variant/10 p-5 sm:p-8 flex-1">
             <div className="flex justify-between items-start mb-6">
               <h4 className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Mastery Progress</h4>
               <span className="text-secondary font-headline font-bold">
@@ -264,7 +264,7 @@ const Dashboard = () => {
         {roadmap && (
           <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
             {roadmap.tasks.slice(0, 3).map((task, idx) => (
-              <div key={task.id} className="bg-surface-container-lowest border border-outline-variant/10 p-6 rounded-3xl hover:bg-surface-container-low transition-colors group cursor-pointer">
+              <div key={task.id} className="bg-surface-container-lowest border border-outline-variant/10 p-4 sm:p-6 rounded-2xl sm:rounded-3xl hover:bg-surface-container-low transition-colors group cursor-pointer">
                 <div className="flex justify-between items-start mb-8">
                   <div className={`h-12 w-12 rounded-2xl bg-surface-container flex items-center justify-center group-hover:border-primary/40 border border-transparent transition-all ${task.status === 'passed' ? 'text-primary' : task.status === 'active' ? 'text-secondary' : 'text-on-surface-variant'
                     }`}>
@@ -291,13 +291,13 @@ const Dashboard = () => {
       </div>
 
       {/* Neural Bridge / Neural Archive Section (Moved from Onboarding) */}
-      <section className="mt-16 animate-in slide-in-from-bottom-8 duration-1000">
+      <section className="mt-10 sm:mt-16 animate-in slide-in-from-bottom-8 duration-1000">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
             <History className="text-primary" size={24} />
           </div>
           <div>
-            <h3 className="text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Neural Archive</h3>
+            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Neural Archive</h3>
             <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Synchronized Neural Pathways</p>
           </div>
         </div>
@@ -310,7 +310,7 @@ const Dashboard = () => {
             </div>
           ) : (
             goals.map((goal) => (
-              <div key={goal.id} className={`group p-6 rounded-[2rem] border transition-all duration-300 relative overflow-hidden ${goal.status === 'active'
+              <div key={goal.id} className={`group p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 relative overflow-hidden ${goal.status === 'active'
                   ? 'bg-primary/5 border-primary/40 shadow-2xl shadow-primary/5'
                   : 'bg-surface-container-low/40 border-outline-variant/10 hover:border-outline-variant/30 opacity-80 hover:opacity-100'
                 }`}>
@@ -324,7 +324,7 @@ const Dashboard = () => {
                   <span className={`text-[8px] font-label font-black uppercase tracking-[0.3em] mb-2 block ${goal.status === 'active' ? 'text-primary' : 'text-on-surface-variant/40'}`}>
                     {goal.status === 'active' ? 'Mastery Active' : 'Neural Path Paused'}
                   </span>
-                  <h4 className="text-xl font-black text-on-surface uppercase tracking-tight line-clamp-2 pr-6 font-headline">
+                  <h4 className="text-lg sm:text-xl font-black text-on-surface uppercase tracking-tight line-clamp-2 pr-6 font-headline">
                     {goal.title}
                   </h4>
                 </div>
@@ -361,20 +361,20 @@ const Dashboard = () => {
           )}
         </div>
 
-        <div className="mt-12 p-8 bg-surface-container-low/30 rounded-[2rem] border border-outline-variant/10 text-center max-w-2xl mx-auto">
+        <div className="mt-8 sm:mt-12 p-5 sm:p-8 bg-surface-container-low/30 rounded-2xl sm:rounded-[2rem] border border-outline-variant/10 text-center max-w-2xl mx-auto">
           <p className="text-[11px] text-on-surface-variant leading-relaxed font-label uppercase tracking-widest opacity-60">
             "The neural bridge maintains your cognitive load across all saved mastery paths."
           </p>
         </div>
       </section>
       {/* Neural Notebook Section */}
-      <section className="mt-16 animate-in slide-in-from-bottom-8 duration-1000">
+      <section className="mt-10 sm:mt-16 animate-in slide-in-from-bottom-8 duration-1000">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/10">
             <BookOpen className="text-secondary" size={24} />
           </div>
           <div>
-            <h3 className="text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Neural Notebook</h3>
+            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Neural Notebook</h3>
             <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Your Preserved Cognitive Insights</p>
           </div>
         </div>
@@ -409,13 +409,13 @@ const Dashboard = () => {
 
       {/* Curriculum Saturation & Schedule Section (Moved from Analytics) */}
       {roadmap && (
-        <section className="mt-16 animate-in slide-in-from-bottom-8 duration-1000">
+        <section className="mt-10 sm:mt-16 animate-in slide-in-from-bottom-8 duration-1000">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/10">
               <span className="material-symbols-outlined text-secondary">analytics</span>
             </div>
             <div>
-              <h3 className="text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Mastery Analytics</h3>
+              <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Mastery Analytics</h3>
               <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Verified Integrity Protocol</p>
             </div>
           </div>
@@ -423,7 +423,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Detailed Roadmap */}
             <div className="lg:col-span-8">
-              <div className="bg-surface-container-low rounded-[2rem] border border-outline-variant/15 p-8 relative overflow-hidden h-full">
+              <div className="bg-surface-container-low rounded-2xl sm:rounded-[2rem] border border-outline-variant/15 p-5 sm:p-8 relative overflow-hidden h-full">
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                   <span className="material-symbols-outlined text-9xl">verified</span>
                 </div>
@@ -556,20 +556,20 @@ const Dashboard = () => {
       )}
 
       {/* System Documentation Section (Moved from Docs) */}
-      <section className="mt-24 mb-12 animate-in slide-in-from-bottom-8 duration-1000">
+      <section className="mt-16 sm:mt-24 mb-8 sm:mb-12 animate-in slide-in-from-bottom-8 duration-1000">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
             <BookOpen className="text-primary" size={24} />
           </div>
           <div>
-            <h3 className="text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">System Documentation</h3>
+            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">System Documentation</h3>
             <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Operating Manual // Protocol AXIOM</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Document Card 1: Verified Mastery */}
-          <div className="p-8 rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 transition-all group relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
               <Zap size={120} />
             </div>
@@ -585,7 +585,7 @@ const Dashboard = () => {
           </div>
 
           {/* Document Card 2: Neural Bridge */}
-          <div className="p-8 rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-secondary/20 transition-all group relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-secondary/20 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
               <Cpu size={120} />
             </div>
@@ -601,7 +601,7 @@ const Dashboard = () => {
           </div>
 
           {/* Document Card 3: Sudden Death */}
-          <div className="p-8 rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-error/20 transition-all group relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-error/20 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
               <span className="material-symbols-outlined text-8xl">bolt</span>
             </div>
@@ -617,7 +617,7 @@ const Dashboard = () => {
           </div>
 
           {/* Document Card 4: Agentic Roadmaps */}
-          <div className="p-8 rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 transition-all group relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
               <span className="material-symbols-outlined text-8xl">account_tree</span>
             </div>
@@ -633,7 +633,7 @@ const Dashboard = () => {
           </div>
 
           {/* Document Card 5: Neural Notebook */}
-          <div className="p-8 rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-secondary/20 transition-all group relative overflow-hidden">
+          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-secondary/20 transition-all group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
               <span className="material-symbols-outlined text-8xl">edit_note</span>
             </div>

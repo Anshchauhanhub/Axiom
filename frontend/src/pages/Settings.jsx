@@ -100,7 +100,7 @@ const Settings = () => {
   return (
     <div className="animate-in fade-in duration-1000 max-w-4xl mx-auto">
       <header className="mb-12">
-        <h2 className="text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Control Center</h2>
+        <h2 className="text-2xl sm:text-4xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">Control Center</h2>
         <p className="text-on-surface-variant font-label tracking-wide uppercase text-[10px] opacity-60">System Configuration</p>
       </header>
 
@@ -110,7 +110,7 @@ const Settings = () => {
           <h3 className="font-label text-xs font-bold text-secondary tracking-[0.2em] uppercase mb-6 flex items-center gap-3">
             <span className="h-[1px] w-8 bg-secondary/30"></span> Profile Identity
           </h3>
-          <div className="bg-surface-container-low rounded-[2rem] p-8 border border-outline-variant/10 flex flex-col md:flex-row items-center gap-8">
+          <div className="bg-surface-container-low rounded-2xl sm:rounded-[2rem] p-5 sm:p-8 border border-outline-variant/10 flex flex-col md:flex-row items-center gap-6 sm:gap-8">
             <div 
               className="relative group cursor-pointer h-24 w-24 rounded-full overflow-hidden border-2 border-primary/20 p-1 bg-surface-container flex items-center justify-center"
               onClick={() => fileInputRef.current?.click()}
@@ -183,7 +183,7 @@ const Settings = () => {
             <span className="h-[1px] w-8 bg-primary/30"></span> Neural Bridge
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-surface-container-lowest border border-outline-variant/15 p-8 rounded-3xl">
+            <div className="bg-surface-container-lowest border border-outline-variant/15 p-5 sm:p-8 rounded-2xl sm:rounded-3xl">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-[#0088cc]/10 flex items-center justify-center text-[#0088cc]">
                   <span className="material-symbols-outlined">send</span>
@@ -225,7 +225,7 @@ const Settings = () => {
           <h3 className="font-label text-xs font-bold text-on-surface-variant tracking-[0.2em] uppercase mb-6 flex items-center gap-3">
             <span className="h-[1px] w-8 bg-outline-variant/30"></span> Study Schedule
           </h3>
-          <div className="bg-surface-container-low border border-outline-variant/15 rounded-[2rem] p-8">
+          <div className="bg-surface-container-low border border-outline-variant/15 rounded-2xl sm:rounded-[2rem] p-5 sm:p-8">
             <div className="flex flex-col gap-4 mb-6">
               {schedule.map((time, idx) => (
                 <div key={idx} className="relative group">

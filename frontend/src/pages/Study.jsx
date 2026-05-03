@@ -467,15 +467,15 @@ const Study = () => {
 
   const renderTaskParts = (task) => (
     <div className="space-y-12 max-w-4xl mx-auto pb-24">
-      <div className="bg-surface-container-low border border-outline-variant/10 p-12 lg:p-16 rounded-[3.5rem] relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-primary/20">
+      <div className="bg-surface-container-low border border-outline-variant/10 p-6 sm:p-12 lg:p-16 rounded-2xl sm:rounded-[3.5rem] relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-primary/20">
         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
           <span className="material-symbols-outlined text-8xl">neuroscience</span>
         </div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mb-6 sm:mb-10 flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-[1px] bg-primary"></div>
-              <h3 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">
+              <h3 className="text-2xl sm:text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">
                 {task.title}
               </h3>
             </div>
@@ -495,16 +495,16 @@ const Study = () => {
               return (
                 <div 
                   key={part.id} 
-                  className={`relative flex items-center justify-between p-7 rounded-[2rem] border transition-all duration-300 ml-16 ${(isActive || isPassed) ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : 'opacity-20 border-outline-variant/5 grayscale'}`}
+                  className={`relative flex items-center justify-between p-4 sm:p-7 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 ml-10 sm:ml-16 ${(isActive || isPassed) ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : 'opacity-20 border-outline-variant/5 grayscale'}`}
                   onClick={() => (isActive || isPassed) && handleStartLearning(part.id, part.title)}
                 >
-                  <div className={`absolute left-[-42px] w-6 h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
-                  <div className="flex items-center gap-6">
+                  <div className={`absolute left-[-30px] sm:left-[-42px] w-5 h-5 sm:w-6 sm:h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
+                  <div className="flex items-center gap-3 sm:gap-6">
                     <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container-highest/50 ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant'}`}>
                        <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
                     </div>
                     <div>
-                      <span className={`block text-lg font-bold tracking-tight mb-0.5 ${isActive || isPassed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{part.title}</span>
+                      <span className={`block text-sm sm:text-lg font-bold tracking-tight mb-0.5 ${isActive || isPassed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{part.title}</span>
                       <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
                     </div>
                   </div>
@@ -582,7 +582,7 @@ const Study = () => {
       <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full">
         <header className="mb-12 text-center">
           <span className="text-primary font-label text-[10px] tracking-[0.4em] uppercase font-bold mb-3 block animate-in slide-in-from-top-4 duration-700">Neural Gateway</span>
-          <h2 className="text-5xl font-black tracking-tighter text-on-surface mb-4 font-headline uppercase leading-none">
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tighter text-on-surface mb-4 font-headline uppercase leading-none">
             {viewMode === 'task' ? 'Study Session' : 'Roadmap Overview'}
           </h2>
           <div className="flex items-center justify-center gap-4">
@@ -616,14 +616,14 @@ const Study = () => {
                 <span className="w-6 h-[1px] bg-primary"></span>
                 <span className="text-[9px] font-label tracking-[0.3em] text-primary uppercase font-black">Neural Documentation</span>
             </div>
-            <h2 className="text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">{partTitle}</h2>
+            <h2 className="text-2xl sm:text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">{partTitle}</h2>
           </div>
           <button onClick={() => setPhase('select')} className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all duration-300 hover:rotate-90">
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
         </header>
 
-        <div className="bg-surface-container-low border border-outline-variant/10 rounded-[2.5rem] p-10 md:p-14 shadow-2xl relative transition-all duration-500 hover:border-primary/10">
+        <div className="bg-surface-container-low border border-outline-variant/10 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 md:p-14 shadow-2xl relative transition-all duration-500 hover:border-primary/10">
           <div className="max-w-none text-on-surface-variant/80 font-light leading-relaxed text-lg">
              {renderParsedContent(learningContent)}
           </div>
@@ -660,14 +660,14 @@ const Study = () => {
                 <div className="h-full bg-primary transition-all duration-500" style={{ width: `${((currentQ + 1) / quizData.length) * 100}%` }}></div>
              </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-on-surface leading-tight max-w-4xl mx-auto">{q.question}</h1>
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tighter text-on-surface leading-tight max-w-4xl mx-auto">{q.question}</h1>
         </section>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-20">
           {q.options.map((opt, i) => (
             <button
               key={i}
               onClick={() => handleSelectOption(i)}
-              className={`p-10 bg-surface-container-low hover:bg-surface-container text-left transition-all duration-300 border-2 rounded-[2rem] relative group active:scale-[0.98] ${selectedOption === i ? 'border-primary shadow-[0_0_40px_rgba(253,184,19,0.15)] bg-primary/5' : 'border-transparent opacity-60 hover:opacity-100'}`}
+              className={`p-5 sm:p-10 bg-surface-container-low hover:bg-surface-container text-left transition-all duration-300 border-2 rounded-2xl sm:rounded-[2rem] relative group active:scale-[0.98] ${selectedOption === i ? 'border-primary shadow-[0_0_40px_rgba(253,184,19,0.15)] bg-primary/5' : 'border-transparent opacity-60 hover:opacity-100'}`}
             >
                 <div className="flex items-center gap-6">
                     <div className={`w-12 h-12 flex items-center justify-center rounded-xl font-black text-lg transition-all ${selectedOption === i ? 'bg-primary text-on-primary-container' : 'bg-surface-container-highest text-on-surface-variant group-hover:bg-primary/20 group-hover:text-primary'}`}>
@@ -716,7 +716,7 @@ const Study = () => {
       
       <div className={`flex w-full h-full relative ${showNotes ? 'flex-1 overflow-hidden' : ''}`}>
         <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
-          <div className={`max-w-[1400px] mx-auto px-10 py-8 lg:py-12 ${showNotes ? 'p-8' : ''}`}>
+          <div className={`max-w-[1400px] mx-auto px-3 sm:px-10 py-6 lg:py-12 ${showNotes ? 'p-4 sm:p-8' : ''}`}>
              {phaseContent}
           </div>
         </main>
