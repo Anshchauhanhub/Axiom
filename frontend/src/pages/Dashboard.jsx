@@ -380,28 +380,56 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {goals.filter(g => Array.isArray(g.notes) && g.notes.length > 0).length === 0 ? (
-            <div className="md:col-span-2 text-center py-12 bg-surface-container-low/30 rounded-[2rem] border border-dashed border-outline-variant/20 opacity-30">
-              <p className="font-label uppercase tracking-[0.2em] text-xs">No entries in the neural notebook yet</p>
+          {goals.length === 0 ? (
+            <div className="md:col-span-2 text-center py-12 bg-surface-container-low/30 rounded-2xl sm:rounded-[2rem] border border-dashed border-outline-variant/20 opacity-30">
+              <span className="material-symbols-outlined text-4xl mb-3 block">menu_book</span>
+              <p className="font-label uppercase tracking-[0.2em] text-xs">Create a goal to start your Neural Notebook</p>
             </div>
           ) : (
-            goals.filter(g => Array.isArray(g.notes) && g.notes.length > 0).map((goal) => (
-              <div key={goal.id} className="p-6 rounded-[2rem] bg-surface-container-low border border-outline-variant/10 hover:border-primary/20 transition-all group">
-                <div className="flex justify-between items-start mb-4">
-                  <h4 className="text-lg font-black font-headline uppercase text-on-surface truncate pr-4">{goal.title}</h4>
-                  <span className="text-[10px] font-label text-primary font-bold uppercase tracking-widest">{goal.notes.length} Blocks</span>
-                </div>
-                <div className="text-xs text-on-surface-variant line-clamp-2 mb-6 opacity-60">
-                  {goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '').substring(0, 100) || 'Multimedia entry...'}
-                </div>
-                <button 
-                  onClick={() => navigate('/study')}
-                  className="flex items-center gap-2 text-[10px] font-label font-bold text-primary uppercase tracking-widest hover:gap-3 transition-all"
+            goals.map((goal) => {
+              const hasNotes = Array.isArray(goal.notes) && goal.notes.length > 0;
+              const noteCount = hasNotes ? goal.notes.length : 0;
+              const preview = hasNotes
+                ? goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '').substring(0, 120) || 'Multimedia entry...'
+                : 'Start writing notes in your study session...';
+
+              return (
+                <div 
+                  key={goal.id} 
+                  onClick={() => navigate('/study', { state: { openNotebook: true } })}
+                  className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all group cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                    goal.status === 'active' 
+                      ? 'bg-surface-container-low border-primary/20 hover:border-primary/40 shadow-lg' 
+                      : 'bg-surface-container-low/60 border-outline-variant/10 hover:border-outline-variant/30'
+                  }`}
                 >
-                  Access Full Entry <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </button>
-              </div>
-            ))
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${goal.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                        <span className="material-symbols-outlined text-xl">description</span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm sm:text-lg font-black font-headline uppercase text-on-surface truncate pr-4 leading-tight">{goal.title}</h4>
+                        <span className={`text-[9px] font-label font-bold uppercase tracking-widest ${goal.status === 'active' ? 'text-primary' : 'text-on-surface-variant/40'}`}>
+                          {goal.status === 'active' ? '● Active' : 'Paused'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-label text-on-surface-variant font-bold uppercase tracking-widest whitespace-nowrap">
+                      {noteCount > 0 ? `${noteCount} Blocks` : 'Empty'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-on-surface-variant line-clamp-2 mb-4 opacity-50 pl-[52px]">
+                    {preview}
+                  </div>
+                  <div className="flex items-center justify-between pl-[52px]">
+                    <span className="flex items-center gap-2 text-[10px] font-label font-bold text-primary uppercase tracking-widest group-hover:gap-3 transition-all">
+                      Open Notebook <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </section>

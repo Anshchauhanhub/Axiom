@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { startQuiz, submitQuiz, getPartContent, updateGoalNotes, createSocialPost } from '../services/api';
 import { useData } from '../context/DataContext';
@@ -10,6 +10,7 @@ const Study = () => {
   const { user, refreshUser } = useAuth();
   const { goals, roadmap, loading: dataLoading, refreshData } = useData();
   const navigate = useNavigate();
+  const location = useLocation();
   const [phase, setPhase] = useState('loading'); // loading, select, learning, quiz, result
   const [viewMode, setViewMode] = useState('task'); // 'task' or 'roadmap'
   const [activeTask, setActiveTask] = useState(null);
@@ -81,6 +82,15 @@ const Study = () => {
       }
     }
   }, [user, roadmap, goals, navigate, phase, activeGoal?.id]);
+
+  // Auto-open notebook when navigating from Dashboard Neural Notebook section
+  useEffect(() => {
+    if (location.state?.openNotebook && goals?.length > 0 && phase !== 'loading') {
+      setShowNotes(true);
+      // Clear the state so it doesn't re-trigger on re-renders
+      window.history.replaceState({}, '');
+    }
+  }, [location.state, goals, phase]);
 
   useEffect(() => {
     if (!activeGoal || !showNotes) return;
