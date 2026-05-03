@@ -17,8 +17,8 @@ from routers.users import router as auth_router, profile_router
 from routers.goals import router as goals_router
 from routers.quiz import router as quiz_router
 from routers.telegram import router as telegram_router, set_bot_app
-from routers.social import router as social_router
-from routers.social_ws import router as social_ws_router
+# from routers.social import router as social_router
+# from routers.social_ws import router as social_ws_router
 from bot import create_bot_app
 from services.scheduler import start_scheduler, set_bot
 
@@ -136,8 +136,8 @@ app.include_router(profile_router)
 app.include_router(goals_router)
 app.include_router(quiz_router)
 app.include_router(telegram_router)
-app.include_router(social_router)
-app.include_router(social_ws_router)
+# app.include_router(social_router)
+# app.include_router(social_ws_router)
  
 # Serve Static Files (Frontend Build)
 # In production, Vite builds to /frontend/dist. We copy this to /backend/static in Docker.
