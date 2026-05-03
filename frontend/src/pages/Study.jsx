@@ -422,7 +422,7 @@ const Study = () => {
     const readTime = Math.ceil(wordCount / 200);
 
     return (
-      <div className={`flex flex-col bg-[#f8fafc] border-l border-slate-200 transition-all duration-700 h-screen sticky top-0 ${showNotes ? 'opacity-100 flex-1 min-w-[60%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
+      <div className={`flex flex-col bg-[#f8fafc] border-l border-slate-200 transition-all duration-700 lg:h-screen lg:sticky lg:top-0 ${showNotes ? 'fixed inset-0 z-[300] lg:relative lg:inset-auto opacity-100 flex-1 lg:min-w-[60%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
         <div className="h-full flex flex-col relative">
           {/* Close button - overlay since editor has its own header */}
           <button 
@@ -452,7 +452,7 @@ const Study = () => {
   const renderNotesToggle = () => (
     <button
       onClick={() => setShowNotes(!showNotes)}
-      className={`fixed bottom-10 right-10 z-[200] w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 shadow-[0_20px_50px_rgba(253,184,19,0.3)] ${
+      className={`fixed bottom-24 lg:bottom-10 right-6 lg:right-10 z-[200] w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center transition-all duration-500 shadow-[0_20px_50px_rgba(253,184,19,0.3)] ${
         showNotes ? 'bg-error text-white scale-0 rotate-180 opacity-0 pointer-events-none' : 'bg-primary text-on-primary-container hover:scale-110 active:scale-95 glow-gold'
       }`}
     >
