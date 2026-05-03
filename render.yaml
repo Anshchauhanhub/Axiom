@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: axiom-fullstack
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: NODE_VERSION
+        value: 18.17.0
