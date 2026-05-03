@@ -68,7 +68,7 @@ const Sidebar = () => {
 
       {/* BottomNavBar (Mobile Only) */}
       <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe pt-2 bg-[#131315]/95 backdrop-blur-xl border-t border-[#353437]/20 shadow-[0_-10px_40px_rgba(0,0,0,0.4)]">
-        {navItems.filter(item => ['Home', 'Study', 'Settings'].includes(item.name)).map((item) => (
+        {navItems.filter(item => ['Home', 'Onboarding', 'Study', 'Settings'].includes(item.name)).map((item) => (
           <Link
             key={item.name}
             to={item.path}
