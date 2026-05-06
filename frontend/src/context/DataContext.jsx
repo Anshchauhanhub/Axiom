@@ -21,8 +21,8 @@ export const DataProvider = ({ children }) => {
       const g = await listGoals();
       setGoals(g);
       let activeGoal = selectedGoalId ? g.find(goal => goal.id === selectedGoalId) : null;
-      if (!activeGoal || activeGoal.status !== 'active') {
-          activeGoal = g.find(goal => goal.status === 'active');
+      if (!activeGoal) {
+          activeGoal = g.find(goal => goal.status === 'active') || g[0];
       }
       
       if (activeGoal) {

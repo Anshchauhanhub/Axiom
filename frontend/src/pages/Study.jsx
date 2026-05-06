@@ -45,7 +45,8 @@ const Study = () => {
       let foundTask = null;
       let foundGoal = null;
 
-      const primaryGoal = (selectedGoalId ? goals.find(g => g.id === selectedGoalId) : null) || goals.find(g => g.status === 'active') || goals[0];
+      const targetGoalId = location.state?.goalId || selectedGoalId;
+      const primaryGoal = (targetGoalId ? goals.find(g => g.id === targetGoalId) : null) || goals.find(g => g.status === 'active') || goals[0];
       
       // Wait for the roadmap to sync with the selected goal before processing
       if (roadmap.goal && primaryGoal && roadmap.goal.id !== primaryGoal.id) {
@@ -87,14 +88,14 @@ const Study = () => {
         setPhase('select');
       }
     }
-  }, [user, roadmap, goals, navigate, phase, activeGoal?.id]);
+  }, [user, roadmap, goals, navigate, phase, activeGoal?.id, selectedGoalId, location.state?.goalId]);
 
   // Auto-open notebook when navigating from Dashboard Neural Notebook section
   useEffect(() => {
     if (location.state?.openNotebook && goals?.length > 0 && phase !== 'loading') {
       setShowNotes(true);
-      // Clear the state so it doesn't re-trigger on re-renders
-      window.history.replaceState({}, '');
+      // Don't clear state completely so we keep the goalId
+      window.history.replaceState({ ...location.state, openNotebook: false }, '');
     }
   }, [location.state, goals, phase]);
 
