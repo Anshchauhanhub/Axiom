@@ -16,24 +16,6 @@ from services.synthesis import synthesize_part_content
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
  
-async def deactivate_all_goals(user_id, db: AsyncSession):
-    from sqlalchemy import update, delete
-    from models import Goal, ChatMessage
-    
-    # 1. Clear chat history so LLM memory is isolated to the new active session
-    await db.execute(
-        delete(ChatMessage)
-        .where(ChatMessage.user_id == user_id)
-    )
-    
-    # 2. Deactivate all goals
-    await db.execute(
-        update(Goal)
-        .where(Goal.user_id == user_id)
-        .values(status="paused")
-        .execution_options(synchronize_session="fetch")
-    )
-
 
 @router.post("/", response_model=GoalResponse)
 async def create_goal(
@@ -41,9 +23,6 @@ async def create_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Deactivate others
-    await deactivate_all_goals(user.id, db)
-    await db.flush()
 
     goal = Goal(user_id=user.id, title=req.title, status="active")
     db.add(goal)
@@ -158,16 +137,6 @@ async def list_goals(
     result = await db.execute(select(Goal).where(Goal.user_id == user.id))
     goals = result.scalars().all()
     
-    # Sanity check: Ensure only one is active
-    active_goals = [g for g in goals if g.status == "active"]
-    if len(active_goals) > 1:
-        # Keep only the first one active, pause others
-        keep_active = active_goals[0]
-        await deactivate_all_goals(user.id, db)
-        await db.flush()
-        keep_active.status = "active"
-        await db.commit()
-    
     return goals
 
 
@@ -223,8 +192,12 @@ async def onboarding_chat(
         goal_result = await db.execute(
             select(Goal).where(Goal.user_id == user.id, Goal.status == "active")
         )
-        active_goal = goal_result.scalar_one_or_none()
-        goal_context = f"Current active study goal: {active_goal.title}" if active_goal else "No active goal yet."
+        active_goals = goal_result.scalars().all()
+        if active_goals:
+            titles = ", ".join([g.title for g in active_goals])
+            goal_context = f"Current active study goals: {titles}"
+        else:
+            goal_context = "No active goals yet."
 
         # 3. Fetch last 15 messages for context
         history_result = await db.execute(
@@ -268,10 +241,6 @@ async def finalize_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Deactivate other goals
-    await deactivate_all_goals(user.id, db)
-    await db.flush()
-
     # 2. Create Goal
     goal = Goal(user_id=user.id, title=req.title, status="active")
     db.add(goal)
@@ -328,10 +297,6 @@ async def quick_activate(
         select(Goal).where(Goal.user_id == user.id, Goal.title == req.title)
     )
     existing_goal = existing_result.scalar_one_or_none()
-
-    # Deactivate others
-    await deactivate_all_goals(user.id, db)
-    await db.flush()
     
     if existing_goal:
         existing_goal.status = "active"
@@ -396,10 +361,6 @@ async def activate_existing_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Deactivate all
-    await deactivate_all_goals(user.id, db)
-    await db.flush()
-
     # 2. Find and activate target
     result = await db.execute(
         select(Goal).where(Goal.id == goal_id, Goal.user_id == user.id)
@@ -449,9 +410,7 @@ async def toggle_goal_status(
         # Just pause it
         goal.status = "paused"
     else:
-        # Deactivate all others, then activate this
-        await deactivate_all_goals(user.id, db)
-        await db.flush()
+        # Activate this
         goal.status = "active"
 
     await db.commit()
