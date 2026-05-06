@@ -8,7 +8,7 @@ import MultimediaEditor from '../components/MultimediaEditor';
 
 const Study = () => {
   const { user, refreshUser } = useAuth();
-  const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId } = useData();
+  const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId, setSelectedGoalId } = useData();
   const navigate = useNavigate();
   const location = useLocation();
   const [phase, setPhase] = useState('loading'); // loading, select, learning, quiz, result
@@ -596,9 +596,24 @@ const Study = () => {
             {viewMode === 'task' ? 'Study Session' : 'Roadmap Overview'}
           </h2>
           <div className="flex items-center justify-center gap-4">
-             <div className="h-[1px] w-8 bg-outline-variant/30"></div>
-            <span className="text-[11px] font-label tracking-[0.3em] uppercase text-on-surface-variant font-black opacity-40 italic">{activeGoal?.title || 'Unknown Synthesis'}</span>
-            <div className="h-[1px] w-8 bg-outline-variant/30"></div>
+             <div className="h-[1px] w-8 bg-outline-variant/30 hidden sm:block"></div>
+            <select
+              value={activeGoal?.id || ''}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSelectedGoalId(newId);
+                // The useEffect will pick up the new selectedGoalId and DataContext will fetch the new roadmap
+                setPhase('loading');
+                activeTaskRef.current = false;
+              }}
+              className="bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2 text-[10px] font-label tracking-[0.2em] uppercase text-on-surface-variant font-black outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none text-center"
+              style={{ textAlignLast: 'center' }}
+            >
+              {goals.filter(g => g.status === 'active').map(g => (
+                <option key={g.id} value={g.id}>{g.title}</option>
+              ))}
+            </select>
+            <div className="h-[1px] w-8 bg-outline-variant/30 hidden sm:block"></div>
           </div>
         </header>
 
