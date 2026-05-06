@@ -32,7 +32,7 @@ const Sidebar = () => {
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 transition-all duration-300 ${isActive(item.path)
                   ? 'text-primary border-r-2 border-secondary bg-gradient-to-r from-primary/10 to-transparent'
-                  : 'text-[#353437] hover:bg-[#1c1b1d] hover:text-[#e5e1e4]'
+                  : 'text-primary/60 hover:bg-[#1c1b1d] hover:text-primary'
                 }`}
             >
               <span className="material-symbols-outlined text-lg">{item.icon}</span>
@@ -72,7 +72,7 @@ const Sidebar = () => {
           <Link
             key={item.name}
             to={item.path}
-            className={`flex flex-col items-center justify-center py-1.5 px-2 min-w-[60px] transition-all duration-300 relative group ${isActive(item.path) ? 'text-primary' : 'text-[#8c909f]'
+            className={`flex flex-col items-center justify-center py-1.5 px-2 min-w-[60px] transition-all duration-300 relative group ${isActive(item.path) ? 'text-primary' : 'text-primary/60'
               }`}
           >
             <div className={`mb-0.5 p-1 rounded-lg transition-all duration-300 ${isActive(item.path) ? 'bg-primary/10 scale-110' : 'group-hover:bg-[#1c1b1d]'}`}>
