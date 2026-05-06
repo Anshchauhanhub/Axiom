@@ -461,14 +461,48 @@ const Dashboard = () => {
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                   <span className="material-symbols-outlined text-9xl">verified</span>
                 </div>
-                <div className="relative z-10">
+                
+                {/* Side Navigation Arrows */}
+                {goals.length > 1 && (
+                  <>
+                    <button 
+                      onClick={() => {
+                          const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
+                          const prevIndex = (currentIndex - 1 + goals.length) % goals.length;
+                          setSelectedGoalId(goals[prevIndex].id);
+                      }} 
+                      className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest/80 backdrop-blur-sm border border-primary/30 hover:border-primary hover:bg-primary/20 flex items-center justify-center transition-all group z-30 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+                    >
+                        <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:-translate-x-1 transition-transform">chevron_left</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                          const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
+                          const nextIndex = (currentIndex + 1) % goals.length;
+                          setSelectedGoalId(goals[nextIndex].id);
+                      }} 
+                      className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest/80 backdrop-blur-sm border border-primary/30 hover:border-primary hover:bg-primary/20 flex items-center justify-center transition-all group z-30 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+                    >
+                        <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:translate-x-1 transition-transform">chevron_right</span>
+                    </button>
+                  </>
+                )}
+                
+                <div className={`relative z-10 ${goals.length > 1 ? 'px-8 sm:px-12' : 'px-4 sm:px-6'}`}>
                   <div className="flex justify-between items-start mb-12">
                     <div>
                       <h3 className="font-headline font-bold text-2xl text-on-surface">Curriculum Saturation</h3>
-                      <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest mt-1">
-                        Overall Mastery: {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                          <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest">
+                            Overall Mastery: {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                          </p>
+                          <span className="w-1.5 h-1.5 rounded-full bg-outline-variant/30 hidden sm:block"></span>
+                          <span className="text-primary text-[10px] font-label font-bold uppercase tracking-widest hidden sm:block">
+                            {roadmap?.goal?.title}
+                          </span>
+                      </div>
                     </div>
+
                   </div>
 
                   <div className="space-y-6">
