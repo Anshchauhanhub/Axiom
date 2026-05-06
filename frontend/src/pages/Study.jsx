@@ -34,6 +34,7 @@ const Study = () => {
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const timerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const editorRef = useRef(null);
@@ -45,6 +46,11 @@ const Study = () => {
       let foundGoal = null;
 
       const primaryGoal = (selectedGoalId ? goals.find(g => g.id === selectedGoalId) : null) || goals.find(g => g.status === 'active') || goals[0];
+      
+      // Wait for the roadmap to sync with the selected goal before processing
+      if (roadmap.goal && primaryGoal && roadmap.goal.id !== primaryGoal.id) {
+        return;
+      }
       
       if (roadmap.tasks) {
         for (const task of roadmap.tasks) {
@@ -590,29 +596,57 @@ const Study = () => {
   } else if (phase === 'select') {
     phaseContent = (
       <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full">
-        <header className="mb-12 text-center">
-          <span className="text-primary font-label text-[10px] tracking-[0.4em] uppercase font-bold mb-3 block animate-in slide-in-from-top-4 duration-700">Neural Gateway</span>
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tighter text-on-surface mb-4 font-headline uppercase leading-none">
-            {viewMode === 'task' ? 'Study Session' : 'Roadmap Overview'}
-          </h2>
-          <div className="flex items-center justify-center gap-4">
+        <header className="mb-6 text-center">
+
+          <div className="flex items-center justify-center gap-4 relative">
              <div className="h-[1px] w-8 bg-outline-variant/30 hidden sm:block"></div>
-            <select
-              value={activeGoal?.id || ''}
-              onChange={(e) => {
-                const newId = e.target.value;
-                setSelectedGoalId(newId);
-                // The useEffect will pick up the new selectedGoalId and DataContext will fetch the new roadmap
-                setPhase('loading');
-                activeTaskRef.current = false;
-              }}
-              className="bg-surface-container-highest border border-outline-variant/20 rounded-xl px-4 py-2 text-[10px] font-label tracking-[0.2em] uppercase text-on-surface-variant font-black outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none text-center"
-              style={{ textAlignLast: 'center' }}
-            >
-              {goals.filter(g => g.status === 'active').map(g => (
-                <option key={g.id} value={g.id}>{g.title}</option>
-              ))}
-            </select>
+             
+             <div className="relative">
+                <button 
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-3 bg-primary text-on-primary-container border-2 border-primary/50 hover:border-primary hover:bg-primary/90 rounded-full px-8 py-4 transition-all group active:scale-95 shadow-[0_10px_40px_rgba(253,184,19,0.3)] mt-2 mx-auto"
+                >
+                  <span className="text-xs sm:text-sm font-label tracking-[0.2em] uppercase font-black truncate max-w-[200px] sm:max-w-[400px]">
+                    {activeGoal?.title || 'Unknown Synthesis'}
+                  </span>
+                  <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}>
+                    expand_more
+                  </span>
+                </button>
+
+                {dropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setDropdownOpen(false)}
+                    ></div>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-64 bg-surface-container-high border border-outline-variant/20 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-200">
+                      <div className="px-4 py-3 border-b border-outline-variant/10 bg-surface-container flex items-center justify-between">
+                        <span className="text-[8px] font-label tracking-[0.3em] uppercase text-primary font-black">Active Paths</span>
+                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse"></span>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                        {goals.filter(g => g.status === 'active').map(g => (
+                          <button
+                            key={g.id}
+                            onClick={() => {
+                              setSelectedGoalId(g.id);
+                              setDropdownOpen(false);
+                              setPhase('loading');
+                              activeTaskRef.current = false;
+                            }}
+                            className={`w-full text-left px-5 py-4 text-[10px] font-label tracking-[0.2em] uppercase font-bold transition-all border-l-2 flex items-center gap-3 ${activeGoal?.id === g.id ? 'bg-primary/5 text-primary border-primary' : 'text-on-surface-variant border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:border-outline-variant/50'}`}
+                          >
+                            <span className="material-symbols-outlined text-sm opacity-50">{activeGoal?.id === g.id ? 'radio_button_checked' : 'radio_button_unchecked'}</span>
+                            <span className="truncate">{g.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+             </div>
+
             <div className="h-[1px] w-8 bg-outline-variant/30 hidden sm:block"></div>
           </div>
         </header>
@@ -741,7 +775,7 @@ const Study = () => {
       
       <div className={`flex w-full h-full relative ${showNotes ? 'flex-1 overflow-hidden' : ''}`}>
         <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
-          <div className={`max-w-[1400px] mx-auto px-3 sm:px-10 py-6 lg:py-12 ${showNotes ? 'p-4 sm:p-8' : ''}`}>
+          <div className={`max-w-[1400px] mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-8' : ''}`}>
              {phaseContent}
           </div>
         </main>
