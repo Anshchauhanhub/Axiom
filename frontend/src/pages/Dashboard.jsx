@@ -9,7 +9,7 @@ import { Trash2, Play, Pause, History, BookOpen, ShieldCheck, Zap, Cpu } from 'l
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { goals, roadmap, loading: dataLoading, refreshData, setSelectedGoalId } = useData();
+  const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId, setSelectedGoalId } = useData();
   const navigate = useNavigate();
   const [activePartId, setActivePartId] = useState(null);
   const [activePartTitle, setActivePartTitle] = useState('');
@@ -491,21 +491,25 @@ const Dashboard = () => {
                 <div className={`relative z-10 ${goals.length > 1 ? 'px-8 sm:px-12' : 'px-4 sm:px-6'}`}>
                   <div className="flex justify-between items-start mb-12">
                     <div>
-                      <h3 className="font-headline font-bold text-2xl text-on-surface">Curriculum Saturation</h3>
+                      <h3 className="font-headline font-bold text-xl sm:text-2xl text-on-surface uppercase tracking-tighter">
+                        {roadmap?.goal?.title || 'Curriculum Saturation'}
+                      </h3>
                       <div className="flex items-center gap-3 mt-1">
                           <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest">
                             Overall Mastery: {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
                           </p>
-                          <span className="w-1.5 h-1.5 rounded-full bg-outline-variant/30 hidden sm:block"></span>
-                          <span className="text-primary text-[10px] font-label font-bold uppercase tracking-widest hidden sm:block">
-                            {roadmap?.goal?.title}
-                          </span>
                       </div>
                     </div>
 
                   </div>
-
-                  <div className="space-y-6">
+                  
+                  {(dataLoading || (roadmap?.goal?.id !== selectedGoalId)) ? (
+                    <div className="flex flex-col items-center justify-center py-20 opacity-60">
+                      <div className="w-16 h-16 rounded-full border-4 border-outline-variant/20 border-t-primary animate-spin mb-4"></div>
+                      <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant font-bold animate-pulse">Syncing Roadmap...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
                     {roadmap.tasks.map((task) => {
                       const taskPassed = task.parts.filter(p => p.status === 'passed').length;
                       const taskTotal = task.parts.length;
@@ -571,6 +575,7 @@ const Dashboard = () => {
                       );
                     })}
                   </div>
+                  )}
                 </div>
               </div>
             </div>
