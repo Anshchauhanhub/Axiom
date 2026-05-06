@@ -9,7 +9,7 @@ import { Trash2, Play, Pause, History, BookOpen, ShieldCheck, Zap, Cpu } from 'l
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { goals, roadmap, loading: dataLoading, refreshData } = useData();
+  const { goals, roadmap, loading: dataLoading, refreshData, setSelectedGoalId } = useData();
   const navigate = useNavigate();
   const [activePartId, setActivePartId] = useState(null);
   const [activePartTitle, setActivePartTitle] = useState('');
@@ -199,7 +199,10 @@ const Dashboard = () => {
               <div className="mt-8 sm:mt-12 flex flex-wrap items-center gap-4 sm:gap-6">
                 {activePartId ? (
                   <button
-                    onClick={() => navigate('/study')}
+                    onClick={() => {
+                        setSelectedGoalId(roadmap?.goal?.id);
+                        navigate('/study', { state: { goalId: roadmap?.goal?.id } });
+                    }}
                     className="px-8 py-4 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase"
                   >
                     Start Study Session
@@ -396,7 +399,10 @@ const Dashboard = () => {
               return (
                 <div 
                   key={goal.id} 
-                  onClick={() => navigate('/study', { state: { openNotebook: true } })}
+                  onClick={() => {
+                      setSelectedGoalId(goal.id);
+                      navigate('/study', { state: { openNotebook: true, goalId: goal.id } });
+                  }}
                   className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all group cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                     goal.status === 'active' 
                       ? 'bg-surface-container-low border-primary/20 hover:border-primary/40 shadow-lg' 

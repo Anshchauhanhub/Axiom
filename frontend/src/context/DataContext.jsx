@@ -10,6 +10,7 @@ export const DataProvider = ({ children }) => {
   const { user } = useAuth();
   const [goals, setGoals] = useState([]);
   const [roadmap, setRoadmap] = useState(null);
+  const [selectedGoalId, setSelectedGoalId] = useState(() => localStorage.getItem('axiom_selected_goal') || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -19,7 +20,11 @@ export const DataProvider = ({ children }) => {
     try {
       const g = await listGoals();
       setGoals(g);
-      const activeGoal = g.find(goal => goal.status === 'active');
+      let activeGoal = selectedGoalId ? g.find(goal => goal.id === selectedGoalId) : null;
+      if (!activeGoal || activeGoal.status !== 'active') {
+          activeGoal = g.find(goal => goal.status === 'active');
+      }
+      
       if (activeGoal) {
         const rm = await getRoadmap(activeGoal.id);
         setRoadmap(rm);
@@ -32,7 +37,7 @@ export const DataProvider = ({ children }) => {
       console.error('Error fetching global data:', e);
     }
     setLoading(false);
-  }, [user]);
+  }, [user, selectedGoalId]);
 
   useEffect(() => {
     fetchData();
@@ -42,13 +47,20 @@ export const DataProvider = ({ children }) => {
     await fetchData();
   };
 
+  const handleSetSelectedGoal = (id) => {
+      localStorage.setItem('axiom_selected_goal', id);
+      setSelectedGoalId(id);
+  };
+
   return (
     <DataContext.Provider value={{
       goals,
       roadmap,
       loading,
       error,
-      refreshData
+      refreshData,
+      selectedGoalId,
+      setSelectedGoalId: handleSetSelectedGoal
     }}>
       {children}
     </DataContext.Provider>

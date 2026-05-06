@@ -8,7 +8,7 @@ import MultimediaEditor from '../components/MultimediaEditor';
 
 const Study = () => {
   const { user, refreshUser } = useAuth();
-  const { goals, roadmap, loading: dataLoading, refreshData } = useData();
+  const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId } = useData();
   const navigate = useNavigate();
   const location = useLocation();
   const [phase, setPhase] = useState('loading'); // loading, select, learning, quiz, result
@@ -44,7 +44,7 @@ const Study = () => {
       let foundTask = null;
       let foundGoal = null;
 
-      const primaryGoal = goals.find(g => g.status === 'active') || goals[0];
+      const primaryGoal = (selectedGoalId ? goals.find(g => g.id === selectedGoalId) : null) || goals.find(g => g.status === 'active') || goals[0];
       
       if (roadmap.tasks) {
         for (const task of roadmap.tasks) {
