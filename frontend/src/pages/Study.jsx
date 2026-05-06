@@ -511,7 +511,7 @@ const Study = () => {
               return (
                 <div 
                   key={part.id} 
-                  className={`relative flex items-center justify-between p-4 sm:p-7 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 ml-10 sm:ml-16 ${(isActive || isPassed) ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : 'opacity-20 border-outline-variant/5 grayscale'}`}
+                  className={`relative flex items-center justify-between p-4 sm:p-7 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 ml-10 sm:ml-16 ${(isActive || isPassed) ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : 'opacity-60 border-outline-variant/10 grayscale'}`}
                   onClick={() => (isActive || isPassed) && handleStartLearning(part.id, part.title)}
                 >
                   <div className={`absolute left-[-30px] sm:left-[-42px] w-5 h-5 sm:w-6 sm:h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
@@ -520,7 +520,7 @@ const Study = () => {
                        <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
                     </div>
                     <div>
-                      <span className={`block text-sm sm:text-lg font-bold tracking-tight mb-0.5 ${isActive || isPassed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{part.title}</span>
+                      <span className="block text-sm sm:text-lg font-bold tracking-tight mb-0.5 text-on-surface">{part.title}</span>
                       <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
                     </div>
                   </div>
