@@ -132,6 +132,9 @@ export const finalizeGoal = (title, roadmap) =>
 
 export const quickActivateGoal = (title) =>
   request('POST', '/goals/quick-activate', { title });
+
+export const generateYoutubeRoadmap = (url) =>
+  request('POST', '/goals/youtube-roadmap', { url });
  
 export const activateGoal = (goalId) =>
   request('POST', `/goals/${goalId}/activate`);
