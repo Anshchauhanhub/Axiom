@@ -1,3 +1,4 @@
+from auth import logger
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,11 +9,12 @@ from models import User, Goal, Task, Part, ChatMessage
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
     PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest,
-    UpdateNotesRequest
+    UpdateNotesRequest, YoutubeRoadmapRequest, YoutubeRoadmapResponse
 )
 from auth import get_current_user
-from services.groq import generate_roadmap
+from services.groq import generate_roadmap, generate_roadmap_from_playlist
 from services.synthesis import synthesize_part_content
+from services.youtube import get_playlist_data
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
  
@@ -233,6 +235,36 @@ async def onboarding_chat(
     except Exception as e:
         logger.error(f"Chat endpoint error: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred. Please try again later.")
+
+
+@router.post("/youtube-roadmap", response_model=YoutubeRoadmapResponse)
+async def generate_youtube_roadmap(
+    req: YoutubeRoadmapRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch a YouTube playlist, extract videos, and generate a roadmap using LLM.
+    """
+    # 1. Scrape YouTube
+    playlist_data = await get_playlist_data(req.url)
+    if not playlist_data:
+        raise HTTPException(status_code=400, detail="Failed to extract data from the provided YouTube playlist URL. Ensure it is a public playlist.")
+
+    # 2. Generate Roadmap from videos
+    try:
+        roadmap = await generate_roadmap_from_playlist(
+            playlist_data["title"], 
+            playlist_data["videos"]
+        )
+        return YoutubeRoadmapResponse(
+            draft_roadmap=roadmap,
+            goal_title=playlist_data["title"]
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger("axiom.goals").error(f"Playlist roadmap generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to synthesize roadmap from playlist.")
 
 
 @router.post("/finalize", response_model=RoadmapResponse)

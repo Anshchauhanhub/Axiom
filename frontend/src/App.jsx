@@ -8,7 +8,6 @@ import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import Study from './pages/Study';
 import Settings from './pages/Settings';
-// import Social from './pages/Social';
 import ScrollToTop from './components/ScrollToTop';
 
 function App() {
@@ -24,7 +23,6 @@ function App() {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/study" element={<Study />} />
                 <Route path="/settings" element={<Settings />} />
-                {/* <Route path="/social" element={<Social />} /> */}
               </Routes>
             </Layout>
           </Router>

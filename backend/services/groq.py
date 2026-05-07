@@ -318,3 +318,30 @@ async def generate_documentation(topic: str, research_data: str) -> str:
     user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}"
 
     return await call_groq(system_prompt, user_prompt)
+
+
+async def generate_roadmap_from_playlist(playlist_title: str, videos: list[str]) -> list[dict]:
+    """Generate a structured roadmap based on a list of YouTube video titles."""
+    video_list_str = "\n".join([f"- {v}" for v in videos[:30]])  # Limit to 30 for token safety
+    
+    system_prompt = (
+        "You are Axiom AI, a high-accountability learning coach. "
+        "I will provide you with a list of video titles from a YouTube playlist. "
+        "Your goal is to organize these videos into a logical, high-mastery learning roadmap. "
+        "Group related videos into 5-8 granular 'Tasks'. "
+        "Each task should have a title and 'parts' (the actual video titles or refined subtopics). "
+        "Return ONLY valid JSON array of objects: "
+        '[{"title": "Task Name", "parts": ["Video Title 1", "Video Title 2"]}]. '
+        "No markdown, no explanation, ONLY valid JSON."
+    )
+    user_prompt = f"Playlist Title: {playlist_title}\n\nVideos:\n{video_list_str}\n\nGenerate the structured roadmap."
+
+    raw = await call_groq(system_prompt, user_prompt)
+    cleaned = _clean_json(raw)
+
+    try:
+        roadmap = json.loads(cleaned)
+        return _normalize_draft_roadmap(roadmap)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parse error in playlist roadmap: {e}\nRaw: {raw[:500]}")
+        raise ValueError(f"Failed to parse AI response as JSON: {e}")

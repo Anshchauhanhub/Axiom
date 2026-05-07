@@ -166,6 +166,15 @@ class FinalizeGoalRequest(BaseModel):
     roadmap: list[dict]
 
 
+class YoutubeRoadmapRequest(BaseModel):
+    url: str
+
+
+class YoutubeRoadmapResponse(BaseModel):
+    draft_roadmap: list[dict]
+    goal_title: str
+
+
 # --- Social ---
 class PostCreateRequest(BaseModel):
     goal_id: Optional[uuid.UUID] = None
