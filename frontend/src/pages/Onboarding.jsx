@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { register, login, onboardingChat, finalizeGoal, quickActivateGoal, activateGoal, deleteGoal, toggleGoalStatus, getChatHistory, clearChatHistory } from '../services/api';
+import { 
+  register, login, onboardingChat, finalizeGoal, 
+  clearChatHistory, generateYoutubeRoadmap 
+} from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MessageBubble from '../components/MessageBubble';
-import { Send, Zap, ChevronRight, Activity, Trash2, Play, Pause, History, BrainCircuit, Search } from 'lucide-react';
+import { 
+  Send, Activity, ChevronRight, History, 
+  BrainCircuit, Search, Video, MessageSquare, 
+  ArrowRight, Sparkles, Globe, Zap 
+} from 'lucide-react';
 
 const Onboarding = () => {
   const { user, loginUser } = useAuth();
-  const { goals, refreshData } = useData();
+  const { refreshData } = useData();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -21,21 +28,25 @@ const Onboarding = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  // Mode Selection
+  const [onboardingMode, setOnboardingMode] = useState(null); // 'chat' or 'youtube'
+
   // Chat state
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [phase, setPhase] = useState('discovery');
   const [draftRoadmap, setDraftRoadmap] = useState(null);
-  const [goalTitle, setGoalTitle] = useState('');  // The real topic name for the goal
+  const [goalTitle, setGoalTitle] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  // YouTube state
+  const [youtubeUrl, setYoutubeUrl] = useState('');
 
   const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -43,12 +54,10 @@ const Onboarding = () => {
       if (user) {
         setLoading(true);
         try {
-          // Auto-clear old chat history on every page load for a fresh session
           await clearChatHistory();
         } catch (e) {
           console.error("Failed to clear history:", e);
         }
-        // Always start with a fresh greeting
         setMessages([{ 
           role: 'assistant', 
           content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
@@ -62,20 +71,16 @@ const Onboarding = () => {
     startFreshSession();
   }, [user]);
 
-  // Auto-scroll whenever messages change or typing indicator appears
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // Also observe DOM mutations inside the chat container for any dynamic content changes
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
-
     const observer = new MutationObserver(() => {
       scrollToBottom();
     });
-
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
@@ -90,11 +95,7 @@ const Onboarding = () => {
       await loginUser(res.access_token);
       window.location.reload();
     } catch (e) {
-      if (mode === 'register' && e.message.includes('already registered')) {
-        setError('This email is already part of the Axiom network. Switch to Login to continue.');
-      } else {
-        setError(e.message);
-      }
+      setError(e.message);
     }
     setLoading(false);
   };
@@ -110,70 +111,53 @@ const Onboarding = () => {
 
     try {
       const res = await onboardingChat([...messages, userMsg]);
-      
-      // Safely extract message — fallback if missing
       const fullMessage = res.message || "I'm preparing your learning path...";
       let displayedMessage = "";
       
-      // Update phase and roadmap immediately as they are behind-the-scenes
       if (res.phase) setPhase(res.phase);
       if (res.draft_roadmap) {
         setDraftRoadmap(res.draft_roadmap);
-        // Capture the real goal title from the AI response or from the user's message
-        if (res.goal_title) {
-          setGoalTitle(res.goal_title);
-        } else {
-          // Fallback: use the user's last message as the topic
-          setGoalTitle(inputText || userMsg.content);
-        }
+        setGoalTitle(res.goal_title || inputText || userMsg.content);
       }
 
-      // Clear any previous errors on success
       setError('');
-
-      // Create a placeholder assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase || phase }]);
 
       const tokens = fullMessage.split(/(\s+)/);
       for (let i = 0; i < tokens.length; i++) {
         displayedMessage += tokens[i];
-        
-        // Update the last message in the history
         setMessages(prev => {
           const newHistory = [...prev];
           newHistory[newHistory.length - 1] = { ...newHistory[newHistory.length - 1], content: displayedMessage };
           return newHistory;
         });
-
-        // Small delay if the token is descriptive text (not just spaces)
         if (tokens[i].trim()) {
-          await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
+          await new Promise(r => setTimeout(r, 10 + Math.random() * 20));
         }
       }
-      
     } catch (e) {
-      console.error('Onboarding chat error:', e);
       setError("Neural link interrupted. Please retry.");
     } finally {
       setIsTyping(false);
     }
   };
 
-  const handleNewChat = async () => {
+  const handleYoutubeSynthesis = async (e) => {
+    e.preventDefault();
+    if (!youtubeUrl.trim()) return;
+    setLoading(true);
+    setError('');
     try {
-      await clearChatHistory();
-      setMessages([{ 
-        role: 'assistant', 
-        content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
-      }]);
-      setPhase('discovery');
-      setDraftRoadmap(null);
-      setError('');
+      const res = await generateYoutubeRoadmap(youtubeUrl);
+      setDraftRoadmap(res.draft_roadmap);
+      setGoalTitle(res.goal_title);
+      setPhase('ready');
     } catch (e) {
-      console.error('Failed to clear chat:', e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
   };
-
 
   const handleFinalize = async () => {
     if (!draftRoadmap) return;
@@ -191,12 +175,10 @@ const Onboarding = () => {
   };
 
   const handleRefine = () => {
-    setPhase('refinement');
+    setDraftRoadmap(null);
+    setPhase('discovery');
     setError('');
-    // Optionally scroll to input
-    scrollToBottom();
   };
-
 
   if (authStep) {
     return (
@@ -216,7 +198,6 @@ const Onboarding = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
               required
-              autoComplete="email"
             />
           </div>
           <div className="space-y-2">
@@ -227,7 +208,6 @@ const Onboarding = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
               required
-              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             />
           </div>
           {error && <p className="text-error text-xs font-bold font-label text-center">{error}</p>}
@@ -244,36 +224,88 @@ const Onboarding = () => {
     );
   }
 
+  if (!onboardingMode) {
+    return (
+      <div className="w-full max-w-6xl mx-auto px-4 py-12 flex-1 flex flex-col justify-center animate-in fade-in zoom-in duration-1000">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-6">
+            <Sparkles className="text-primary" size={14} />
+            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.2em]">Neural Initialization</span>
+          </div>
+          <h1 className="text-5xl sm:text-7xl font-black font-headline uppercase tracking-tighter text-on-surface italic mb-6">
+            Select Your <span className="text-primary">Path</span>
+          </h1>
+          <p className="text-on-surface-variant/60 font-label text-xs sm:text-sm tracking-widest uppercase max-w-2xl mx-auto">
+            Initialize your mastery journey using direct neural dialogue or external curation.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <button 
+            onClick={() => setOnboardingMode('chat')}
+            className="group relative bg-surface-container-low p-10 rounded-[3rem] border border-outline-variant/10 text-left transition-all hover:scale-[1.02] hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+              <MessageSquare size={160} />
+            </div>
+            <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center mb-10 border border-primary/20 group-hover:neural-glow transition-all">
+              <MessageSquare className="text-primary" size={32} />
+            </div>
+            <h3 className="text-3xl font-black font-headline uppercase tracking-tighter mb-4">Neural Chat</h3>
+            <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10 max-w-xs">
+              Converse with the high-accountability coach to build a personalized roadmap from scratch.
+            </p>
+            <div className="flex items-center gap-3 text-primary font-label font-bold text-[10px] uppercase tracking-widest">
+              Launch Dialogue <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+            </div>
+          </button>
+
+          <button 
+            onClick={() => setOnboardingMode('youtube')}
+            className="group relative bg-surface-container-low p-10 rounded-[3rem] border border-outline-variant/10 text-left transition-all hover:scale-[1.02] hover:border-secondary/40 hover:shadow-2xl hover:shadow-secondary/10 overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Video size={160} />
+            </div>
+            <div className="w-20 h-20 rounded-[2rem] bg-secondary/10 flex items-center justify-center mb-10 border border-secondary/20 group-hover:shadow-[0_0_40px_rgba(0,179,89,0.3)] transition-all">
+              <Video className="text-secondary" size={32} />
+            </div>
+            <h3 className="text-3xl font-black font-headline uppercase tracking-tighter mb-4">Playlist Synthesis</h3>
+            <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10 max-w-xs">
+              Paste a YouTube playlist URL to transform expert video content into a structured learning journey.
+            </p>
+            <div className="flex items-center gap-3 text-secondary font-label font-bold text-[10px] uppercase tracking-widest">
+              Paste URL <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex-1 min-h-[500px] flex flex-col animate-in fade-in duration-1000">
-      {loading && (
-        <NeuralLoader 
-          message="SYNTHESIZING NEURAL PATH" 
-          subMessages={[
-            'Scanning global repositories',
-            'Calibrating neural roadmap',
-            'Tapping into node archives',
-            'Finalizing pathway synthesis',
-            'Synchronizing bio-locked records',
-          ]}
-        />
-      )}
+      {loading && <NeuralLoader message="SYNTHESIZING NEURAL PATH" />}
 
-      {/* Main Chat Area - Now Full Width */}
       <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
-
-        {/* Chat Header */}
         <div className="w-full p-3 sm:p-6 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50 backdrop-blur-xl sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 neural-glow">
-              <BrainCircuit className="text-primary" size={24} />
-            </div>
+            <button 
+               onClick={() => setOnboardingMode(null)}
+               className="w-12 h-12 rounded-2xl bg-surface-container-highest flex items-center justify-center border border-outline-variant/10 hover:border-primary/40 transition-all group"
+            >
+              <History className="text-on-surface-variant group-hover:text-primary" size={20} />
+            </button>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="h-2 w-2 rounded-full bg-secondary animate-pulse shadow-[0_0_10px_rgba(0,179,89,0.5)]"></span>
-                <span className="font-label text-[10px] tracking-[0.3em] text-secondary uppercase font-bold">Neural Link Active</span>
+                <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : 'bg-secondary'}`}></span>
+                <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : 'text-secondary'}`}>
+                  {onboardingMode === 'chat' ? 'Neural Link Active' : 'Synthesis Engine Engaged'}
+                </span>
               </div>
-              <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">Axiom Coach</h2>
+              <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
+                {onboardingMode === 'chat' ? 'Axiom Coach' : 'Playlist Architect'}
+              </h2>
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -284,21 +316,45 @@ const Onboarding = () => {
           </div>
         </div>
 
-        {/* Message Area */}
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto px-3 py-4 sm:px-8 sm:py-8 space-y-4 custom-scrollbar"
         >
-          {messages.map((m, i) => (
-            <MessageBubble 
-              key={i} 
-              message={m.content} 
-              role={m.role} 
-              phase={m.role === 'assistant' ? (m.phase || phase) : null} 
-            />
+          {onboardingMode === 'chat' && messages.map((m, i) => (
+            <MessageBubble key={i} message={m.content} role={m.role} phase={m.role === 'assistant' ? (m.phase || phase) : null} />
           ))}
 
-          {isTyping && (
+          {onboardingMode === 'youtube' && !draftRoadmap && (
+             <div className="h-full flex flex-col items-center justify-center text-center p-10 max-w-2xl mx-auto">
+                <div className="w-24 h-24 rounded-[2rem] bg-secondary/10 flex items-center justify-center mb-8 border border-secondary/20 shadow-[0_0_40px_rgba(0,179,89,0.2)]">
+                  <Video className="text-secondary" size={40} />
+                </div>
+                <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-4 italic">Curation Engine</h3>
+                <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10">
+                   Provide a public YouTube playlist URL. Our neural engine will analyze the curriculum and synthesize a master roadmap.
+                </p>
+                <form onSubmit={handleYoutubeSynthesis} className="w-full relative group">
+                  <Globe className="absolute left-6 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-secondary transition-colors" size={20} />
+                  <input 
+                    type="url" 
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/playlist?list=..."
+                    className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-[2rem] pl-16 pr-24 py-6 text-on-surface text-sm font-light focus:ring-4 focus:ring-secondary/20 focus:border-secondary/40 outline-none transition-all shadow-2xl"
+                    required
+                  />
+                  <button 
+                    type="submit"
+                    disabled={!youtubeUrl || loading}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 px-6 py-3 bg-secondary text-on-primary-container rounded-full font-label font-bold text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all disabled:opacity-20"
+                  >
+                    Synthesize
+                  </button>
+                </form>
+             </div>
+          )}
+
+          {isTyping && onboardingMode === 'chat' && (
             <div className="flex justify-start">
               <div className="bg-surface-container-lowest border border-outline-variant/10 p-5 rounded-[1.5rem] rounded-tl-none">
                 <div className="flex gap-1.5">
@@ -310,17 +366,17 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Draft Roadmap Display — only show once we reach draft phase */}
-          {draftRoadmap && (phase === 'draft' || phase === 'refinement' || phase === 'ready') && (
+          {draftRoadmap && (
             <div className="w-full mt-12 animate-in zoom-in duration-700">
               <div className="bg-gradient-to-br from-[#0e0e10] to-[#1c1b1d] border border-primary/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-10 opacity-5">
-                  <span className="material-symbols-outlined text-[120px]">neurology</span>
-                </div>
-
                 <header className="mb-10 relative z-10">
-                  <span className="font-label text-[10px] tracking-[0.3em] text-primary uppercase font-bold bg-primary/10 px-3 py-1 rounded-full border border-primary/20">Proposed Learning Path</span>
-                  <h3 className="text-4xl font-black font-headline uppercase mt-4 tracking-tighter italic">Synthesis Draft</h3>
+                  <span className="font-label text-[10px] tracking-[0.3em] text-primary uppercase font-bold bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                    {onboardingMode === 'youtube' ? 'Extracted Learning Path' : 'Proposed Learning Path'}
+                  </span>
+                  <h3 className="text-4xl font-black font-headline uppercase mt-4 tracking-tighter italic">
+                    {onboardingMode === 'youtube' ? 'Neural Synthesis' : 'Synthesis Draft'}
+                  </h3>
+                  {goalTitle && <p className="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.2em] mt-2">{goalTitle}</p>}
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 mb-12">
@@ -342,73 +398,41 @@ const Onboarding = () => {
                   ))}
                 </div>
 
-                {draftRoadmap && phase !== 'discovery' && phase !== 'timeline' && phase !== 'syllabus' && (
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
-                    <button
-                      onClick={handleFinalize}
-                      className="group relative px-10 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40 w-full sm:w-auto"
-                    >
-                      <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Activate Neural Path</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </button>
-                    
-                    <button
-                      onClick={handleRefine}
-                      className="px-10 py-5 bg-surface-container-highest/50 text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-full font-label font-bold tracking-[0.3em] uppercase text-[10px] transition-all hover:bg-primary/5 hover:border-primary/30 w-full sm:w-auto"
-                    >
-                      Refine Path
-                    </button>
-                  </div>
-                )}
+                <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
+                  <button onClick={handleFinalize} className="group relative px-10 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40 w-full sm:w-auto">
+                    <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Activate Neural Path</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </button>
+                  <button onClick={handleRefine} className="px-10 py-5 bg-surface-container-highest/50 text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-full font-label font-bold tracking-[0.3em] uppercase text-[10px] transition-all hover:bg-primary/5 hover:border-primary/30 w-full sm:w-auto">
+                    New Synthesis
+                  </button>
+                </div>
               </div>
             </div>
           )}
-
-          {/* Dummy element for scroll-to-bottom anchor */}
-          <div ref={messagesEndRef} className="h-4 w-full opacity-0 pointer-events-none" />
-
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Chat Input */}
-        <div className="p-3 sm:p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
-          <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
-            <div className="relative flex items-center gap-2">
-
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                disabled={isTyping}
-                placeholder={phase === 'ready' ? "Neural path locked. Click 'Refine Path' to modify." : "Respond to Axiom..."}
-                className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl px-4 py-3.5 sm:px-8 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 focus:border-transparent outline-none transition-all shadow-2xl disabled:opacity-50 placeholder:text-on-surface-variant/30"
-              />
-              <button
-                type="submit"
-                disabled={!inputText.trim() || isTyping || phase === 'ready'}
-                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all disabled:opacity-20 shadow-lg shadow-primary/20 hover:brightness-110 group-hover:neural-glow"
-              >
-                {isTyping ? <Activity size={20} className="animate-pulse" /> : <Send size={20} />}
-              </button>
-            </div>
-
-            {/* Quick Suggestions */}
-            {phase === 'discovery' && messages.length <= 2 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {['College Student', 'Preparing for Exam', 'Career Mastery'].map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setInputText(s)}
-                    className="px-4 py-1.5 rounded-xl border border-outline-variant/10 bg-surface-container-lowest text-[10px] font-label font-bold text-on-surface-variant hover:text-primary hover:border-primary/30 transition-all uppercase tracking-widest"
-                  >
-                    {s}
-                  </button>
-                ))}
+        {onboardingMode === 'chat' && (
+          <div className="p-3 sm:p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
+            <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
+              <div className="relative flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  disabled={isTyping}
+                  placeholder="Respond to Axiom..."
+                  className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl px-4 py-3.5 sm:px-8 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
+                />
+                <button type="submit" disabled={!inputText.trim() || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">
+                  {isTyping ? <Activity size={20} className="animate-pulse" /> : <Send size={20} />}
+                </button>
               </div>
-            )}
-          </form>
-          {error && <p className="text-error text-[10px] font-label font-bold uppercase tracking-widest text-center mt-4 animate-bounce">{error}</p>}
-        </div>
+            </form>
+          </div>
+        )}
+        {error && <p className="text-error text-[10px] font-label font-bold uppercase tracking-widest text-center mt-4 animate-bounce mb-8">{error}</p>}
       </div>
     </div>
   );
