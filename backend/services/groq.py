@@ -301,9 +301,9 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
 
 
 async def generate_documentation(topic: str, research_data: str) -> str:
-    """Synthesize a structured study guide for a topic using research data."""
+    """Generate a structured study guide for a topic using research data."""
     system_prompt = (
-        "You are Axiom AI, a high-fidelity learning synthesizer. "
+        "You are Axiom AI, a high-fidelity learning assistant. "
         "Your goal is to create a comprehensive, engaging, and structured study guide "
         "based on the provided raw research data. "
         "### GUIDELINES:\n"

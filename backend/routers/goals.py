@@ -480,7 +480,7 @@ async def get_part_content(
             content=part.content
         )
 
-    # Trigger Neural Synthesis
+    # Trigger Generation
     try:
         content = await synthesize_part_content(part.title)
         part.content = content
@@ -493,7 +493,7 @@ async def get_part_content(
         )
     except Exception as e:
         import logging
-        logging.getLogger("axiom.goals").error(f"Neural Synthesis failed: {e}", exc_info=True)
+        logging.getLogger("axiom.goals").error(f"Generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 
