@@ -162,22 +162,37 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section id="features" className="py-24 lg:py-40 relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-24 max-w-2xl mx-auto">
-            <h2 className="text-4xl lg:text-6xl font-black font-headline uppercase tracking-tighter mb-6">Built for High <span className="text-primary">Performance</span></h2>
-            <p className="text-on-surface-variant font-light text-lg">Traditional learning is broken by cognitive overload. Axiom fixes it with precision architecture.</p>
+      {/* ─── Features Grid ─── */}
+      <section id="features" className="py-20 lg:py-32 relative">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[150px] -z-10"></div>
+        
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+          <div className="text-center mb-16 lg:mb-20 max-w-2xl mx-auto">
+            <span className="inline-block text-[10px] font-label font-bold uppercase tracking-[0.3em] text-primary/60 mb-4">Core Capabilities</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-headline uppercase tracking-tighter mb-5 leading-tight">
+              Built for High <span className="text-primary">Performance</span>
+            </h2>
+            <p className="text-on-surface-variant/60 font-light text-base sm:text-lg">
+              Traditional learning is broken by cognitive overload. Axiom fixes it with precision architecture.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
             {features.map((f, i) => (
-              <div key={i} className="group p-8 rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/5 hover:border-primary/20 transition-all duration-500 hover:-translate-y-2">
-                <div className="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-8 border border-outline-variant/10 group-hover:bg-primary/5 transition-colors">
-                  {f.icon}
+              <div 
+                key={i} 
+                className="group relative p-7 rounded-2xl bg-[#151517] border border-outline-variant/8 hover:border-primary/20 transition-all duration-500 hover:-translate-y-1"
+              >
+                {/* Hover glow */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-primary/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                <div className="relative">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.gradient || 'from-primary/20 to-primary/5'} flex items-center justify-center mb-6 border border-white/5 group-hover:scale-110 transition-transform duration-500`}>
+                    {f.icon}
+                  </div>
+                  <h3 className="text-base font-bold font-headline uppercase tracking-tight mb-3 group-hover:text-primary transition-colors duration-300">{f.title}</h3>
+                  <p className="text-on-surface-variant/50 text-sm leading-relaxed font-light">{f.description}</p>
                 </div>
-                <h3 className="text-xl font-bold font-headline uppercase tracking-tight mb-4 group-hover:text-primary transition-colors">{f.title}</h3>
-                <p className="text-on-surface-variant/70 text-sm leading-relaxed font-light">{f.description}</p>
               </div>
             ))}
           </div>
