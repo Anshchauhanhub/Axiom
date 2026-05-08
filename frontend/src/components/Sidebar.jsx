@@ -21,9 +21,9 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop SideNavBar */}
-      <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40">
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-72 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40">
         <div className="mb-10 px-2 flex items-center justify-center">
-          <img src="/logo.png" alt="Axiom Logo" className="w-56 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]" />
+          <img src="/logo.png" alt="Axiom Logo" className="w-64 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]" />
         </div>
         <nav className="flex-1 space-y-2">
           {navItems.map((item) => (
@@ -35,8 +35,8 @@ const Sidebar = () => {
                   : 'text-primary/60 hover:bg-[#1c1b1d] hover:text-primary'
                 }`}
             >
-              <span className="material-symbols-outlined text-lg">{item.icon}</span>
-              <span className="font-['Space_Grotesk'] uppercase tracking-widest text-xs">{item.name}</span>
+              <span className="material-symbols-outlined text-xl">{item.icon}</span>
+              <span className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">{item.name}</span>
             </Link>
           ))}
         </nav>
@@ -78,7 +78,7 @@ const Sidebar = () => {
             <div className={`mb-0.5 p-1 rounded-lg transition-all duration-300 ${isActive(item.path) ? 'bg-primary/10 scale-110' : 'group-hover:bg-[#1c1b1d]'}`}>
               <span className={`material-symbols-outlined text-[20px] ${isActive(item.path) ? 'fill-1' : ''}`}>{item.icon}</span>
             </div>
-            <span className="font-['Space_Grotesk'] text-[8px] uppercase font-bold tracking-[0.05em]">{item.name}</span>
+            <span className="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-[0.05em]">{item.name}</span>
             {isActive(item.path) && (
               <div className="absolute -top-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_10px_#fdb813]"></div>
             )}
