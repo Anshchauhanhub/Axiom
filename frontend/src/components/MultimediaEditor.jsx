@@ -248,7 +248,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
     const element = documentRef.current;
     const opt = {
       margin:       10,
-      filename:     `${(activeGoalTitle || 'Neural_Notes').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
+      filename:     `${(activeGoalTitle || 'Study_Notes').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2 },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -267,7 +267,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
     const fileDownload = document.createElement("a");
     document.body.appendChild(fileDownload);
     fileDownload.href = source;
-    fileDownload.download = `${(activeGoalTitle || 'Neural_Notes').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.doc`;
+    fileDownload.download = `${(activeGoalTitle || 'Study_Notes').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.doc`;
     fileDownload.click();
     document.body.removeChild(fileDownload);
     setShowDownloadMenu(false);
@@ -637,11 +637,11 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
           
           {/* Subtle Document Header */}
           <div className="mb-4 border-b border-slate-100 pb-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
-            <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Neural Notes"}</h1>
+            <h1 className="text-3xl font-black font-headline tracking-tighter text-slate-900 border-l-4 border-primary pl-4 uppercase">{activeGoalTitle || "Study Notes"}</h1>
           </div>
 
           {/* BLOCK FEED */}
-          <div className="flex-grow flex flex-col neural-editor">
+          <div className="flex-grow flex flex-col axiom-editor">
             {blocks.map((block) => (
               <div key={block.id} className="relative group/wrapper min-h-[1.5rem]">
                 {/* Drag / Remove Controls */}
