@@ -182,7 +182,7 @@ const Onboarding = () => {
 
   if (authStep) {
     return (
-      <div className="w-full max-w-md mx-auto mt-6 sm:mt-12 lg:mt-20 px-2 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="w-full max-md mx-auto mt-6 sm:mt-12 lg:mt-20 px-2 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <div className="text-center mb-8 sm:mb-12">
           <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 border border-primary/20">
             <span className="material-symbols-outlined text-primary text-2xl sm:text-3xl">neurology</span>
@@ -226,56 +226,74 @@ const Onboarding = () => {
 
   if (!onboardingMode) {
     return (
-      <div className="w-full max-w-6xl mx-auto px-4 py-12 flex-1 flex flex-col justify-center animate-in fade-in zoom-in duration-1000">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <Sparkles className="text-primary" size={14} />
-            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.2em]">Neural Initialization</span>
+      <div className="w-full max-w-6xl mx-auto px-4 py-12 flex-1 flex flex-col justify-center relative z-10">
+        {/* Background Decorative Elements */}
+        <div className="fixed inset-0 neural-grid opacity-20 pointer-events-none -z-10"></div>
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[160px] pointer-events-none -z-10 animate-neural-pulse"></div>
+
+        <div className="text-center mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5">
+            <Sparkles className="text-primary animate-pulse" size={16} />
+            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.3em]">Neural Protocol Initialized</span>
           </div>
-          <h1 className="text-5xl sm:text-7xl font-black font-headline uppercase tracking-tighter text-on-surface italic mb-6">
-            Select Your <span className="text-primary">Path</span>
+          <h1 className="text-6xl sm:text-8xl font-black font-headline uppercase tracking-tighter text-on-surface italic mb-8 leading-none">
+            SELECT YOUR <span className="text-primary drop-shadow-[0_0_30px_rgba(253,184,19,0.5)]">PATH</span>
           </h1>
-          <p className="text-on-surface-variant/60 font-label text-xs sm:text-sm tracking-widest uppercase max-w-2xl mx-auto">
-            Initialize your mastery journey using direct neural dialogue or external curation.
+          <p className="text-on-surface-variant/70 font-label text-sm sm:text-base tracking-[0.2em] uppercase max-w-3xl mx-auto leading-relaxed px-4">
+            Axiom is ready to synthesize your curriculum. Choose your method of knowledge acquisition.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto w-full px-4 sm:px-0">
+          {/* Neural Chat Card */}
           <button 
             onClick={() => setOnboardingMode('chat')}
-            className="group relative bg-surface-container-low p-10 rounded-[3rem] border border-outline-variant/10 text-left transition-all hover:scale-[1.02] hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 overflow-hidden"
+            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-primary/50 hover:shadow-[0_0_80px_rgba(253,184,19,0.15)] overflow-hidden animate-in slide-in-from-left-12 duration-1000"
           >
-            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
-              <MessageSquare size={160} />
+            {/* Scanner Effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
+            
+            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:rotate-12 group-hover:scale-125">
+              <MessageSquare size={200} strokeWidth={1} />
             </div>
-            <div className="w-20 h-20 rounded-[2rem] bg-primary/10 flex items-center justify-center mb-10 border border-primary/20 group-hover:neural-glow transition-all">
-              <MessageSquare className="text-primary" size={32} />
-            </div>
-            <h3 className="text-3xl font-black font-headline uppercase tracking-tighter mb-4">Neural Chat</h3>
-            <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10 max-w-xs">
-              Converse with the high-accountability coach to build a personalized roadmap from scratch.
-            </p>
-            <div className="flex items-center gap-3 text-primary font-label font-bold text-[10px] uppercase tracking-widest">
-              Launch Dialogue <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+
+            <div className="relative z-20">
+              <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center mb-12 border border-primary/20 group-hover:neural-glow group-hover:scale-110 transition-all duration-500 animate-float">
+                <MessageSquare className="text-primary" size={40} />
+              </div>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-primary transition-colors duration-500">Neural Chat</h3>
+              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
+                Engage in direct cognitive dialogue with our high-accountability coach to architect a custom path.
+              </p>
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 text-primary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-primary group-hover:text-black transition-all duration-500">
+                Launch Dialogue <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
+              </div>
             </div>
           </button>
 
+          {/* Playlist Synthesis Card */}
           <button 
             onClick={() => setOnboardingMode('youtube')}
-            className="group relative bg-surface-container-low p-10 rounded-[3rem] border border-outline-variant/10 text-left transition-all hover:scale-[1.02] hover:border-secondary/40 hover:shadow-2xl hover:shadow-secondary/10 overflow-hidden"
+            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-secondary/50 hover:shadow-[0_0_80px_rgba(0,179,89,0.15)] overflow-hidden animate-in slide-in-from-right-12 duration-1000"
           >
-            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Video size={160} />
+            {/* Scanner Effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
+
+            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:-rotate-12 group-hover:scale-125">
+              <Video size={200} strokeWidth={1} />
             </div>
-            <div className="w-20 h-20 rounded-[2rem] bg-secondary/10 flex items-center justify-center mb-10 border border-secondary/20 group-hover:shadow-[0_0_40px_rgba(0,179,89,0.3)] transition-all">
-              <Video className="text-secondary" size={32} />
-            </div>
-            <h3 className="text-3xl font-black font-headline uppercase tracking-tighter mb-4">Playlist Synthesis</h3>
-            <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10 max-w-xs">
-              Paste a YouTube playlist URL to transform expert video content into a structured learning journey.
-            </p>
-            <div className="flex items-center gap-3 text-secondary font-label font-bold text-[10px] uppercase tracking-widest">
-              Paste URL <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+
+            <div className="relative z-20">
+              <div className="w-24 h-24 rounded-[2.5rem] bg-secondary/10 flex items-center justify-center mb-12 border border-secondary/20 group-hover:neural-glow-secondary group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:1s]">
+                <Video className="text-secondary" size={40} />
+              </div>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">Playlist Synthesis</h3>
+              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
+                Inject external knowledge by transforming YouTube playlists into structured learning nodes.
+              </p>
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-secondary group-hover:text-black transition-all duration-500">
+                Paste URL <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
+              </div>
             </div>
           </button>
         </div>

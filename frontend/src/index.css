@@ -1,10 +1,19 @@
 /* Shared Design System Utilities */
 @layer utilities {
   .neural-glow {
-    box-shadow: 0 0 20px -5px rgba(253, 184, 19, 0.3);
+    box-shadow: 0 0 30px -5px rgba(253, 184, 19, 0.4);
   }
   .neural-glow-secondary {
-    box-shadow: 0 0 20px -5px rgba(0, 179, 89, 0.3);
+    box-shadow: 0 0 30px -5px rgba(0, 179, 89, 0.4);
+  }
+  .neural-grid {
+    background-image: radial-gradient(rgba(253, 184, 19, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 }
 
@@ -55,6 +64,35 @@
 
 .animate-toast-in {
   animation: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+@keyframes scan {
+  from { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  to { transform: translateY(200%); opacity: 0; }
+}
+
+.animate-scan {
+  animation: scan 3s linear infinite;
+}
+
+@keyframes neural-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-neural-pulse {
+  animation: neural-pulse 2s ease-in-out infinite;
 }
 
 /* Document Word Processor Styling */
