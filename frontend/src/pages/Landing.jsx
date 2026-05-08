@@ -199,79 +199,89 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Social Proof / How it works */}
-      <section id="how-it-works" className="py-24 lg:py-40 bg-surface-container-low/30 relative overflow-hidden">
-        <div className="absolute top-1/2 left-0 w-96 h-96 bg-secondary/5 rounded-full blur-[120px] -z-10"></div>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div className="order-2 lg:order-1">
-              <div className="space-y-12">
-                <div className="flex gap-6">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black shrink-0 border border-primary/20 shadow-lg shadow-primary/5">1</div>
-                  <div>
-                    <h4 className="text-xl font-bold font-headline uppercase tracking-tight mb-2">Discovery Phase</h4>
-                    <p className="text-on-surface-variant/80 font-light">Tell Axiom what you want to achieve. Our AI analyzes your intent and level to start the architecture.</p>
-                  </div>
-                </div>
-                <div className="flex gap-6">
-                  <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary font-black shrink-0 border border-secondary/20 shadow-lg shadow-secondary/5">2</div>
-                  <div>
-                    <h4 className="text-xl font-bold font-headline uppercase tracking-tight mb-2">Roadmap Generation</h4>
-                    <p className="text-on-surface-variant/80 font-light">Axiom generates a granular, step-by-step roadmap. Approve, refine, or import from external sources.</p>
-                  </div>
-                </div>
-                <div className="flex gap-6">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black shrink-0 border border-primary/20 shadow-lg shadow-primary/5">3</div>
-                  <div>
-                    <h4 className="text-xl font-bold font-headline uppercase tracking-tight mb-2">Verified Progression</h4>
-                    <p className="text-on-surface-variant/80 font-light">Complete tasks and pass assessments. Progress is tracked and nudged via our integrated assistant.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* ─── How It Works ─── */}
+      <section id="how-it-works" className="py-20 lg:py-32 relative overflow-hidden">
+        <div className="absolute top-1/2 left-[-100px] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[120px] -z-10"></div>
+        <div className="absolute bottom-0 right-[-100px] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[120px] -z-10"></div>
+        
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+            
+            {/* Right: Heading + Card (rendered first on mobile) */}
             <div className="order-1 lg:order-2">
-              <h2 className="text-4xl lg:text-6xl font-black font-headline uppercase tracking-tighter mb-8 leading-none">The Science of <br /><span className="text-secondary italic">Progression</span></h2>
-              <p className="text-lg text-on-surface-variant/70 font-light leading-relaxed mb-10">
+              <span className="inline-block text-[10px] font-label font-bold uppercase tracking-[0.3em] text-secondary/60 mb-4">Methodology</span>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-headline uppercase tracking-tighter mb-6 leading-tight">
+                The Science of <br /><span className="text-secondary italic">Progression</span>
+              </h2>
+              <p className="text-base sm:text-lg text-on-surface-variant/60 font-light leading-relaxed mb-8">
                 We've engineered Axiom to reduce friction and maximize focus. Our systems handle the planning, so you can handle the learning.
               </p>
-              <div className="p-8 rounded-[2.5rem] bg-[#0e0e10] border border-outline-variant/10">
-                <div className="flex items-center gap-4 mb-4 text-secondary">
-                  <Shield size={20} />
+              <div className="p-6 rounded-2xl bg-[#151517] border border-outline-variant/8">
+                <div className="flex items-center gap-3 mb-3 text-secondary">
+                  <Shield size={18} />
                   <span className="font-label font-bold uppercase tracking-widest text-[10px]">Security Guaranteed</span>
                 </div>
-                <p className="text-xs text-on-surface-variant font-light italic leading-relaxed">
+                <p className="text-xs text-on-surface-variant/50 font-light italic leading-relaxed">
                   "Your data is localized and private. Axiom's goal is your growth, not your attention."
                 </p>
               </div>
             </div>
+
+            {/* Left: Steps */}
+            <div className="order-2 lg:order-1">
+              <div className="space-y-8">
+                {[
+                  { num: '1', color: 'primary', title: 'Discovery Phase', desc: "Tell Axiom what you want to achieve. Our AI analyzes your intent and level to start the architecture." },
+                  { num: '2', color: 'secondary', title: 'Roadmap Generation', desc: "Axiom generates a granular, step-by-step roadmap. Approve, refine, or import from external sources." },
+                  { num: '3', color: 'primary', title: 'Verified Progression', desc: "Complete tasks and pass assessments. Progress is tracked and nudged via our integrated assistant." },
+                ].map((step, i) => (
+                  <div key={i} className="flex gap-5 group">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-11 h-11 rounded-full bg-${step.color}/10 flex items-center justify-center text-${step.color} font-black text-sm shrink-0 border border-${step.color}/20 group-hover:bg-${step.color}/20 transition-colors duration-300`}>
+                        {step.num}
+                      </div>
+                      {i < 2 && <div className={`w-px h-full mt-2 bg-gradient-to-b from-${step.color}/20 to-transparent`}></div>}
+                    </div>
+                    <div className="pb-2">
+                      <h4 className="text-base font-bold font-headline uppercase tracking-tight mb-2 group-hover:text-primary transition-colors duration-300">{step.title}</h4>
+                      <p className="text-on-surface-variant/60 font-light text-sm leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-32 lg:py-56 text-center">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-6xl lg:text-8xl font-black font-headline uppercase tracking-tighter leading-none mb-10">Ready to build <br />your <span className="text-primary underline decoration-primary/30 decoration-8 underline-offset-8">Axiom</span>?</h2>
-          <p className="text-xl text-on-surface-variant/80 font-light leading-relaxed mb-16">
+      {/* ─── CTA Section ─── */}
+      <section className="py-24 lg:py-40 text-center relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[160px] -z-10"></div>
+        
+        <div className="max-w-3xl mx-auto px-5 sm:px-8">
+          <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black font-headline uppercase tracking-tighter leading-[0.95] mb-8">
+            Ready to build <br />your <span className="text-primary underline decoration-primary/30 decoration-4 underline-offset-8">Axiom</span>?
+          </h2>
+          <p className="text-base sm:text-lg text-on-surface-variant/60 font-light leading-relaxed mb-12 max-w-xl mx-auto">
             Join the new era of high-accountability learning. No more passive consumption. Only active mastery.
           </p>
-          <Link to="/onboarding" className="inline-flex items-center gap-4 px-12 py-6 bg-primary text-on-primary-container rounded-full font-label font-bold text-sm uppercase tracking-[0.4em] hover:scale-105 active:scale-95 transition-all shadow-[0_30px_100px_rgba(253,184,19,0.3)]">
-            Create Free Account <ArrowRight size={20} />
+          <Link to="/onboarding" className="inline-flex items-center gap-3 px-10 py-5 bg-primary text-on-primary-container rounded-full font-label font-bold text-xs uppercase tracking-[0.3em] hover:scale-[1.03] active:scale-[0.97] transition-all shadow-[0_20px_80px_rgba(253,184,19,0.25)]">
+            Create Free Account <ArrowRight size={18} />
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-outline-variant/5">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-3 opacity-50">
-            <img src="/logo.png" alt="Axiom" className="h-6 w-auto grayscale" />
+      {/* ─── Footer ─── */}
+      <footer className="py-10 border-t border-outline-variant/5">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-3 opacity-40">
+            <img src="/logo.png" alt="Axiom" className="h-5 w-auto grayscale" />
             <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant">© 2024 Axiom AI. All rights reserved.</span>
           </div>
-          <div className="flex gap-10 opacity-50">
-            <a href="#" className="text-[9px] font-label uppercase tracking-widest hover:text-primary">Twitter</a>
-            <a href="#" className="text-[9px] font-label uppercase tracking-widest hover:text-primary">Discord</a>
-            <a href="#" className="text-[9px] font-label uppercase tracking-widest hover:text-primary">Privacy</a>
+          <div className="flex gap-8 opacity-40">
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Twitter</a>
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Discord</a>
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Privacy</a>
           </div>
         </div>
       </footer>
