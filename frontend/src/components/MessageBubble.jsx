@@ -22,7 +22,7 @@ const MessageBubble = ({ message, role, phase }) => {
         {isAI && phase === 'syllabus' && (
           <div className="flex items-center gap-1.5 mb-2 px-2 py-0.5 bg-secondary/10 border border-secondary/20 rounded-full w-fit">
             <Globe size={10} className="text-secondary animate-pulse" />
-            <span className="text-[8px] font-label font-bold text-secondary uppercase tracking-widest">Neural Search Active</span>
+            <span className="text-[8px] font-label font-bold text-secondary uppercase tracking-widest">Search Active</span>
           </div>
         )}
 

@@ -154,9 +154,6 @@ const Dashboard = () => {
             <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">
               Welcome, {user.full_name || user.email.split('@')[0]}
             </h2>
-            <p className="text-on-surface-variant font-label tracking-wide uppercase text-xs opacity-60">
-              System Status: Operational | {goals.length} Active Goal{goals.length !== 1 ? 's' : ''}
-            </p>
           </div>
           {/* Streak Widget */}
           <div className="bg-surface-container-low p-1 rounded-2xl flex items-center gap-3 sm:gap-4 pr-4 sm:pr-6 glow-blue border border-outline-variant/10">
@@ -180,7 +177,7 @@ const Dashboard = () => {
               <div>
                 <div className="flex items-center gap-2 mb-6">
                   <span className="h-2 w-2 rounded-full bg-secondary animate-pulse"></span>
-                  <span className="font-label text-[10px] uppercase tracking-[0.2em] text-secondary font-bold">Priority Session</span>
+                  <span className="font-label text-[10px] uppercase tracking-[0.2em] text-secondary font-bold">Active Session</span>
                 </div>
                 <h3 className="text-xl sm:text-3xl font-black tracking-tight mb-2 font-headline">
                   {activePartTitle || 'No active part'}
@@ -236,7 +233,7 @@ const Dashboard = () => {
                 {user.telegram_chat_id ? 'Telegram Connected ✓' : 'Connect Telegram'}
               </h4>
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                {user.telegram_chat_id ? 'Nudges active at your scheduled times.' : 'Get precision nudges via Neural Bridge.'}
+                {user.telegram_chat_id ? 'Nudges active at your scheduled times.' : 'Get precision nudges via Telegram.'}
               </p>
             </div>
           </div>
@@ -257,7 +254,7 @@ const Dashboard = () => {
                 ></div>
               </div>
               <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                <span className="text-on-surface font-bold">{completedTasks}/{totalTasks}</span> tasks mastered via Verified Mastery.
+                <span className="text-on-surface font-bold">{completedTasks}/{totalTasks}</span> tasks completed successfully.
               </p>
             </div>
           </div>
@@ -300,8 +297,8 @@ const Dashboard = () => {
             <History className="text-primary" size={24} />
           </div>
           <div>
-            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Neural Archive</h3>
-            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Synchronized Neural Pathways</p>
+            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">My Archive</h3>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Your Saved Learning Paths</p>
           </div>
         </div>
 
@@ -309,7 +306,7 @@ const Dashboard = () => {
           {goals.length === 0 ? (
             <div className="md:col-span-3 text-center py-20 bg-surface-container-low/30 rounded-[2rem] border border-dashed border-outline-variant/20 opacity-30">
               <span className="material-symbols-outlined text-5xl mb-4">folder_open</span>
-              <p className="font-label uppercase tracking-[0.2em] text-xs">No saved paths in neural storage</p>
+              <p className="font-label uppercase tracking-[0.2em] text-xs">No saved paths in storage</p>
             </div>
           ) : (
             goals.map((goal) => (
@@ -325,7 +322,7 @@ const Dashboard = () => {
 
                 <div className="mb-8">
                   <span className={`text-[8px] font-label font-black uppercase tracking-[0.3em] mb-2 block ${goal.status === 'active' ? 'text-primary' : 'text-on-surface-variant/40'}`}>
-                    {goal.status === 'active' ? 'Mastery Active' : 'Neural Path Paused'}
+                    {goal.status === 'active' ? 'Active Path' : 'Learning Path Paused'}
                   </span>
                   <h4 className="text-lg sm:text-xl font-black text-on-surface uppercase tracking-tight line-clamp-2 pr-6 font-headline">
                     {goal.title}
@@ -355,7 +352,7 @@ const Dashboard = () => {
                   </button>
                 </div>
 
-                {/* Aesthetic Neural Connector */}
+                {/* Aesthetic Connector */}
                 {goal.status === 'active' && (
                   <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
                 )}
@@ -366,7 +363,7 @@ const Dashboard = () => {
 
         <div className="mt-8 sm:mt-12 p-5 sm:p-8 bg-surface-container-low/30 rounded-2xl sm:rounded-[2rem] border border-outline-variant/10 text-center max-w-2xl mx-auto">
           <p className="text-[11px] text-on-surface-variant leading-relaxed font-label uppercase tracking-widest opacity-60">
-            "The neural bridge maintains your cognitive load across all saved mastery paths."
+            "Keep track of your learning progress across all saved paths."
           </p>
         </div>
       </section>
@@ -377,8 +374,8 @@ const Dashboard = () => {
             <BookOpen className="text-secondary" size={24} />
           </div>
           <div>
-            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Neural Notebook</h3>
-            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Your Preserved Cognitive Insights</p>
+            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Notebook</h3>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Your Saved Study Insights</p>
           </div>
         </div>
 
@@ -386,7 +383,7 @@ const Dashboard = () => {
           {goals.length === 0 ? (
             <div className="md:col-span-2 text-center py-12 bg-surface-container-low/30 rounded-2xl sm:rounded-[2rem] border border-dashed border-outline-variant/20 opacity-30">
               <span className="material-symbols-outlined text-4xl mb-3 block">menu_book</span>
-              <p className="font-label uppercase tracking-[0.2em] text-xs">Create a goal to start your Neural Notebook</p>
+              <p className="font-label uppercase tracking-[0.2em] text-xs">Create a goal to start your Notebook</p>
             </div>
           ) : (
             goals.map((goal) => {

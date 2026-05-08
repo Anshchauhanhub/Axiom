@@ -60,7 +60,7 @@ const Onboarding = () => {
         }
         setMessages([{ 
           role: 'assistant', 
-          content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal neural path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
+          content: "Welcome to Axiom. I am your high-accountability coach. To build your optimal learning path, tell me: Are you currently in college, preparing for entrances, or focused on job mastery?" 
         }]);
         setPhase('discovery');
         setDraftRoadmap(null);
@@ -136,7 +136,7 @@ const Onboarding = () => {
         }
       }
     } catch (e) {
-      setError("Neural link interrupted. Please retry.");
+      setError("Connection interrupted. Please retry.");
     } finally {
       setIsTyping(false);
     }
@@ -234,7 +234,7 @@ const Onboarding = () => {
         <div className="text-center mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5">
             <Sparkles className="text-primary animate-pulse" size={16} />
-            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.3em]">Neural Protocol Initialized</span>
+            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.3em]">Session Initialized</span>
           </div>
           <h1 className="text-6xl sm:text-8xl font-black font-headline uppercase tracking-tighter text-on-surface italic mb-8 leading-none">
             SELECT YOUR <span className="text-primary drop-shadow-[0_0_30px_rgba(253,184,19,0.5)]">PATH</span>
@@ -261,12 +261,12 @@ const Onboarding = () => {
               <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center mb-12 border border-primary/20 group-hover:neural-glow group-hover:scale-110 transition-all duration-500 animate-float">
                 <MessageSquare className="text-primary" size={40} />
               </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-primary transition-colors duration-500">Neural Chat</h3>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-primary transition-colors duration-500">Learning Chat</h3>
               <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
-                Engage in direct cognitive dialogue with our high-accountability coach to architect a custom path.
+                Engage in direct dialogue with our high-accountability coach to architect a custom path.
               </p>
               <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 text-primary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-primary group-hover:text-black transition-all duration-500">
-                Launch Dialogue <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
+                Launch Chat <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
               </div>
             </div>
           </button>
@@ -287,9 +287,9 @@ const Onboarding = () => {
               <div className="w-24 h-24 rounded-[2.5rem] bg-secondary/10 flex items-center justify-center mb-12 border border-secondary/20 group-hover:neural-glow-secondary group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:1s]">
                 <Video className="text-secondary" size={40} />
               </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">Playlist Synthesis</h3>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">Playlist Import</h3>
               <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
-                Inject external knowledge by transforming YouTube playlists into structured learning nodes.
+                Import external knowledge by transforming YouTube playlists into structured learning modules.
               </p>
               <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-secondary group-hover:text-black transition-all duration-500">
                 Paste URL <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
@@ -303,7 +303,7 @@ const Onboarding = () => {
 
   return (
     <div className="w-full flex-1 min-h-[500px] flex flex-col animate-in fade-in duration-1000">
-      {loading && <NeuralLoader message="SYNTHESIZING NEURAL PATH" />}
+      {loading && <NeuralLoader message="GENERATING LEARNING PATH" />}
 
       <div className="flex-1 flex flex-col bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm">
         <div className="w-full p-3 sm:p-6 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50 backdrop-blur-xl sticky top-0 z-20">
@@ -318,11 +318,11 @@ const Onboarding = () => {
               <div className="flex items-center gap-2 mb-0.5">
                 <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : 'bg-secondary'}`}></span>
                 <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : 'text-secondary'}`}>
-                  {onboardingMode === 'chat' ? 'Neural Link Active' : 'Synthesis Engine Engaged'}
+                  {onboardingMode === 'chat' ? 'Axiom Link Active' : 'Import Engine Active'}
                 </span>
               </div>
               <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
-                {onboardingMode === 'chat' ? 'Axiom Coach' : 'Playlist Architect'}
+                {onboardingMode === 'chat' ? 'Axiom Assistant' : 'Playlist Architect'}
               </h2>
             </div>
           </div>
@@ -347,9 +347,9 @@ const Onboarding = () => {
                 <div className="w-24 h-24 rounded-[2rem] bg-secondary/10 flex items-center justify-center mb-8 border border-secondary/20 shadow-[0_0_40px_rgba(0,179,89,0.2)]">
                   <Video className="text-secondary" size={40} />
                 </div>
-                <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-4 italic">Curation Engine</h3>
+                <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-4 italic">Playlist Import</h3>
                 <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10">
-                   Provide a public YouTube playlist URL. Our neural engine will analyze the curriculum and synthesize a master roadmap.
+                   Provide a public YouTube playlist URL. Our engine will analyze the content and generate a master roadmap.
                 </p>
                 <form onSubmit={handleYoutubeSynthesis} className="w-full relative group">
                   <Globe className="absolute left-6 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-secondary transition-colors" size={20} />
@@ -366,7 +366,7 @@ const Onboarding = () => {
                     disabled={!youtubeUrl || loading}
                     className="absolute right-3 top-1/2 -translate-y-1/2 px-6 py-3 bg-secondary text-on-primary-container rounded-full font-label font-bold text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all disabled:opacity-20"
                   >
-                    Synthesize
+                    Generate
                   </button>
                 </form>
              </div>
@@ -392,7 +392,7 @@ const Onboarding = () => {
                     {onboardingMode === 'youtube' ? 'Extracted Learning Path' : 'Proposed Learning Path'}
                   </span>
                   <h3 className="text-4xl font-black font-headline uppercase mt-4 tracking-tighter italic">
-                    {onboardingMode === 'youtube' ? 'Neural Synthesis' : 'Synthesis Draft'}
+                    {onboardingMode === 'youtube' ? 'Draft Generated' : 'Learning Draft'}
                   </h3>
                   {goalTitle && <p className="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.2em] mt-2">{goalTitle}</p>}
                 </header>
@@ -418,11 +418,11 @@ const Onboarding = () => {
 
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
                   <button onClick={handleFinalize} className="group relative px-10 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40 w-full sm:w-auto">
-                    <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Activate Neural Path</span>
+                    <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Activate Learning Path</span>
                     <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </button>
                   <button onClick={handleRefine} className="px-10 py-5 bg-surface-container-highest/50 text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-full font-label font-bold tracking-[0.3em] uppercase text-[10px] transition-all hover:bg-primary/5 hover:border-primary/30 w-full sm:w-auto">
-                    New Synthesis
+                    New Draft
                   </button>
                 </div>
               </div>

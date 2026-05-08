@@ -26,8 +26,8 @@ const GoalSelectionGrid = ({ onSelect, loading }) => {
   return (
     <div className="w-full max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="text-center mb-12">
-        <h3 className="text-3xl font-black font-headline uppercase tracking-tighter text-on-surface mb-2">Select Your Neural Path</h3>
-        <p className="text-on-surface-variant font-label text-[10px] tracking-[0.3em] uppercase opacity-60">System Ready for Goal Initialization</p>
+        <h3 className="text-3xl font-black font-headline uppercase tracking-tighter text-on-surface mb-2">Select Your Path</h3>
+        <p className="text-on-surface-variant font-label text-[10px] tracking-[0.3em] uppercase opacity-60">Ready to begin your journey</p>
       </div>
 
       <div className="space-y-12">
@@ -56,7 +56,7 @@ const GoalSelectionGrid = ({ onSelect, loading }) => {
                     </div>
                     <div>
                       <div className="text-sm font-bold text-on-surface mb-1 group-hover:text-primary transition-colors">{goal.title}</div>
-                      <div className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant opacity-40">System Protocol // Active</div>
+                      <div className="text-[9px] font-label uppercase tracking-widest text-on-surface-variant opacity-40">Status // Active</div>
                     </div>
                   </div>
 
@@ -78,7 +78,7 @@ const GoalSelectionGrid = ({ onSelect, loading }) => {
           disabled={loading}
           className="px-8 py-3 bg-primary text-on-primary-container font-label font-bold text-[10px] tracking-widest uppercase rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.03] active:scale-95 transition-all"
         >
-          Initialize AI Chat
+          Start AI Chat
         </button>
       </div>
     </div>

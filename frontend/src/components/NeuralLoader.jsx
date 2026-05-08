@@ -49,7 +49,7 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-14 h-14 rounded-2xl bg-surface-container-high flex items-center justify-center border border-outline-variant/20 shadow-2xl">
               <span className="material-symbols-outlined text-primary text-3xl" style={{ animation: 'pulse 2s ease-in-out infinite' }}>
-                neurology
+                psychology
               </span>
             </div>
           </div>
@@ -83,19 +83,19 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
             className="h-full bg-gradient-to-r from-primary via-secondary to-primary rounded-full"
             style={{
               width: '40%',
-              animation: 'neuralProgress 2s ease-in-out infinite',
+              animation: 'axiomProgress 2s ease-in-out infinite',
             }}
           ></div>
         </div>
 
         {/* Subtle hint */}
         <p className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant/30 mt-4">
-          Axiom Neural Engine Active
+          Axiom Engine Active
         </p>
       </div>
 
       <style>{`
-        @keyframes neuralProgress {
+        @keyframes axiomProgress {
           0% { transform: translateX(-100%); width: 40%; }
           50% { transform: translateX(80%); width: 60%; }
           100% { transform: translateX(-100%); width: 40%; }
