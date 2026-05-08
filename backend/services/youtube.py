@@ -51,24 +51,46 @@ async def get_playlist_data(url: str):
             # 3. Extract Video Titles
             videos = []
             
-            # Try to find all video titles using a broad regex that matches the internal JSON structure in HTML
-            # This is often more reliable than traversing the complex JSON tree
-            # Pattern: "title":{"runs":[{"text":"VIDEO_TITLE"}]}
-            video_matches = re.findall(r'\{"title":\{"runs":\[\{"text":"(.*?)"\}\]\},"index"', html)
-            if video_matches:
-                videos = video_matches
-            else:
-                # Secondary attempt with a different pattern
-                video_matches = re.findall(r'"title":\{"runs":\[\{"text":"(.*?)"\}\]\},"accessibility"', html)
+            def find_titles_recursive(obj):
+                """Recursively search for video titles in the nested JSON structure."""
+                if isinstance(obj, dict):
+                    if "playlistVideoRenderer" in obj:
+                        try:
+                            title = obj["playlistVideoRenderer"]["title"]["runs"][0]["text"]
+                            videos.append(title)
+                        except:
+                            pass
+                    else:
+                        for k, v in obj.items():
+                            find_titles_recursive(v)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        find_titles_recursive(item)
+
+            if data:
+                find_titles_recursive(data)
+
+            if not videos:
+                # Try to find all video titles using a broad regex that matches the internal JSON structure in HTML
+                # Pattern: "title":{"runs":[{"text":"VIDEO_TITLE"}]}
+                # Note: accessibility or index might follow, so we match more loosely
+                video_matches = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"(.*?)\"\}\]\}', html)
                 if video_matches:
                     videos = video_matches
+                else:
+                    # Secondary attempt with a different pattern (sometimes found in specific scripts)
+                    video_matches = re.findall(r'\"title\":\{\"simpleText\":\"(.*?)\"\}', html)
+                    if video_matches:
+                        videos = video_matches
 
-            # Remove duplicates and filter out nonsense (like 'Play all', 'Shuffle')
+            # Remove duplicates and filter out nonsense (like 'Play all', 'Shuffle', etc.)
             seen = set()
             unique_videos = []
             for v in videos:
+                # Decode unicode escapes if present
                 v_clean = v.encode('utf-8').decode('unicode-escape', errors='ignore') if '\\u' in v else v
-                if v_clean not in seen and len(v_clean) > 3:
+                # Filter out obvious non-video strings
+                if v_clean not in seen and len(v_clean) > 3 and v_clean not in ["Play all", "Shuffle", "Mix"]:
                     unique_videos.append(v_clean)
                     seen.add(v_clean)
             
