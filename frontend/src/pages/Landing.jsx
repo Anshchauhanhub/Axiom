@@ -122,31 +122,41 @@ const Landing = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-20 lg:pt-32 lg:pb-32 overflow-hidden">
+      {/* ─── Hero Section ─── */}
+      <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-28 overflow-hidden">
+        {/* Ambient */}
         <div className="absolute inset-0 axiom-grid opacity-[0.03] -z-10"></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-primary/10 rounded-full blur-[160px] opacity-20 -z-10"></div>
-        <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-16 grid lg:grid-cols-[1fr_1.1fr] gap-12 items-center">
-          <div className="animate-in fade-in slide-in-from-left-8 duration-1000 z-10">
-            <h1 className="text-6xl lg:text-8xl font-black font-headline uppercase tracking-tighter leading-[0.9] mb-8">
+        <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/8 rounded-full blur-[200px] -z-10"></div>
+        <div className="absolute bottom-[-100px] right-[-200px] w-[600px] h-[400px] bg-secondary/5 rounded-full blur-[150px] -z-10"></div>
+
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 grid lg:grid-cols-[1fr_1fr] gap-12 lg:gap-16 items-center">
+          {/* Left: Copy */}
+          <div className="z-10 order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/15 bg-primary/5 mb-8">
+              <Sparkles size={14} className="text-primary" />
+              <span className="text-[10px] font-label font-bold uppercase tracking-[0.2em] text-primary/80">AI-Powered Learning</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black font-headline uppercase tracking-tighter leading-[0.92] mb-6">
               Master Your <span className="text-primary italic">Focus</span>.<br />
               Architect Your <span className="text-secondary italic">Future</span>.
             </h1>
-            <p className="text-xl text-on-surface-variant/80 font-light leading-relaxed mb-12 max-w-xl">
+            <p className="text-base sm:text-lg text-on-surface-variant/70 font-light leading-relaxed mb-10 max-w-lg">
               Axiom is a high-accountability learning ecosystem. We transform fragmented content into structured mastery paths using world-class AI coaching.
             </p>
-            <div className="flex flex-col sm:flex-row gap-6">
-              <Link to="/onboarding" className="px-10 py-5 bg-primary text-on-primary-container rounded-full font-label font-bold text-xs uppercase tracking-[0.3em] hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary/30 flex items-center justify-center gap-3">
-                Begin Your Path <ArrowRight size={18} />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link to="/onboarding" className="px-8 py-4 bg-primary text-on-primary-container rounded-full font-label font-bold text-xs uppercase tracking-[0.2em] hover:scale-[1.03] active:scale-[0.97] transition-all shadow-[0_10px_40px_rgba(253,184,19,0.25)] flex items-center justify-center gap-3">
+                Begin Your Path <ArrowRight size={16} />
               </Link>
-              <a href="#features" className="px-10 py-5 bg-surface-container-highest/30 border border-outline-variant/10 text-on-surface rounded-full font-label font-bold text-xs uppercase tracking-[0.3em] hover:bg-surface-container-highest transition-all flex items-center justify-center">
+              <a href="#features" className="px-8 py-4 bg-white/[0.03] border border-outline-variant/15 text-on-surface rounded-full font-label font-bold text-xs uppercase tracking-[0.2em] hover:bg-white/[0.06] hover:border-outline-variant/25 transition-all flex items-center justify-center">
                 Explore Features
               </a>
             </div>
           </div>
 
-          <div className="relative animate-in fade-in slide-in-from-right-12 duration-1000 delay-300 flex items-center justify-center">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 blur-[100px] -z-10"></div>
+          {/* Right: Visual */}
+          <div className="relative order-1 lg:order-2 flex items-center justify-center">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 blur-[80px] -z-10"></div>
             <RoadmapVisual />
           </div>
         </div>
