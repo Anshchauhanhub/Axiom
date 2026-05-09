@@ -9,7 +9,7 @@ const Sidebar = () => {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { name: 'Home', icon: 'home', path: '/' },
+    { name: 'Home', icon: 'home', path: '/dashboard' },
     // { name: 'Social Feed', icon: 'public', path: '/social' },
     { name: 'Onboarding', icon: 'person_add', path: '/onboarding' },
     { name: 'Study', icon: 'menu_book', path: '/study' },

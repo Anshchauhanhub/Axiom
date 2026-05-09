@@ -116,36 +116,26 @@ const Dashboard = () => {
       await activateGoal(id);
       await refreshData();
     } catch (e) {
-      console.error("Failed to switch neural path.");
+      console.error("Failed to switch learning path.");
     } finally {
       setActivationLoading(false);
     }
   };
 
-  if (!user) {
+  useEffect(() => {
+    if (!user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
-    return (
-      <div className="animate-in fade-in duration-1000 flex flex-col items-center justify-center min-h-[60vh] gap-8">
-        <div className="text-center">
-          <h2 className="text-5xl font-black tracking-tighter text-on-surface mb-4 font-headline uppercase">AXIOM AI</h2>
-          <p className="text-on-surface-variant font-label text-sm uppercase tracking-widest">High-Accountability Learning Coach</p>
-        </div>
-        <button
-          onClick={() => navigate('/onboarding')}
-          className="px-12 py-5 rounded-full bg-gradient-to-br from-primary to-primary-container text-on-primary-container font-label text-xs font-bold tracking-widest uppercase shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
-        >
-          Initialize System
-        </button>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   const completedTasks = roadmap?.tasks?.filter(t => t.status === 'passed').length || 0;
   const totalTasks = roadmap?.tasks?.length || 0;
 
   return (
     <div className="animate-in fade-in duration-1000 relative">
-      {activationLoading && <NeuralLoader message="Synthesizing Roadmap" />}
+      {activationLoading && <NeuralLoader message="Generating Roadmap" />}
 
       {/* Header Section */}
       <section className="mb-12">
@@ -711,10 +701,10 @@ const Dashboard = () => {
               <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
                 <span className="material-symbols-outlined text-secondary">book</span>
               </div>
-              <h4 className="text-lg font-bold font-headline uppercase">Neural Notebook</h4>
+              <h4 className="text-lg font-bold font-headline uppercase">Smart Notebook</h4>
             </div>
             <p className="text-xs text-on-surface-variant leading-relaxed opacity-70">
-              Your cognitive insights are preserved in the Neural Notebook. While studying, you can capture rich-text notes, images, and links. These notes are bio-locked to each specific neural path and can be exported as high-fidelity documents or shared to the social feed.
+              Your insights are preserved in the Smart Notebook. While studying, you can capture rich-text notes, images, and links. These notes are locked to each specific learning path and can be exported as high-fidelity documents or shared to the social feed.
             </p>
           </div>
         </div>
@@ -726,8 +716,8 @@ const Dashboard = () => {
            </div>
            <div className="flex gap-6">
               <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Privacy Shield</span>
-              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Neural Safety</span>
-              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Core Ethics</span>
+              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Safety</span>
+              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Ethics</span>
            </div>
         </div>
       </section>
