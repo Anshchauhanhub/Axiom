@@ -7,6 +7,7 @@ import { DataProvider } from './context/DataContext';
 import { ToastProvider } from './context/ToastContext';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
+import Auth from './pages/Auth';
 import Study from './pages/Study';
 import Settings from './pages/Settings';
 import ScrollToTop from './components/ScrollToTop';
@@ -21,6 +22,8 @@ function App() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Auth />} />
+                <Route path="/register" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/study" element={<Study />} />
