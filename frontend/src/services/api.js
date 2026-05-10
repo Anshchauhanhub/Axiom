@@ -33,7 +33,7 @@ async function request(method, path, body = null) {
   const res = await fetch(`${API_BASE}${path}`, opts);
   if (res.status === 401 && path !== '/auth/login' && path !== '/auth/register') {
     clearToken();
-    window.location.href = '/onboarding';
+    window.location.href = '/login';
     throw new Error('Session expired');
   }
   if (res.status === 429) {
@@ -89,7 +89,7 @@ export const uploadProfileImage = async (file) => {
 
   if (res.status === 401) {
     clearToken();
-    window.location.href = '/onboarding';
+    window.location.href = '/login';
     throw new Error('Session expired');
   }
 
