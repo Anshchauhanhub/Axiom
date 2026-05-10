@@ -50,6 +50,12 @@ const Onboarding = () => {
   };
 
   useEffect(() => {
+    if (!user && !loading) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
     const startFreshSession = async () => {
       if (user) {
         setLoading(true);
@@ -65,7 +71,6 @@ const Onboarding = () => {
         setPhase('discovery');
         setDraftRoadmap(null);
         setLoading(false);
-        setAuthStep(false);
       }
     };
     startFreshSession();
@@ -84,21 +89,6 @@ const Onboarding = () => {
     observer.observe(container, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
-
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const fn = mode === 'register' ? register : login;
-      const res = await fn(email, password);
-      await loginUser(res.access_token);
-      window.location.reload();
-    } catch (e) {
-      setError(e.message);
-    }
-    setLoading(false);
-  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -180,49 +170,11 @@ const Onboarding = () => {
     setError('');
   };
 
-  if (authStep) {
-    return (
-      <div className="w-full max-md mx-auto mt-6 sm:mt-12 lg:mt-20 px-2 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 border border-primary/20">
-            <span className="material-symbols-outlined text-primary text-2xl sm:text-3xl">neurology</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black font-headline uppercase tracking-tighter text-on-surface">Initialize Session</h2>
-        </div>
-        <form onSubmit={handleAuth} className="space-y-5 sm:space-y-6 bg-surface-container-low p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-outline-variant/10 shadow-2xl">
-          <div className="space-y-2">
-            <label className="text-[10px] font-label font-bold text-primary uppercase tracking-widest ml-1">Email Identifier</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-label font-bold text-primary uppercase tracking-widest ml-1">Security Key</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-4 bg-surface-container-highest border-none rounded-2xl text-on-surface focus:ring-2 focus:ring-primary/50 transition-all font-label text-sm"
-              required
-            />
-          </div>
-          {error && <p className="text-error text-xs font-bold font-label text-center">{error}</p>}
-          <button type="submit" disabled={loading} className="w-full py-5 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest uppercase rounded-2xl shadow-xl">
-            {loading ? 'Processing...' : mode.toUpperCase()}
-          </button>
-          <div className="text-center pt-4">
-            <button type="button" onClick={() => setMode(mode === 'register' ? 'login' : 'register')} className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest hover:text-primary">
-              {mode === 'register' ? 'Switch to Login' : 'Switch to Register'}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
+  if (!user && loading) {
+    return <NeuralLoader message="INITIALIZING AUTH PROTOCOL" />;
   }
+
+  if (!user) return null; // Should be handled by useEffect redirect
 
   if (!onboardingMode) {
     return (

@@ -187,8 +187,8 @@ const Dashboard = () => {
                 {activePartId ? (
                   <button
                     onClick={() => {
-                        setSelectedGoalId(roadmap?.goal?.id);
-                        navigate('/study', { state: { goalId: roadmap?.goal?.id } });
+                      setSelectedGoalId(roadmap?.goal?.id);
+                      navigate('/study', { state: { goalId: roadmap?.goal?.id } });
                     }}
                     className="px-8 py-4 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase"
                   >
@@ -301,10 +301,10 @@ const Dashboard = () => {
           ) : (
             goals.map((goal) => (
               <div key={goal.id} className={`group p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 relative overflow-hidden ${goal.status === 'active'
-                  ? 'bg-primary/5 border-primary/40 shadow-2xl shadow-primary/5'
-                  : 'bg-surface-container-low/40 border-outline-variant/10 hover:border-outline-variant/30 opacity-80 hover:opacity-100'
+                ? 'bg-primary/5 border-primary/40 shadow-2xl shadow-primary/5'
+                : 'bg-surface-container-low/40 border-outline-variant/10 hover:border-outline-variant/30 opacity-80 hover:opacity-100'
                 }`}>
-                
+
                 {/* Status Indicator */}
                 <div className="absolute top-0 right-0 p-6">
                   <div className={`w-2 h-2 rounded-full ${goal.status === 'active' ? 'bg-primary animate-pulse shadow-[0_0_10px_#fdb813]' : 'bg-on-surface-variant/30'}`}></div>
@@ -324,15 +324,15 @@ const Dashboard = () => {
                     <button
                       onClick={() => handleToggleStatus(goal.id)}
                       className={`flex items-center gap-2 px-6 py-3 rounded-xl font-label font-bold text-[9px] tracking-[0.2em] uppercase transition-all ${goal.status === 'active'
-                          ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                          : 'bg-surface-container-highest text-on-surface-variant hover:bg-primary/10 hover:text-primary'
+                        ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
+                        : 'bg-surface-container-highest text-on-surface-variant hover:bg-primary/10 hover:text-primary'
                         }`}
                     >
                       {goal.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
                       {goal.status === 'active' ? 'Pause' : 'Activate'}
                     </button>
                   </div>
-                  
+
                   <button
                     onClick={() => handleDeleteGoal(goal.id)}
                     className="w-10 h-10 rounded-xl bg-surface-container-highest/50 flex items-center justify-center text-on-surface-variant/40 hover:text-error hover:bg-error/10 transition-all border border-outline-variant/10"
@@ -384,17 +384,16 @@ const Dashboard = () => {
                 : 'Start writing notes in your study session...';
 
               return (
-                <div 
-                  key={goal.id} 
+                <div
+                  key={goal.id}
                   onClick={() => {
-                      setSelectedGoalId(goal.id);
-                      navigate('/study', { state: { openNotebook: true, goalId: goal.id } });
+                    setSelectedGoalId(goal.id);
+                    navigate('/study', { state: { openNotebook: true, goalId: goal.id } });
                   }}
-                  className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all group cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
-                    goal.status === 'active' 
-                      ? 'bg-surface-container-low border-primary/20 hover:border-primary/40 shadow-lg' 
+                  className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all group cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${goal.status === 'active'
+                      ? 'bg-surface-container-low border-primary/20 hover:border-primary/40 shadow-lg'
                       : 'bg-surface-container-low/60 border-outline-variant/10 hover:border-outline-variant/30'
-                  }`}
+                    }`}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
@@ -448,33 +447,33 @@ const Dashboard = () => {
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                   <span className="material-symbols-outlined text-9xl">verified</span>
                 </div>
-                
+
                 {/* Side Navigation Arrows */}
                 {goals.length > 1 && (
                   <>
-                    <button 
+                    <button
                       onClick={() => {
-                          const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
-                          const prevIndex = (currentIndex - 1 + goals.length) % goals.length;
-                          setSelectedGoalId(goals[prevIndex].id);
-                      }} 
+                        const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
+                        const prevIndex = (currentIndex - 1 + goals.length) % goals.length;
+                        setSelectedGoalId(goals[prevIndex].id);
+                      }}
                       className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest/80 backdrop-blur-sm border border-primary/30 hover:border-primary hover:bg-primary/20 flex items-center justify-center transition-all group z-30 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
                     >
-                        <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:-translate-x-1 transition-transform">chevron_left</span>
+                      <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:-translate-x-1 transition-transform">chevron_left</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
-                          const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
-                          const nextIndex = (currentIndex + 1) % goals.length;
-                          setSelectedGoalId(goals[nextIndex].id);
-                      }} 
+                        const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
+                        const nextIndex = (currentIndex + 1) % goals.length;
+                        setSelectedGoalId(goals[nextIndex].id);
+                      }}
                       className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest/80 backdrop-blur-sm border border-primary/30 hover:border-primary hover:bg-primary/20 flex items-center justify-center transition-all group z-30 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
                     >
-                        <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:translate-x-1 transition-transform">chevron_right</span>
+                      <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:translate-x-1 transition-transform">chevron_right</span>
                     </button>
                   </>
                 )}
-                
+
                 <div className={`relative z-10 ${goals.length > 1 ? 'px-8 sm:px-12' : 'px-4 sm:px-6'}`}>
                   <div className="flex justify-between items-start mb-12">
                     <div>
@@ -482,14 +481,14 @@ const Dashboard = () => {
                         {roadmap?.goal?.title || 'Curriculum Saturation'}
                       </h3>
                       <div className="flex items-center gap-3 mt-1">
-                          <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest">
-                            Overall Mastery: {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                          </p>
+                        <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest">
+                          Overall Mastery: {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                        </p>
                       </div>
                     </div>
 
                   </div>
-                  
+
                   {(dataLoading || (roadmap?.goal?.id !== selectedGoalId)) ? (
                     <div className="flex flex-col items-center justify-center py-20 opacity-60">
                       <div className="w-16 h-16 rounded-full border-4 border-outline-variant/20 border-t-primary animate-spin mb-4"></div>
@@ -497,71 +496,71 @@ const Dashboard = () => {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                    {roadmap.tasks.map((task) => {
-                      const taskPassed = task.parts.filter(p => p.status === 'passed').length;
-                      const taskTotal = task.parts.length;
-                      const progress = taskTotal > 0 ? Math.round((taskPassed / taskTotal) * 100) : 0;
-                      const isExpanded = expandedTasks.has(task.id);
-                      let status = task.status === 'passed' ? 'MASTERED' : task.status === 'active' ? 'IN PROGRESS' : 'LOCKED';
-                      let color = task.status === 'passed' ? 'bg-primary' : task.status === 'active' ? 'bg-secondary animate-pulse' : 'bg-surface-container-highest';
+                      {roadmap.tasks.map((task) => {
+                        const taskPassed = task.parts.filter(p => p.status === 'passed').length;
+                        const taskTotal = task.parts.length;
+                        const progress = taskTotal > 0 ? Math.round((taskPassed / taskTotal) * 100) : 0;
+                        const isExpanded = expandedTasks.has(task.id);
+                        let status = task.status === 'passed' ? 'MASTERED' : task.status === 'active' ? 'IN PROGRESS' : 'LOCKED';
+                        let color = task.status === 'passed' ? 'bg-primary' : task.status === 'active' ? 'bg-secondary animate-pulse' : 'bg-surface-container-highest';
 
-                      return (
-                        <div key={task.id} className="group/item">
-                          <div
-                            className="flex justify-between items-center mb-2 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => toggleTask(task.id)}
-                          >
-                            <div className="flex items-center gap-3">
-                              {progress === 100 ? (
-                                <span className="material-symbols-outlined text-primary text-sm">verified</span>
-                              ) : (
-                                <div className={`h-2 w-2 rounded-full ${color}`}></div>
-                              )}
-                              <span className="text-sm font-bold text-on-surface">{task.title}</span>
+                        return (
+                          <div key={task.id} className="group/item">
+                            <div
+                              className="flex justify-between items-center mb-2 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => toggleTask(task.id)}
+                            >
+                              <div className="flex items-center gap-3">
+                                {progress === 100 ? (
+                                  <span className="material-symbols-outlined text-primary text-sm">verified</span>
+                                ) : (
+                                  <div className={`h-2 w-2 rounded-full ${color}`}></div>
+                                )}
+                                <span className="text-sm font-bold text-on-surface">{task.title}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">{status}</span>
+                                <span className={`material-symbols-outlined text-xs text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                  expand_more
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">{status}</span>
-                              <span className={`material-symbols-outlined text-xs text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                expand_more
-                              </span>
+                            <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
+                              <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
                             </div>
-                          </div>
-                          <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
-                            <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
-                          </div>
 
-                          {isExpanded && (
-                            <div className="ml-5 mt-4 space-y-4 pb-4 animate-in slide-in-from-top-2 duration-300">
-                              {task.parts.map((part) => (
-                                <div key={part.id} className="flex justify-between items-center group/part">
-                                  <div className="flex items-center gap-4">
-                                    <span className={`material-symbols-outlined text-[14px] ${part.status === 'passed' ? 'text-primary' :
+                            {isExpanded && (
+                              <div className="ml-5 mt-4 space-y-4 pb-4 animate-in slide-in-from-top-2 duration-300">
+                                {task.parts.map((part) => (
+                                  <div key={part.id} className="flex justify-between items-center group/part">
+                                    <div className="flex items-center gap-4">
+                                      <span className={`material-symbols-outlined text-[14px] ${part.status === 'passed' ? 'text-primary' :
                                         part.status === 'active' ? 'text-secondary animate-pulse' :
                                           'text-on-surface-variant opacity-40'
-                                      }`}>
-                                      {part.status === 'passed' ? 'check_circle' : 'radio_button_unchecked'}
-                                    </span>
-                                    <span className={`text-[12px] font-medium transition-colors ${part.status === 'passed' ? 'text-on-surface font-bold' :
+                                        }`}>
+                                        {part.status === 'passed' ? 'check_circle' : 'radio_button_unchecked'}
+                                      </span>
+                                      <span className={`text-[12px] font-medium transition-colors ${part.status === 'passed' ? 'text-on-surface font-bold' :
                                         part.status === 'active' ? 'text-secondary' :
                                           'text-on-surface-variant/70'
-                                      }`}>
-                                      {part.title}
-                                    </span>
-                                  </div>
-                                  <span className={`text-[8px] font-label uppercase tracking-[0.1em] px-2 py-0.5 rounded border ${part.status === 'passed' ? 'border-primary/30 text-primary bg-primary/5' :
+                                        }`}>
+                                        {part.title}
+                                      </span>
+                                    </div>
+                                    <span className={`text-[8px] font-label uppercase tracking-[0.1em] px-2 py-0.5 rounded border ${part.status === 'passed' ? 'border-primary/30 text-primary bg-primary/5' :
                                       part.status === 'active' ? 'border-secondary/30 text-secondary bg-secondary/5' :
                                         'border-outline-variant/20 text-on-surface-variant/40'
-                                    }`}>
-                                    {part.status}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                                      }`}>
+                                      {part.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
@@ -569,8 +568,8 @@ const Dashboard = () => {
 
             {/* Schedule & Routine */}
             <div className="lg:col-span-4 space-y-8">
-               {/* Badge/Rank */}
-               <div className="bg-gradient-to-br from-primary/20 to-secondary/10 border border-primary/20 p-8 rounded-[2rem] text-center relative overflow-hidden shadow-2xl shadow-primary/5">
+              {/* Badge/Rank */}
+              <div className="bg-gradient-to-br from-primary/20 to-secondary/10 border border-primary/20 p-8 rounded-[2rem] text-center relative overflow-hidden shadow-2xl shadow-primary/5">
                 <div className="relative z-10 flex flex-col items-center">
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4 shadow-xl shadow-primary/40">
                     <span className="material-symbols-outlined text-white text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>military_tech</span>
@@ -710,15 +709,15 @@ const Dashboard = () => {
         </div>
 
         <div className="mt-16 pt-8 border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-6 opacity-40">
-           <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Axiom" className="h-6 w-auto grayscale" />
-              <span className="text-[9px] font-label uppercase tracking-widest">System Version 2.4.0-Final</span>
-           </div>
-           <div className="flex gap-6">
-              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Privacy Shield</span>
-              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Safety</span>
-              <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Ethics</span>
-           </div>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Axiom" className="h-6 w-auto grayscale" />
+            <span className="text-[9px] font-label uppercase tracking-widest">System Version 2.4.0-Final</span>
+          </div>
+          <div className="flex gap-6">
+            <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Privacy Shield</span>
+            <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Safety</span>
+            <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Ethics</span>
+          </div>
         </div>
       </section>
 
