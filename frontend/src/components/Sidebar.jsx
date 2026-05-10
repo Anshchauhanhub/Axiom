@@ -23,7 +23,13 @@ const Sidebar = () => {
       {/* Desktop SideNavBar */}
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-72 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40">
         <div className="mb-10 px-2 flex items-center justify-center">
-          <img src="/logo.png" alt="Axiom Logo" className="w-64 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]" />
+          <Link to="/" className="group">
+            <img
+              src="/logo.png"
+              alt="Axiom Logo"
+              className="w-40 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] transition-transform duration-500 group-hover:scale-110"
+            />
+          </Link>
         </div>
         <nav className="flex-1 space-y-2">
           {navItems.map((item) => (
@@ -31,8 +37,8 @@ const Sidebar = () => {
               key={item.name}
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 transition-all duration-300 ${isActive(item.path)
-                  ? 'text-primary border-r-2 border-secondary bg-gradient-to-r from-primary/10 to-transparent'
-                  : 'text-primary/60 hover:bg-[#1c1b1d] hover:text-primary'
+                ? 'text-primary border-r-2 border-secondary bg-gradient-to-r from-primary/10 to-transparent'
+                : 'text-primary/60 hover:bg-[#1c1b1d] hover:text-primary'
                 }`}
             >
               <span className="material-symbols-outlined text-xl">{item.icon}</span>
@@ -57,7 +63,7 @@ const Sidebar = () => {
             </div>
           ) : (
             <Link
-              to="/onboarding"
+              to="/login"
               className="w-full py-3 bg-primary-container/20 text-primary border border-primary/20 rounded-lg font-label text-[10px] font-bold tracking-[0.2em] hover:bg-primary-container hover:text-on-primary-container transition-all uppercase block text-center"
             >
               LOGIN / REGISTER
