@@ -136,9 +136,9 @@ const Landing = () => {
         <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/8 rounded-full blur-[200px] -z-10"></div>
         <div className="absolute bottom-[-100px] right-[-200px] w-[600px] h-[400px] bg-secondary/5 rounded-full blur-[150px] -z-10"></div>
 
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 grid lg:grid-cols-[1fr_1fr] gap-12 lg:gap-16 items-center">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 grid lg:grid-cols-[1fr_1fr] gap-8 lg:gap-16 items-center">
           {/* Left: Copy */}
-          <div className="z-10 order-2 lg:order-1">
+          <div className="z-10 order-1">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/15 bg-primary/5 mb-8">
               <Sparkles size={14} className="text-primary" />
               <span className="text-[10px] font-label font-bold uppercase tracking-[0.2em] text-primary/80">AI-Powered Learning</span>
@@ -162,7 +162,7 @@ const Landing = () => {
           </div>
 
           {/* Right: Visual */}
-          <div className="relative order-1 lg:order-2 flex items-center justify-center">
+          <div className="relative order-2 flex items-center justify-center">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 blur-[80px] -z-10"></div>
             <RoadmapVisual />
           </div>
