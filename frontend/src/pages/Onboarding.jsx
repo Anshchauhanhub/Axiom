@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  register, login, onboardingChat, finalizeGoal, 
+  onboardingChat, finalizeGoal, 
   clearChatHistory, generateYoutubeRoadmap 
 } from '../services/api';
 import { useData } from '../context/DataContext';
