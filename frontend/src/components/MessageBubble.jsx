@@ -33,10 +33,12 @@ const MessageBubble = ({ message, role, phase }) => {
               strong: ({ node, ...props }) => <strong className="font-bold text-primary" {...props} />,
               ul: ({ node, ...props }) => <ul className="list-disc ml-4 space-y-1 mt-2" {...props} />,
               li: ({ node, ...props }) => <li className="text-xs font-light" {...props} />,
-              code: ({ node, inline, ...props }) => 
-                inline 
-                  ? <code className="bg-surface-container-highest px-1.5 py-0.5 rounded text-xs font-mono" {...props} />
-                  : <pre className="bg-surface-container-highest p-4 rounded-xl overflow-x-auto mt-2"><code className="text-xs font-mono" {...props} /></pre>
+              code: ({ node, className, children, ...props }) => {
+                const isBlock = /language-/.test(className || '');
+                return isBlock 
+                  ? <pre className="bg-surface-container-highest p-4 rounded-xl overflow-x-auto mt-2"><code className="text-xs font-mono" {...props}>{children}</code></pre>
+                  : <code className="bg-surface-container-highest px-1.5 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>;
+              }
             }}
           >
             {message}
