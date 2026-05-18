@@ -10,8 +10,10 @@ async def search_internet(query: str, max_results: int = 5) -> str:
     """
     logger.info(f"🌐 Neural Search: '{query}'")
     try:
+        import asyncio
         with DDGS() as ddgs:
-            results = [r for r in ddgs.text(query, max_results=max_results)]
+            # Run the blocking search in a separate thread so it doesn't freeze FastAPI
+            results = await asyncio.to_thread(lambda: list(ddgs.text(query, max_results=max_results)))
             
             if not results:
                 return "No relevant search results found."
