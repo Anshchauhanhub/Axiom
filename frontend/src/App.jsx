@@ -16,8 +16,8 @@ function App() {
   return (
     <AuthProvider>
       <DataProvider>
-        <ToastProvider>
-          <Router>
+        <Router>
+          <ToastProvider>
             <ScrollToTop />
             <Layout>
               <Routes>
@@ -30,8 +30,8 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </Layout>
-          </Router>
-        </ToastProvider>
+          </ToastProvider>
+        </Router>
       </DataProvider>
     </AuthProvider>
   );
