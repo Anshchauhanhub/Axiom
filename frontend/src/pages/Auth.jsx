@@ -174,9 +174,9 @@ const Auth = () => {
           </p>
         </div>
 
-        <div className="glass-morphism rounded-[3rem] border border-white/5 p-8 sm:p-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+        <div className="auth-glass rounded-[3rem] border border-white/5 p-8 sm:p-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           {/* Subtle Scanner Line */}
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent animate-scan" />
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent auth-scan" />
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -271,7 +271,7 @@ const Auth = () => {
       </div>
 
       <style>{`
-        .glass-morphism {
+        .auth-glass {
           background: rgba(14, 14, 16, 0.6);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
@@ -279,13 +279,13 @@ const Auth = () => {
         .drop-shadow-glow {
           filter: drop-shadow(0 0 20px rgba(253, 184, 19, 0.4));
         }
-        @keyframes scan {
+        @keyframes auth-scan-kf {
           0% { transform: translateY(-100%); opacity: 0; }
           50% { opacity: 0.5; }
           100% { transform: translateY(1000%); opacity: 0; }
         }
-        .animate-scan {
-          animation: scan 4s linear infinite;
+        .auth-scan {
+          animation: auth-scan-kf 4s linear infinite;
         }
       `}</style>
     </div>

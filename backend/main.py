@@ -159,7 +159,8 @@ if os.path.exists(STATIC_DIR):
     async def serve_spa(request: Request, full_path: str):
         # Exclude common API-like prefixes
         if full_path.startswith(("auth", "goals", "quiz", "telegram", "profile", "users", "api")):
-             return {"detail": "API endpoint not found", "path": full_path}
+             from fastapi.responses import JSONResponse
+             return JSONResponse(status_code=404, content={"detail": "API endpoint not found", "path": full_path})
              
         # Check if requested file exists in STATIC_DIR (like logo.png, favicon.ico)
         file_path = os.path.join(STATIC_DIR, full_path)

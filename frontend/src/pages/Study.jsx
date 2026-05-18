@@ -38,6 +38,7 @@ const Study = () => {
   const timerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const editorRef = useRef(null);
+  const initialNotesRef = useRef(null);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -79,7 +80,9 @@ const Study = () => {
       // Update notes and editor content ONLY if the goal has changed
       if (foundGoal && foundGoal.id !== prevGoalId) {
         // Migration: Ensure notes is at least an empty array or the current goal's notes
-        setNotes(foundGoal.notes || []); 
+        const newNotes = foundGoal.notes || [];
+        setNotes(newNotes); 
+        initialNotesRef.current = JSON.stringify(newNotes);
       }
       
       // Fix: Only reset to 'select' if we are in the initial loading state.
@@ -101,13 +104,17 @@ const Study = () => {
 
   useEffect(() => {
     if (!activeGoal || !showNotes) return;
+    
+    // Prevent saving if notes haven't actually changed from initial load
+    const currentNotesStr = JSON.stringify(notes);
+    if (currentNotesStr === initialNotesRef.current) return;
+
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
-      // Use JSON.stringify for a deep comparison since notes is an array of objects
       setIsSaving(true);
       try {
         await updateGoalNotes(activeGoal.id, notes);
-        activeGoal.notes = notes; 
+        initialNotesRef.current = currentNotesStr;
         refreshData(); // Sync with global state
       } catch (e) {
         console.error('Failed to save notes:', e);
@@ -116,7 +123,7 @@ const Study = () => {
       }
     }, 2000);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [notes, activeGoal, showNotes]);
+  }, [notes, activeGoal, showNotes, refreshData]);
 
   useEffect(() => {
     if (phase === 'quiz') {
@@ -215,23 +222,6 @@ const Study = () => {
     }
   };
 
-  const handleExecCommand = (command, value = null) => {
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
-      setNotes(editorRef.current.innerHTML);
-    }
-  };
-
-  const handleContentChange = () => {
-    if (editorRef.current) {
-      setNotes(editorRef.current.innerHTML);
-    }
-  };
-
-  const handleAddLink = () => {
-    const url = prompt('Enter the URL:');
-    if (url) handleExecCommand('createLink', url);
-  };
 
   const handleShare = async () => {
     if (!notes || !Array.isArray(notes)) return;

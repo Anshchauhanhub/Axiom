@@ -43,9 +43,9 @@ export const DataProvider = ({ children }) => {
     fetchData();
   }, [fetchData]);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     await fetchData();
-  };
+  }, [fetchData]);
 
   const handleSetSelectedGoal = (id) => {
       localStorage.setItem('axiom_selected_goal', id);

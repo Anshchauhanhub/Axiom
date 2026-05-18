@@ -30,8 +30,8 @@ async def get_playlist_data(url: str):
             if json_match:
                 try:
                     data = json.loads(json_match.group(1))
-                except:
-                    logger.warning("Failed to parse ytInitialData JSON.")
+                except Exception as e:
+                    logger.warning(f"Failed to parse ytInitialData JSON: {e}")
 
             # 2. Extract Playlist Title
             playlist_title = "YouTube Learning Path"
@@ -39,7 +39,7 @@ async def get_playlist_data(url: str):
             try:
                 if "metadata" in data and "playlistMetadataRenderer" in data["metadata"]:
                     playlist_title = data["metadata"]["playlistMetadataRenderer"]["title"]
-            except:
+            except Exception:
                 pass
             
             # If not in JSON, try regex on HTML
@@ -51,21 +51,23 @@ async def get_playlist_data(url: str):
             # 3. Extract Video Titles
             videos = []
             
-            def find_titles_recursive(obj):
+            def find_titles_recursive(obj, current_depth=0, max_depth=10):
                 """Recursively search for video titles in the nested JSON structure."""
+                if current_depth > max_depth:
+                    return
                 if isinstance(obj, dict):
                     if "playlistVideoRenderer" in obj:
                         try:
                             title = obj["playlistVideoRenderer"]["title"]["runs"][0]["text"]
                             videos.append(title)
-                        except:
+                        except Exception:
                             pass
                     else:
                         for k, v in obj.items():
-                            find_titles_recursive(v)
+                            find_titles_recursive(v, current_depth + 1, max_depth)
                 elif isinstance(obj, list):
                     for item in obj:
-                        find_titles_recursive(item)
+                        find_titles_recursive(item, current_depth + 1, max_depth)
 
             if data:
                 find_titles_recursive(data)

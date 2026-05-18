@@ -240,16 +240,19 @@ const Landing = () => {
             <div className="order-2 lg:order-1">
               <div className="space-y-12">
                 {[
-                  { num: '01', color: 'primary', title: 'Discovery Phase', desc: "Tell Axiom what you want to achieve. Our AI analyzes your intent and level to start the architecture." },
-                  { num: '02', color: 'secondary', title: 'Roadmap Generation', desc: "Axiom generates a granular, step-by-step roadmap. Approve, refine, or import from external sources." },
-                  { num: '03', color: 'primary', title: 'Verified Progression', desc: "Complete tasks and pass assessments. Progress is tracked and nudged via our integrated assistant." },
+                  { num: '01', color: 'primary', title: 'Discovery Phase', desc: "Tell Axiom what you want to achieve. Our AI analyzes your intent and level to start the architecture.",
+                    bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', hoverBg: 'group-hover:bg-primary', shadow: 'shadow-primary/5', line: 'from-primary/30' },
+                  { num: '02', color: 'secondary', title: 'Roadmap Generation', desc: "Axiom generates a granular, step-by-step roadmap. Approve, refine, or import from external sources.",
+                    bg: 'bg-secondary/10', text: 'text-secondary', border: 'border-secondary/20', hoverBg: 'group-hover:bg-secondary', shadow: 'shadow-secondary/5', line: 'from-secondary/30' },
+                  { num: '03', color: 'primary', title: 'Verified Progression', desc: "Complete tasks and pass assessments. Progress is tracked and nudged via our integrated assistant.",
+                    bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', hoverBg: 'group-hover:bg-primary', shadow: 'shadow-primary/5', line: 'from-primary/30' },
                 ].map((step, i) => (
                   <div key={i} className="flex gap-8 group">
                     <div className="flex flex-col items-center">
-                      <div className={`w-14 h-14 rounded-full bg-${step.color}/10 flex items-center justify-center text-${step.color} font-black text-lg shrink-0 border border-${step.color}/20 group-hover:bg-${step.color} group-hover:text-black transition-all duration-500 shadow-xl shadow-${step.color}/5`}>
+                      <div className={`w-14 h-14 rounded-full ${step.bg} flex items-center justify-center ${step.text} font-black text-lg shrink-0 border ${step.border} ${step.hoverBg} group-hover:text-black transition-all duration-500 shadow-xl ${step.shadow}`}>
                         {step.num}
                       </div>
-                      {i < 2 && <div className={`w-[2px] h-full mt-4 bg-gradient-to-b from-${step.color}/30 to-transparent opacity-20`}></div>}
+                      {i < 2 && <div className={`w-[2px] h-full mt-4 bg-gradient-to-b ${step.line} to-transparent opacity-20`}></div>}
                     </div>
                     <div className="pt-3">
                       <h4 className="text-xl font-black font-headline uppercase tracking-tight mb-3 group-hover:text-primary transition-colors duration-500 italic">{step.title}</h4>
@@ -287,7 +290,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-3 opacity-60">
             <img src="/logo.png" alt="Axiom" className="h-8 w-auto" />
-            <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant">© 2024 Axiom AI. All rights reserved.</span>
+            <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant">© {new Date().getFullYear()} Axiom AI. All rights reserved.</span>
           </div>
           <div className="flex gap-8 opacity-40">
             <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Twitter</a>

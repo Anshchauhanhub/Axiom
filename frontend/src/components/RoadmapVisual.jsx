@@ -27,12 +27,14 @@ const RoadmapVisual = () => {
   const [progress, setProgress] = useState(0);
   const [visibleChats, setVisibleChats] = useState(0);
   const [visibleNotifs, setVisibleNotifs] = useState(0);
+  const [iteration, setIteration] = useState(0);
 
   const resetAll = useCallback(() => {
     setStep(0);
     setProgress(0);
     setVisibleChats(0);
     setVisibleNotifs(0);
+    setIteration(i => i + 1);
   }, []);
 
   // Auto-play the full demo
@@ -71,7 +73,7 @@ const RoadmapVisual = () => {
     timers.push(setTimeout(() => resetAll(), 18500));
 
     return () => timers.forEach(clearTimeout);
-  }, [step === 0 && progress === 0]);
+  }, [iteration]);
 
   return (
     <div className="relative w-full max-w-[440px] mx-auto mt-8 lg:mt-0 select-none">
