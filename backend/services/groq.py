@@ -13,6 +13,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 
 
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 async def call_groq(system_prompt: str, user_prompt: str) -> str:
     """Call Groq API with a system and user prompt. Returns raw text."""
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -24,7 +26,7 @@ async def call_groq(system_prompt: str, user_prompt: str) -> str:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "llama-3.3-70b-versatile",
+                    "model": GROQ_MODEL,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
