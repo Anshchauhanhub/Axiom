@@ -16,7 +16,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     telegram_chat_id = Column(BigInteger, unique=True, nullable=True)
     timezone = Column(String, default="Asia/Kolkata")
-    study_schedule = Column(JSONB, default=["12:00", "18:00"])
+    study_schedule = Column(JSONB, default=lambda: ["12:00", "18:00"])
     current_streak = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
