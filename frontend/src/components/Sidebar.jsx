@@ -27,7 +27,7 @@ const Sidebar = () => {
             <img
               src="/logo.png"
               alt="Axiom Logo"
-              className="w-40 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] transition-transform duration-500 group-hover:scale-110"
+              className="w-24 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] transition-transform duration-500 group-hover:scale-110"
             />
           </Link>
         </div>

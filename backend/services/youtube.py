@@ -48,18 +48,33 @@ async def get_playlist_data(url: str):
                 if title_match:
                     playlist_title = title_match.group(1)
 
-            # 3. Extract Video Titles
+            # 3. Extract Video Titles and IDs
             videos = []
             
-            def find_titles_recursive(obj, current_depth=0, max_depth=10):
-                """Recursively search for video titles in the nested JSON structure."""
+            def find_titles_recursive(obj, current_depth=0, max_depth=30):
+                """Recursively search for video titles and IDs in the nested JSON structure."""
                 if current_depth > max_depth:
                     return
                 if isinstance(obj, dict):
                     if "playlistVideoRenderer" in obj:
                         try:
                             title = obj["playlistVideoRenderer"]["title"]["runs"][0]["text"]
-                            videos.append(title)
+                            video_id = obj["playlistVideoRenderer"].get("videoId")
+                            if title and video_id:
+                                videos.append({"title": title, "video_id": video_id})
+                        except Exception:
+                            pass
+                    elif "lockupViewModel" in obj:
+                        try:
+                            title = obj["lockupViewModel"]["metadata"]["lockupMetadataViewModel"]["title"]["content"]
+                            video_id = None
+                            endpoint = obj["lockupViewModel"].get("navigationEndpoint", {})
+                            if "watchEndpoint" in endpoint:
+                                video_id = endpoint["watchEndpoint"].get("videoId")
+                            if not video_id:
+                                video_id = obj["lockupViewModel"].get("contentId")
+                            if title and video_id:
+                                videos.append({"title": title, "video_id": video_id})
                         except Exception:
                             pass
                     else:
@@ -73,28 +88,27 @@ async def get_playlist_data(url: str):
                 find_titles_recursive(data)
 
             if not videos:
-                # Try to find all video titles using a broad regex that matches the internal JSON structure in HTML
-                # Pattern: "title":{"runs":[{"text":"VIDEO_TITLE"}]}
-                # Note: accessibility or index might follow, so we match more loosely
-                video_matches = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"(.*?)\"\}\]\}', html)
+                # Try to find all video titles and videoIds using regex fallback if JSON is not available
+                video_matches = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]*)\"\}', html)
+                video_ids = re.findall(r'\"videoId\":\"([^\"]*)\"', html)
+                
+                # Zip them up if matching lengths, otherwise fallback to mock IDs
                 if video_matches:
-                    videos = video_matches
-                else:
-                    # Secondary attempt with a different pattern (sometimes found in specific scripts)
-                    video_matches = re.findall(r'\"title\":\{\"simpleText\":\"(.*?)\"\}', html)
-                    if video_matches:
-                        videos = video_matches
+                    for idx, title in enumerate(video_matches):
+                        vid = video_ids[idx] if idx < len(video_ids) else "dQw4w9WgXcQ"
+                        videos.append({"title": title, "video_id": vid})
 
-            # Remove duplicates and filter out nonsense (like 'Play all', 'Shuffle', etc.)
+            # Remove duplicates and filter out nonsense
             seen = set()
             unique_videos = []
             for v in videos:
+                t = v["title"]
                 # Decode unicode escapes if present
-                v_clean = v.encode('utf-8').decode('unicode-escape', errors='ignore') if '\\u' in v else v
+                t_clean = t.encode('utf-8').decode('unicode-escape', errors='ignore') if '\\u' in t else t
                 # Filter out obvious non-video strings
-                if v_clean not in seen and len(v_clean) > 3 and v_clean not in ["Play all", "Shuffle", "Mix"]:
-                    unique_videos.append(v_clean)
-                    seen.add(v_clean)
+                if t_clean not in seen and len(t_clean) > 3 and t_clean not in ["Play all", "Shuffle", "Mix"]:
+                    unique_videos.append({"title": t_clean, "video_id": v["video_id"]})
+                    seen.add(t_clean)
             
             videos = unique_videos
 

@@ -147,7 +147,7 @@ const Study = () => {
     setLoadingContent(true);
     setError('');
     setActivePartId(partId);
-    setPartTitle(title);
+    setPartTitle(title.split(' || ')[0]);
     try {
       const data = await getPartContent(partId);
       setLearningContent(data.content);
@@ -361,6 +361,23 @@ const Study = () => {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
+      if (line.startsWith('[youtube:')) {
+        const videoId = line.replace('[youtube:', '').replace(']', '').trim();
+        elements.push(
+          <div key={`yt-${i}`} className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl aspect-video relative group transition-all duration-500 hover:border-primary/30">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video player"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+            ></iframe>
+          </div>
+        );
+        continue;
+      }
+
       if (line.startsWith('```')) {
         if (inCodeBlock) {
           // Close block
@@ -511,7 +528,7 @@ const Study = () => {
                        <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
                     </div>
                     <div>
-                      <span className="block text-sm sm:text-lg font-bold tracking-tight mb-0.5 text-on-surface">{part.title}</span>
+                      <span className="block text-sm sm:text-lg font-bold tracking-tight mb-0.5 text-on-surface">{part.title.split(' || ')[0]}</span>
                       <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
                     </div>
                   </div>

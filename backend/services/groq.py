@@ -289,6 +289,11 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                         result["message"] = "Let me help you build your learning path."
                     if "phase" not in result:
                         result["phase"] = "discovery"
+
+                    # Programmatic guardrail: if phase is not "draft" or "ready", clear the draft_roadmap!
+                    if result.get("phase") not in ["draft", "ready"]:
+                        result["draft_roadmap"] = None
+                        result["goal_title"] = None
                     
                     return result
 
@@ -322,28 +327,60 @@ async def generate_documentation(topic: str, research_data: str) -> str:
     return await call_groq(system_prompt, user_prompt)
 
 
-async def generate_roadmap_from_playlist(playlist_title: str, videos: list[str]) -> list[dict]:
-    """Generate a structured roadmap based on a list of YouTube video titles."""
-    video_list_str = "\n".join([f"- {v}" for v in videos[:30]])  # Limit to 30 for token safety
+async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]) -> list[dict]:
+    """Generate a structured chapter-based roadmap from a list of YouTube video titles and IDs."""
+    # Extract titles for LLM processing
+    video_titles = [v["title"] for v in videos]
+    
+    # Format video titles with their indices for the LLM
+    video_list_str = "\n".join([f"{idx}: {title}" for idx, title in enumerate(video_titles)])
     
     system_prompt = (
-        "You are Axiom AI, a high-accountability learning coach. "
-        "I will provide you with a list of video titles from a YouTube playlist. "
-        "Your goal is to organize these videos into a logical, high-mastery learning roadmap. "
-        "Group related videos into 5-8 granular 'Tasks'. "
-        "Each task should have a title and 'parts' (the actual video titles or refined subtopics). "
-        "Return ONLY valid JSON array of objects: "
-        '[{"title": "Task Name", "parts": ["Video Title 1", "Video Title 2"]}]. '
+        "You are Axiom AI, a high-accountability learning coach.\n"
+        "I will provide you with a list of video titles from a YouTube playlist.\n"
+        "Your goal is to organize EVERY SINGLE ONE of these videos in chronological order into logical 'Chapters'.\n"
+        "Each chapter should group roughly 7 to 12 consecutive videos (do not skip any videos, do not reuse videos).\n"
+        "Return ONLY a JSON array of objects where each object represents a chapter:\n"
+        '[{"title": "Chapter X: [Descriptive Chapter Title]", "video_indices": [0, 1, 2, ...]}]\n'
+        "The 'video_indices' list must contain the 0-indexed indices of the videos from the input list that belong to that chapter.\n"
+        "Every video index from 0 to the last video index must be assigned to exactly one chapter in ascending sequential order.\n"
         "No markdown, no explanation, ONLY valid JSON."
     )
-    user_prompt = f"Playlist Title: {playlist_title}\n\nVideos:\n{video_list_str}\n\nGenerate the structured roadmap."
+    user_prompt = f"Playlist Title: {playlist_title}\n\nVideos:\n{video_list_str}\n\nGenerate the structured JSON roadmap."
 
-    raw = await call_groq(system_prompt, user_prompt)
-    cleaned = _clean_json(raw)
-
+    structured_roadmap = []
+    
     try:
-        roadmap = json.loads(cleaned)
-        return _normalize_draft_roadmap(roadmap)
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON parse error in playlist roadmap: {e}\nRaw: {raw[:500]}")
-        raise ValueError(f"Failed to parse AI response as JSON: {e}")
+        raw = await call_groq(system_prompt, user_prompt)
+        cleaned = _clean_json(raw)
+        parsed_chapters = json.loads(cleaned)
+        
+        for chapter in parsed_chapters:
+            chapter_title = chapter.get("title", f"Chapter {len(structured_roadmap) + 1}")
+            parts = []
+            for idx in chapter.get("video_indices", []):
+                if 0 <= idx < len(videos):
+                    v = videos[idx]
+                    parts.append(f"{v['title']} || {v['video_id']}")
+            if parts:
+                structured_roadmap.append({
+                    "title": chapter_title,
+                    "parts": parts
+                })
+    except Exception as e:
+        logger.error(f"Failed to generate playlist roadmap via LLM: {e}. Falling back to programmatic grouping.")
+        structured_roadmap = []
+
+    # If parsing failed or returned empty roadmap, run programmatic fallback
+    if not structured_roadmap:
+        chunk_size = 10
+        for i in range(0, len(videos), chunk_size):
+            chunk = videos[i:i+chunk_size]
+            chapter_title = f"Chapter {i//chunk_size + 1}: {chunk[0]['title']}"
+            parts = [f"{v['title']} || {v['video_id']}" for v in chunk]
+            structured_roadmap.append({
+                "title": chapter_title,
+                "parts": parts
+            })
+
+    return _normalize_draft_roadmap(structured_roadmap)
