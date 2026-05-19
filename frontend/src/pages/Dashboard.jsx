@@ -45,7 +45,7 @@ const Dashboard = () => {
         for (const part of task.parts) {
           if (part.status === 'active') {
             setActivePartId(part.id);
-            setActivePartTitle(part.title);
+            setActivePartTitle(part.title.split(' || ')[0]);
             found = true;
             break;
           }
@@ -544,7 +544,7 @@ const Dashboard = () => {
                                         part.status === 'active' ? 'text-secondary' :
                                           'text-on-surface-variant/70'
                                         }`}>
-                                        {part.title}
+                                        {part.title.split(' || ')[0]}
                                       </span>
                                     </div>
                                     <span className={`text-[8px] font-label uppercase tracking-[0.1em] px-2 py-0.5 rounded border ${part.status === 'passed' ? 'border-primary/30 text-primary bg-primary/5' :
