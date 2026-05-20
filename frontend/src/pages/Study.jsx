@@ -489,104 +489,143 @@ const Study = () => {
     </button>
   );
 
-  const renderTaskParts = (task) => (
-    <div className="space-y-12 max-w-4xl mx-auto pb-24">
-      <div className="bg-surface-container-low border border-outline-variant/10 p-6 sm:p-12 lg:p-16 rounded-2xl sm:rounded-[3.5rem] relative overflow-hidden group shadow-2xl transition-all duration-500 hover:border-primary/20">
-        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-          <span className="material-symbols-outlined text-8xl">menu_book</span>
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-6 sm:mb-10 flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-[1px] bg-primary"></div>
-              <h3 className="text-2xl sm:text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">
-                {task.title}
-              </h3>
+  const renderWorkbench = () => {
+    return (
+      <div className="flex flex-col lg:flex-row gap-8 h-full max-w-[1600px] mx-auto pb-24 animate-in slide-in-from-bottom-5 duration-700">
+        {/* Sidebar: Path Logic */}
+        <div className="w-full lg:w-80 flex flex-col gap-6">
+          <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="material-symbols-outlined text-primary text-xl">account_tree</span>
+              <span className="text-[10px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant">Neural Path</span>
             </div>
-            <button 
-              onClick={() => setViewMode('roadmap')}
-              className="px-6 py-2 rounded-full border border-outline-variant/20 text-[10px] font-label font-black uppercase tracking-widest text-on-surface-variant hover:bg-surface-container-highest transition-all"
-            >
-              Back to Roadmap
-            </button>
-          </div>
-          <div className="space-y-6 relative">
-            <div className="absolute left-[34px] top-4 bottom-4 w-[1px] bg-gradient-to-b from-primary/40 via-secondary/40 to-transparent"></div>
-            {task.parts.map((part) => {
-              const isActive = part.status === 'active';
-              const isPassed = part.status === 'passed';
-              
-              return (
-                <div 
-                  key={part.id} 
-                  className={`relative flex items-center justify-between p-4 sm:p-7 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 ml-10 sm:ml-16 ${(isActive || isPassed) ? 'bg-surface-container-highest/20 border-primary/40 cursor-pointer hover:bg-surface-container-highest/40 hover:scale-[1.03] shadow-lg' : 'opacity-60 border-outline-variant/10 grayscale'}`}
-                  onClick={() => (isActive || isPassed) && handleStartLearning(part.id, part.title)}
-                >
-                  <div className={`absolute left-[-30px] sm:left-[-42px] w-5 h-5 sm:w-6 sm:h-6 rounded-full border-4 border-surface-container-low z-20 transition-all duration-500 ${isActive ? 'bg-primary shadow-[0_0_15px_rgba(253,184,19,0.5)] animate-pulse' : isPassed ? 'bg-secondary' : 'bg-outline-variant/30'}`}></div>
-                  <div className="flex items-center gap-3 sm:gap-6">
-                    <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-surface-container-highest/50 ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant'}`}>
-                       <span className="material-symbols-outlined text-2xl">{isActive ? 'bolt' : isPassed ? 'verified' : 'lock'}</span>
-                    </div>
-                    <div>
-                      <span className="block text-sm sm:text-lg font-bold tracking-tight mb-0.5 text-on-surface">{part.title.split(' || ')[0]}</span>
-                      <span className={`text-[9px] font-label tracking-[0.2em] font-black uppercase ${isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-on-surface-variant/40'}`}>{part.status}</span>
-                    </div>
-                  </div>
-                  {(isActive || isPassed) && <span className="material-symbols-outlined text-primary group-secondary:translate-x-1 transition-transform">arrow_forward_ios</span>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderRoadmapOverview = () => (
-    <div className="animate-in fade-in duration-700 max-w-5xl mx-auto w-full pb-24">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {roadmap.tasks.map((task, idx) => {
-          const isLocked = task.status === 'locked';
-          const isActive = task.status === 'active';
-          const isPassed = task.status === 'passed';
-          
-          return (
-            <div 
-              key={task.id} 
-              onClick={() => !isLocked && handleSelectTask(task)}
-              className={`p-8 rounded-[2.5rem] border transition-all duration-500 flex flex-col justify-between group h-64 ${
-                !isLocked ? 'bg-surface-container-low border-outline-variant/10 cursor-pointer hover:border-primary/40 hover:bg-surface-container-high' : 'bg-surface-container-low/50 border-transparent opacity-40'
-              }`}
-            >
-              <div>
-                 <div className="flex justify-between items-start mb-6">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                      isActive ? 'bg-primary/20 text-primary shadow-[0_0_20px_rgba(253,184,19,0.2)]' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
+            
+            <div className="space-y-4 relative">
+              <div className="absolute left-4 top-2 bottom-2 w-[1px] bg-outline-variant/20"></div>
+              {roadmap.tasks.map((task, idx) => {
+                const isActive = activeTask?.id === task.id;
+                const isLocked = task.status === 'locked';
+                const isPassed = task.status === 'passed';
+                
+                return (
+                  <button
+                    key={task.id}
+                    onClick={() => !isLocked && handleSelectTask(task)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 ${
+                      isActive 
+                        ? 'bg-primary/10 border border-primary/20 scale-[1.02] shadow-lg' 
+                        : isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'hover:bg-surface-container/50 border border-transparent'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
+                      isActive ? 'bg-primary border-primary text-on-primary-container' : isPassed ? 'bg-secondary border-secondary text-on-secondary-container' : 'bg-surface border-outline-variant text-on-surface-variant'
                     }`}>
-                      <span className="material-symbols-outlined text-3xl">
-                        {isPassed ? 'verified' : isActive ? 'play_arrow' : 'lock'}
-                      </span>
+                      {isPassed ? (
+                        <span className="material-symbols-outlined text-sm">check</span>
+                      ) : (
+                        <span className="text-[10px] font-black">{idx + 1}</span>
+                      )}
                     </div>
-                    <span className="text-[10px] font-label font-black text-on-surface-variant/20 group-hover:text-primary/40 transition-colors uppercase tracking-[0.3em]">Module {String(idx + 1).padStart(2, '0')}</span>
-                 </div>
-                 <h4 className="text-xl font-headline font-black uppercase tracking-tight text-on-surface mb-2 leading-none">{task.title}</h4>
-                  <p className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant opacity-60">
-                    {task.parts.filter(p => p.status === 'passed').length} / {task.parts.length} Tasks Completed
-                  </p>
+                    <span className={`text-[11px] font-label font-black text-left uppercase tracking-tight flex-1 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
+                      {task.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-8">
+            <div className="flex items-center justify-between mb-4">
+               <span className="text-[9px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/40">Efficiency</span>
+               <span className="text-[9px] font-label font-black text-primary">84%</span>
+            </div>
+            <div className="h-1 bg-surface-container-highest rounded-full overflow-hidden">
+               <div className="h-full bg-primary w-[84%]"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main: Module Focus */}
+        <div className="flex-1 min-w-0">
+          {!activeTask ? (
+            <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-surface-container-low/20 rounded-[3.5rem] border border-dashed border-outline-variant/30">
+              <span className="material-symbols-outlined text-6xl text-on-surface-variant/20 mb-6">target</span>
+              <h3 className="text-xl font-headline font-black text-on-surface-variant/40 uppercase tracking-widest">Select logic node to begin focus</h3>
+            </div>
+          ) : (
+            <div className="space-y-8 h-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
+                <div>
+                   <span className="text-[10px] font-label tracking-[0.4em] text-primary uppercase font-black">Active Context</span>
+                   <h2 className="text-3xl font-black font-headline text-on-surface uppercase tracking-tight mt-1">{activeTask.title}</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant/10 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                      <span className="text-[9px] font-label font-black uppercase tracking-widest">Live Focus</span>
+                   </div>
+                </div>
               </div>
-              
-              <div className="mt-6 flex items-center justify-between">
-                 <span className={`text-[9px] font-label font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${
-                    isActive ? 'bg-primary text-on-primary-container' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
-                 }`}>
-                   {task.status}
-                 </span>
-                 {!isLocked && <span className="material-symbols-outlined text-primary scale-0 group-hover:scale-100 transition-transform">open_in_new</span>}
+
+              <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 p-4 sm:p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                   <span className="material-symbols-outlined text-9xl">molecular_autonomy</span>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-6 relative z-10">
+                  {activeTask.parts.map((part, pidx) => {
+                    const isActive = part.status === 'active';
+                    const isPassed = part.status === 'passed';
+                    const isLocked = part.status === 'locked';
+                    
+                    return (
+                      <div 
+                        key={part.id} 
+                        onClick={() => !isLocked && handleStartLearning(part.id, part.title)}
+                        className={`group flex items-center justify-between p-6 sm:p-8 rounded-[2.5rem] border-2 transition-all duration-500 ${
+                          !isLocked 
+                            ? 'bg-surface-container-low/80 border-outline-variant/10 cursor-pointer hover:border-primary/40 hover:bg-surface-container-low hover:translate-x-2' 
+                            : 'opacity-40 border-transparent grayscale'
+                        }`}
+                      >
+                        <div className="flex items-center gap-6">
+                           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                             isActive ? 'bg-primary text-on-primary-container shadow-2xl' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest/50 text-on-surface-variant'
+                           }`}>
+                             <span className="material-symbols-outlined text-3xl">
+                               {isPassed ? 'check_circle' : isActive ? 'bolt' : 'lock_open'}
+                             </span>
+                           </div>
+                           <div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[9px] font-label tracking-[0.2em] uppercase text-on-surface-variant/40 font-black">Segment {pidx + 1}</span>
+                                {isActive && <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>}
+                              </div>
+                              <h4 className="text-xl font-black text-on-surface group-hover:text-primary transition-colors">{part.title.split(' || ')[0]}</h4>
+                           </div>
+                        </div>
+                        <span className="material-symbols-outlined text-on-surface-variant/20 group-hover:text-primary transition-all group-hover:translate-x-1">arrow_forward</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
+    );
+  };
+
+  const renderLearningStatus = () => (
+    <div className="flex items-center gap-6 px-4 py-3 rounded-2xl bg-surface-container/30 border border-outline-variant/10 backdrop-blur-md">
+      <div className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(253,184,19,1)]"></span>
+        <span className="text-[10px] font-label font-black uppercase tracking-widest text-on-surface">Neural Sync</span>
+      </div>
+      <div className="h-4 w-[1px] bg-outline-variant/20"></div>
+      <span className="text-[10px] font-label font-black uppercase tracking-widest text-on-surface-variant/60">{partTitle}</span>
     </div>
   );
 
@@ -602,22 +641,47 @@ const Study = () => {
       </div>
     );
   } else if (phase === 'select') {
+    const passedParts = roadmap?.tasks?.flatMap(t => t.parts).filter(p => p.status === 'passed').length || 0;
+    const totalParts = roadmap?.tasks?.flatMap(t => t.parts).length || 0;
+    const progressPercent = totalParts > 0 ? Math.round((passedParts / totalParts) * 100) : 0;
+
     phaseContent = (
       <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full">
-        <header className="mb-6 text-center">
+        <header className="mb-12 text-center relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 w-64 h-64 bg-primary/5 blur-[100px] pointer-events-none rounded-full"></div>
+          
+          <div className="flex flex-col items-center gap-6 relative z-10">
+            {/* Neural Streak & Progress Indicator */}
+            <div className="flex items-center gap-10 mb-4 scale-90 sm:scale-100">
+               <div className="flex flex-col items-center">
+                  <div className="text-3xl font-black text-primary leading-none">{user?.current_streak || 0}</div>
+                  <div className="text-[8px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 mt-1">Day Streak</div>
+               </div>
+               <div className="w-[1px] h-8 bg-outline-variant/20"></div>
+               <div className="flex flex-col items-center">
+                  <div className="text-3xl font-black text-on-surface leading-none">{progressPercent}%</div>
+                  <div className="text-[8px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 mt-1">Map Sync</div>
+               </div>
+                <div className="w-[1px] h-8 bg-outline-variant/20"></div>
+                <div className="flex flex-col items-center">
+                  <div className="text-3xl font-black text-secondary leading-none">{passedParts}</div>
+                  <div className="text-[8px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 mt-1">Verified</div>
+               </div>
+            </div>
 
-          <div className="flex items-center justify-center gap-4 relative">
-             <div className="h-[1px] w-8 bg-outline-variant/30 hidden sm:block"></div>
-             
              <div className="relative">
                 <button 
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-3 bg-primary text-on-primary-container border-2 border-primary/50 hover:border-primary hover:bg-primary/90 rounded-full px-8 py-4 transition-all group active:scale-95 shadow-[0_10px_40px_rgba(253,184,19,0.3)] mt-2 mx-auto"
+                  className="flex items-center gap-4 bg-surface-container-high text-on-surface border-2 border-outline-variant/10 hover:border-primary/50 hover:bg-surface-container-highest rounded-[2rem] px-10 py-5 transition-all group active:scale-95 shadow-2xl relative overflow-hidden"
                 >
-                  <span className="text-xs sm:text-sm font-label tracking-[0.2em] uppercase font-black truncate max-w-[200px] sm:max-w-[400px]">
+                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-sm">psychology</span>
+                  </div>
+                  <span className="text-xs sm:text-sm font-label tracking-[0.3em] uppercase font-black truncate max-w-[200px] sm:max-w-[400px]">
                     {activeGoal?.title || 'Unknown Synthesis'}
                   </span>
-                  <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`}>
+                  <span className={`material-symbols-outlined text-lg transition-all duration-500 ${dropdownOpen ? 'rotate-180 text-primary' : 'opacity-40'}`}>
                     expand_more
                   </span>
                 </button>
@@ -628,12 +692,16 @@ const Study = () => {
                       className="fixed inset-0 z-40" 
                       onClick={() => setDropdownOpen(false)}
                     ></div>
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-64 bg-surface-container-high border border-outline-variant/20 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-200">
-                      <div className="px-4 py-3 border-b border-outline-variant/10 bg-surface-container flex items-center justify-between">
-                        <span className="text-[8px] font-label tracking-[0.3em] uppercase text-primary font-black">Active Paths</span>
-                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse"></span>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-72 bg-surface-container-highest/90 backdrop-blur-2xl border border-outline-variant/20 rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+                      <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                        <span className="text-[9px] font-label tracking-[0.4em] uppercase text-primary font-black">Neural Pathways</span>
+                        <div className="flex gap-1">
+                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
+                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse delay-75"></div>
+                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse delay-150"></div>
+                        </div>
                       </div>
-                      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                      <div className="max-h-80 overflow-y-auto custom-scrollbar p-2">
                         {goals.filter(g => g.status === 'active').map(g => (
                           <button
                             key={g.id}
@@ -643,9 +711,9 @@ const Study = () => {
                               setPhase('loading');
                               activeTaskRef.current = false;
                             }}
-                            className={`w-full text-left px-5 py-4 text-[10px] font-label tracking-[0.2em] uppercase font-bold transition-all border-l-2 flex items-center gap-3 ${activeGoal?.id === g.id ? 'bg-primary/5 text-primary border-primary' : 'text-on-surface-variant border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:border-outline-variant/50'}`}
+                            className={`w-full text-left px-6 py-5 rounded-2xl text-[10px] font-label tracking-[0.2em] uppercase font-bold transition-all flex items-center gap-4 mb-1 ${activeGoal?.id === g.id ? 'bg-primary text-on-primary-container shadow-lg' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
                           >
-                            <span className="material-symbols-outlined text-sm opacity-50">{activeGoal?.id === g.id ? 'radio_button_checked' : 'radio_button_unchecked'}</span>
+                            <span className={`material-symbols-outlined text-base ${activeGoal?.id === g.id ? 'text-on-primary-container' : 'opacity-30'}`}>{activeGoal?.id === g.id ? 'verified' : 'radio_button_unchecked'}</span>
                             <span className="truncate">{g.title}</span>
                           </button>
                         ))}
@@ -654,14 +722,15 @@ const Study = () => {
                   </>
                 )}
              </div>
-
-            <div className="h-[1px] w-8 bg-outline-variant/30 hidden sm:block"></div>
           </div>
         </header>
 
         {error && (
-          <div className="mb-10 p-5 bg-error-container/10 border border-error/20 rounded-2xl max-w-2xl mx-auto backdrop-blur-sm">
-            <p className="text-error text-xs font-label font-bold text-center tracking-widest">{error}</p>
+          <div className="mb-10 p-6 bg-error/5 border border-error/20 rounded-3xl max-w-2xl mx-auto backdrop-blur-md animate-in slide-in-from-top-4">
+             <div className="flex items-center gap-4 justify-center">
+                <span className="material-symbols-outlined text-error">warning</span>
+                <p className="text-error text-[10px] font-label font-black text-center tracking-[0.2em] uppercase">{error}</p>
+             </div>
           </div>
         )}
 
@@ -670,48 +739,76 @@ const Study = () => {
             Calibrating mastery protocols...
           </div>
         ) : (
-          viewMode === 'task' && activeTask ? renderTaskParts(activeTask) : renderRoadmapOverview()
+          renderWorkbench()
         )}
       </div>
     );
   } else if (phase === 'learning' && learningContent) {
     phaseContent = (
-      <div className="animate-in slide-in-from-bottom-10 duration-1000 max-w-4xl mx-auto w-full">
-        <header className="mb-8 flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-                <span className="w-6 h-[1px] bg-primary"></span>
-                <span className="text-[9px] font-label tracking-[0.3em] text-primary uppercase font-black">Neural Documentation</span>
+      <div className="animate-in slide-in-from-bottom-10 duration-1000 max-w-4xl mx-auto w-full relative">
+        <div className="absolute top-0 right-0 -translate-y-20 opacity-10 pointer-events-none">
+          <span className="material-symbols-outlined text-[200px] text-primary">auto_stories</span>
+        </div>
+        
+        <header className="mb-12 flex items-end justify-between border-b border-outline-variant/10 pb-8 relative z-10">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-primary/10 rounded-lg text-[9px] font-label tracking-[0.4em] text-primary uppercase font-black border border-primary/20">Module Sync Active</span>
+                <span className="text-[10px] font-label tracking-[0.2em] text-on-surface-variant/40 uppercase font-black italic">Reading Protocol v4.0</span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none">{partTitle}</h2>
+            <h2 className="text-3xl sm:text-5xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none mt-2">{partTitle}</h2>
           </div>
-          <button onClick={() => setPhase('select')} className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all duration-300 hover:rotate-90">
-            <span className="material-symbols-outlined text-xl">close</span>
+          <button 
+            onClick={() => setPhase('select')} 
+            className="group flex flex-col items-center gap-2"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-variant group-hover:bg-error group-hover:text-white transition-all duration-500 group-hover:rotate-90 shadow-xl border border-white/5">
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </div>
+            <span className="text-[8px] font-label tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-opacity font-black text-error">Disconnect</span>
           </button>
         </header>
 
-        <div className="bg-surface-container-low border border-outline-variant/10 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 md:p-14 shadow-2xl relative transition-all duration-500 hover:border-primary/10">
-          <div className="max-w-none text-on-surface-variant/80 font-light leading-relaxed text-lg">
+        <div className="bg-surface-container-low/40 backdrop-blur-3xl border border-white/5 rounded-[3rem] p-6 sm:p-12 md:p-16 shadow-[0_50px_100px_rgba(0,0,0,0.4)] relative transition-all duration-700 hover:border-primary/20 overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+          
+          <div className="max-w-none prose-custom">
              {renderParsedContent(learningContent)}
           </div>
-          <div className="mt-20 pt-10 border-t border-outline-variant/10 flex flex-col items-center">
-             <span className="text-[10px] font-label text-on-surface-variant/30 uppercase tracking-[0.3em] mb-8 italic text-center">Neural integrity verification required for progression</span>
+
+          <div className="mt-24 pt-12 border-t border-white/5 flex flex-col items-center relative overflow-hidden">
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/5 blur-3xl -translate-y-32 rounded-full"></div>
+             
+             <div className="flex items-center gap-4 mb-10 opacity-40">
+                <div className="w-10 h-[1px] bg-outline-variant"></div>
+                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-[0.4em] font-black italic">Neural integrity verification required</span>
+                <div className="w-10 h-[1px] bg-outline-variant"></div>
+             </div>
+
             {roadmap?.tasks?.flatMap(t => t.parts).find(p => p.id === activePartId)?.status === 'passed' ? (
               <button
                 onClick={() => setPhase('select')}
-                className="group relative px-16 py-6 bg-surface-container-highest rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-xl hover:bg-surface-container"
+                className="group relative px-20 py-7 bg-surface-container-highest/50 backdrop-blur-md rounded-full overflow-hidden transition-all duration-500 active:scale-95 border border-white/10 hover:bg-surface-container-highest"
               >
-                <span className="relative font-label font-black tracking-[0.5em] text-on-surface text-lg uppercase">BACK TO TASK</span>
+                <span className="relative font-label font-black tracking-[0.6em] text-on-surface text-lg uppercase flex items-center gap-4">
+                   <span className="material-symbols-outlined text-secondary">verified</span>
+                   Return to Hub
+                </span>
               </button>
             ) : (
               <button
                 onClick={handleStartQuiz}
-                className="group relative px-16 py-6 bg-gradient-to-br from-primary via-primary to-secondary rounded-full overflow-hidden transition-all duration-500 active:scale-95 shadow-[0_20px_50px_rgba(253,184,19,0.3)] hover:shadow-primary/40"
+                className="group relative px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105"
               >
-                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <span className="relative font-label font-black tracking-[0.5em] text-on-primary-container text-lg uppercase">TAKE QUIZ</span>
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+                <span className="relative font-label font-black tracking-[0.6em] text-on-primary-container text-lg uppercase flex items-center gap-4">
+                   Initiate Assessment
+                   <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">bolt</span>
+                </span>
               </button>
             )}
+            
+            <p className="mt-8 text-[8px] font-label uppercase tracking-[0.5em] text-on-surface-variant/20 font-black">Authorized Session Only</p>
           </div>
         </div>
       </div>
