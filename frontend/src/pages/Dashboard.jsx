@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { quickActivateGoal, toggleGoalStatus, deleteGoal, activateGoal } from '../services/api';
 import NeuralLoader from '../components/NeuralLoader';
-import { Trash2, Play, Pause, History, BookOpen, ShieldCheck, Zap, Cpu } from 'lucide-react';
+import { Trash2, Play, Pause, History, BookOpen, ShieldCheck, Zap, Cpu, Send, CheckCircle2, Circle, ChevronRight, Activity, BookText } from 'lucide-react';
 
 
 const Dashboard = () => {
@@ -38,10 +38,11 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    if (roadmap) {
+    if (roadmap && roadmap.tasks) {
       // Find first active part
       let found = false;
       for (const task of roadmap.tasks) {
+        if (!task.parts) continue;
         for (const part of task.parts) {
           if (part.status === 'active') {
             setActivePartId(part.id);
@@ -54,8 +55,10 @@ const Dashboard = () => {
       }
 
       // Initialize expanded tasks with active ones
-      const activeTasks = roadmap.tasks.filter(t => t.status === 'active').map(t => t.id);
-      setExpandedTasks(new Set(activeTasks));
+      if (roadmap.tasks) {
+        const activeTasks = roadmap.tasks.filter(t => t.status === 'active').map(t => t.id);
+        setExpandedTasks(new Set(activeTasks));
+      }
     }
   }, [roadmap]);
 
@@ -132,595 +135,386 @@ const Dashboard = () => {
 
   const completedTasks = roadmap?.tasks?.filter(t => t.status === 'passed').length || 0;
   const totalTasks = roadmap?.tasks?.length || 0;
+  const activeGoals = goals.filter(g => g.status === 'active');
+  const archivedGoals = goals.filter(g => g.status !== 'active');
 
   return (
-    <div className="animate-in fade-in duration-1000 relative">
-      {activationLoading && <NeuralLoader message="Generating Roadmap" />}
+    <div className="animate-in fade-in duration-700 min-h-screen pb-24 relative">
+      {activationLoading && <NeuralLoader message="Calibrating Neural Pathways" />}
 
-      {/* Header Section */}
-      <section className="mb-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter text-on-surface mb-2 font-headline uppercase">
-              Welcome, {user.full_name || user.email.split('@')[0]}
-            </h2>
-          </div>
-          {/* Streak Widget */}
-          <div className="bg-surface-container-low p-1 rounded-2xl flex items-center gap-3 sm:gap-4 pr-4 sm:pr-6 glow-blue border border-outline-variant/10">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-on-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+      {/* Background glow effect */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 blur-[120px] rounded-[100%] pointer-events-none"></div>
+
+      <div className="max-w-[1600px] mx-auto relative z-10">
+        
+        {/* Minimal Header */}
+        <div className="flex items-center justify-between mb-8">
+           <div>
+              <h2 className="text-2xl sm:text-4xl font-black tracking-tighter text-on-surface mb-1 font-headline uppercase">
+                Welcome back, {user.full_name || user.email.split('@')[0]}
+              </h2>
+              <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em]">Command Center // Neural Link Active</p>
+           </div>
+        </div>
+
+        {/* KPI Header Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-10">
+          <div className="bg-surface-container-low/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:border-white/10 transition-colors">
+            <span className="text-[9px] font-label font-black tracking-[0.2em] uppercase text-on-surface-variant/60 mb-3">Active Paths</span>
+            <div className="flex items-end gap-3">
+              <span className="text-4xl font-headline font-black text-on-surface leading-none">{activeGoals.length}</span>
+              <span className="text-[10px] font-label text-primary mb-1 uppercase tracking-widest">Focusing</span>
             </div>
+          </div>
+          
+          <div className="bg-surface-container-low/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:border-white/10 transition-colors group">
+            <span className="text-[9px] font-label font-black tracking-[0.2em] uppercase text-on-surface-variant/60 mb-3 flex items-center justify-between">
+              Consistency
+              <Activity className="w-3.5 h-3.5 text-primary group-hover:animate-pulse" />
+            </span>
+            <div className="flex items-end gap-3">
+              <span className="text-4xl font-headline font-black text-on-surface leading-none">{user.current_streak}</span>
+              <span className="text-[10px] font-label text-on-surface-variant mb-1 uppercase tracking-widest">Days</span>
+            </div>
+          </div>
+
+          <div className="bg-surface-container-low/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:border-white/10 transition-colors">
+            <span className="text-[9px] font-label font-black tracking-[0.2em] uppercase text-on-surface-variant/60 mb-3 flex items-center justify-between">
+              Global Mastery
+              <ShieldCheck className="w-3.5 h-3.5 text-on-surface-variant/40" />
+            </span>
+            <div className="flex items-end gap-3">
+              <span className="text-4xl font-headline font-black text-on-surface leading-none">{totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%</span>
+              <span className="text-[10px] font-label text-on-surface-variant mb-1 uppercase tracking-widest">Verified</span>
+            </div>
+          </div>
+
+          <div className="bg-surface-container-low/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:border-white/10 transition-colors">
+            <span className="text-[9px] font-label font-black tracking-[0.2em] uppercase text-on-surface-variant/60 mb-3">Next Sync</span>
+            <div className="flex items-end gap-3">
+              <span className="text-4xl font-headline font-black text-on-surface leading-none tracking-tighter">{nextSchedule || '--:--'}</span>
+              <span className="text-[10px] font-label text-on-surface-variant mb-1 uppercase tracking-widest">Today</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Split View */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+          
+          {/* LEFT COLUMN: FOCUS ZONE (70%) */}
+          <div className="lg:col-span-8 flex flex-col gap-8">
+            
+            {/* Path Switcher (Pills) */}
             <div>
-              <div className="text-2xl font-black font-headline text-primary">{user.current_streak}</div>
-              <div className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Day Streak</div>
+               <div className="flex items-center gap-4 mb-4">
+                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                 <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface">Active Protocols</span>
+               </div>
+               
+               <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-3">
+                 {activeGoals.map(goal => {
+                   const isSelected = goal.id === (roadmap?.goal?.id || selectedGoalId);
+                   return (
+                     <button
+                       key={goal.id}
+                       onClick={() => {
+                         if (!isSelected) {
+                           setActivationLoading(true);
+                           setSelectedGoalId(goal.id);
+                           refreshData().then(() => setActivationLoading(false));
+                         }
+                       }}
+                       className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-full font-label font-bold text-[10px] tracking-widest uppercase transition-all flex items-center gap-3 border ${
+                         isSelected 
+                           ? 'bg-primary text-on-primary-container border-primary shadow-[0_0_20px_rgba(253,184,19,0.3)] shadow-primary/20 scale-[1.02]' 
+                           : 'bg-surface-container-lowest text-on-surface-variant border-white/5 hover:bg-surface-container hover:text-on-surface'
+                       }`}
+                     >
+                       {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-on-primary-container animate-pulse"></span>}
+                       {goal.title.length > 25 ? goal.title.substring(0, 25) + '...' : goal.title}
+                     </button>
+                   );
+                 })}
+                 {activeGoals.length === 0 && (
+                    <div className="px-6 py-3 rounded-full font-label font-bold text-[10px] tracking-widest uppercase bg-surface-container-lowest text-on-surface-variant/30 border border-white/5 border-dashed">
+                      No Active Paths Detected
+                    </div>
+                 )}
+                 <button onClick={() => navigate('/onboarding')} className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-white/5 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary/50 transition-colors">
+                    <span className="material-symbols-outlined text-lg">add</span>
+                 </button>
+               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Next Up Session */}
-        <div className="lg:col-span-8 group">
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] bg-surface-container-low border border-outline-variant/10 h-full p-5 sm:p-8 transition-all duration-500 hover:border-primary/30">
-            <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-[80px]"></div>
-            <div className="relative z-10 h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="h-2 w-2 rounded-full bg-secondary animate-pulse"></span>
-                  <span className="font-label text-[10px] uppercase tracking-[0.2em] text-secondary font-bold">Active Session</span>
-                </div>
-                <h3 className="text-xl sm:text-3xl font-black tracking-tight mb-2 font-headline">
-                  {activePartTitle || 'No active part'}
-                </h3>
-                <div className="flex items-center gap-4 text-on-surface-variant font-label text-sm uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base">schedule</span>
-                    {nextSchedule || '12:00'} Today
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base">layers</span>
-                    {roadmap?.goal?.title || goals.find(g => g.status === 'active')?.title || 'Set a goal'}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-8 sm:mt-12 flex flex-wrap items-center gap-4 sm:gap-6">
-                {activePartId ? (
-                  <button
-                    onClick={() => {
-                      setSelectedGoalId(roadmap?.goal?.id);
-                      navigate('/study', { state: { goalId: roadmap?.goal?.id } });
-                    }}
-                    className="px-8 py-4 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase"
-                  >
-                    Start Study Session
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => navigate('/onboarding')}
-                    className="px-8 py-4 bg-primary text-on-primary-container font-label font-bold text-xs tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase"
-                  >
-                    Set Goal
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Side widgets */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="rounded-2xl sm:rounded-[2rem] bg-gradient-to-br from-secondary/20 to-transparent border border-secondary/30 p-5 sm:p-8 relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all"
-            onClick={() => navigate('/settings')}
-          >
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-white">
-                  <span className="material-symbols-outlined">send</span>
-                </div>
-                <span className="font-label text-[10px] font-bold tracking-widest uppercase text-secondary">Coach Access</span>
-              </div>
-              <h4 className="text-xl font-bold font-headline mb-2">
-                {user.telegram_chat_id ? 'Telegram Connected ✓' : 'Connect Telegram'}
-              </h4>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
-                {user.telegram_chat_id ? 'Nudges active at your scheduled times.' : 'Get precision nudges via Telegram.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Progress Widget */}
-          <div className="rounded-2xl sm:rounded-[2rem] bg-surface-container border border-outline-variant/10 p-5 sm:p-8 flex-1">
-            <div className="flex justify-between items-start mb-6">
-              <h4 className="font-label text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">Mastery Progress</h4>
-              <span className="text-secondary font-headline font-bold">
-                {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-              </span>
-            </div>
-            <div className="space-y-4">
-              <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_12px_rgba(0,179,89,0.5)] transition-all duration-1000"
-                  style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
-                ></div>
-              </div>
-              <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                <span className="text-on-surface font-bold">{completedTasks}/{totalTasks}</span> tasks completed successfully.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Roadmap Tasks */}
-        {roadmap && (
-          <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {roadmap.tasks.slice(0, 3).map((task, idx) => (
-              <div key={task.id} className="bg-surface-container-lowest border border-outline-variant/10 p-4 sm:p-6 rounded-2xl sm:rounded-3xl hover:bg-surface-container-low transition-colors group cursor-pointer">
-                <div className="flex justify-between items-start mb-8">
-                  <div className={`h-12 w-12 rounded-2xl bg-surface-container flex items-center justify-center group-hover:border-primary/40 border border-transparent transition-all ${task.status === 'passed' ? 'text-primary' : task.status === 'active' ? 'text-secondary' : 'text-on-surface-variant'
-                    }`}>
-                    <span className="material-symbols-outlined">
-                      {task.status === 'passed' ? 'verified' : task.status === 'active' ? 'play_arrow' : 'lock'}
-                    </span>
+            {/* Path Hero (Current Selection) */}
+            {activeGoals.length > 0 ? (
+              <div className="bg-surface-container-low/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 sm:p-10 relative overflow-hidden group shadow-2xl">
+                {/* Subtle Background Glow inside card */}
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100"></div>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-8">
+                    <span className="px-3 py-1.5 bg-surface-container text-on-surface rounded-md text-[9px] font-label font-black tracking-[0.2em] uppercase border border-white/10 shadow-lg">Focus Zone</span>
+                    {activePartTitle && (
+                       <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 animate-in fade-in zoom-in duration-500">
+                         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                         {activePartTitle}
+                       </span>
+                    )}
                   </div>
-                  <span className="text-[10px] font-label font-bold text-on-surface-variant/40">{String(idx + 1).padStart(2, '0')}</span>
-                </div>
-                <h5 className="font-bold text-lg mb-2">{task.title}</h5>
-                <p className="text-xs text-on-surface-variant leading-relaxed mb-4">
-                  {task.parts.length} parts • {task.parts.filter(p => p.status === 'passed').length} mastered
-                </p>
-                <div className="flex gap-2">
-                  <span className={`px-2 py-1 rounded-md text-[9px] font-label uppercase tracking-wider ${task.status === 'passed' ? 'bg-primary/20 text-primary' : task.status === 'active' ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest text-on-surface-variant'
-                    }`}>
-                    {task.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black font-headline text-on-surface uppercase tracking-tighter leading-[1.1] mb-12 max-w-4xl">
+                    {roadmap?.goal?.title || 'Loading Context...'}
+                  </h2>
 
-      {/* Neural Bridge / Neural Archive Section (Moved from Onboarding) */}
-      <section className="mt-10 sm:mt-16 animate-in slide-in-from-bottom-8 duration-1000">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
-            <History className="text-primary" size={24} />
-          </div>
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">My Archive</h3>
-            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Your Saved Learning Paths</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {goals.length === 0 ? (
-            <div className="md:col-span-3 text-center py-20 bg-surface-container-low/30 rounded-[2rem] border border-dashed border-outline-variant/20 opacity-30">
-              <span className="material-symbols-outlined text-5xl mb-4">folder_open</span>
-              <p className="font-label uppercase tracking-[0.2em] text-xs">No saved paths in storage</p>
-            </div>
-          ) : (
-            goals.map((goal) => (
-              <div key={goal.id} className={`group p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 relative overflow-hidden ${goal.status === 'active'
-                ? 'bg-primary/5 border-primary/40 shadow-2xl shadow-primary/5'
-                : 'bg-surface-container-low/40 border-outline-variant/10 hover:border-outline-variant/30 opacity-80 hover:opacity-100'
-                }`}>
-
-                {/* Status Indicator */}
-                <div className="absolute top-0 right-0 p-6">
-                  <div className={`w-2 h-2 rounded-full ${goal.status === 'active' ? 'bg-primary animate-pulse shadow-[0_0_10px_#fdb813]' : 'bg-on-surface-variant/30'}`}></div>
-                </div>
-
-                <div className="mb-8">
-                  <span className={`text-[8px] font-label font-black uppercase tracking-[0.3em] mb-2 block ${goal.status === 'active' ? 'text-primary' : 'text-on-surface-variant/40'}`}>
-                    {goal.status === 'active' ? 'Active Path' : 'Learning Path Paused'}
-                  </span>
-                  <h4 className="text-lg sm:text-xl font-black text-on-surface uppercase tracking-tight line-clamp-2 pr-6 font-headline">
-                    {goal.title}
-                  </h4>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleToggleStatus(goal.id)}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-xl font-label font-bold text-[9px] tracking-[0.2em] uppercase transition-all ${goal.status === 'active'
-                        ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                        : 'bg-surface-container-highest text-on-surface-variant hover:bg-primary/10 hover:text-primary'
-                        }`}
-                    >
-                      {goal.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
-                      {goal.status === 'active' ? 'Pause' : 'Activate'}
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteGoal(goal.id)}
-                    className="w-10 h-10 rounded-xl bg-surface-container-highest/50 flex items-center justify-center text-on-surface-variant/40 hover:text-error hover:bg-error/10 transition-all border border-outline-variant/10"
-                    title="Purge Path"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                {/* Aesthetic Connector */}
-                {goal.status === 'active' && (
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mt-8 sm:mt-12 p-5 sm:p-8 bg-surface-container-low/30 rounded-2xl sm:rounded-[2rem] border border-outline-variant/10 text-center max-w-2xl mx-auto">
-          <p className="text-[11px] text-on-surface-variant leading-relaxed font-label uppercase tracking-widest opacity-60">
-            "Keep track of your learning progress across all saved paths."
-          </p>
-        </div>
-      </section>
-      {/* Neural Notebook Section */}
-      <section className="mt-10 sm:mt-16 animate-in slide-in-from-bottom-8 duration-1000">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/10">
-            <BookOpen className="text-secondary" size={24} />
-          </div>
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Notebook</h3>
-            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Your Saved Study Insights</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {goals.length === 0 ? (
-            <div className="md:col-span-2 text-center py-12 bg-surface-container-low/30 rounded-2xl sm:rounded-[2rem] border border-dashed border-outline-variant/20 opacity-30">
-              <span className="material-symbols-outlined text-4xl mb-3 block">menu_book</span>
-              <p className="font-label uppercase tracking-[0.2em] text-xs">Create a goal to start your Notebook</p>
-            </div>
-          ) : (
-            goals.map((goal) => {
-              const hasNotes = Array.isArray(goal.notes) && goal.notes.length > 0;
-              const noteCount = hasNotes ? goal.notes.length : 0;
-              const preview = hasNotes
-                ? goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '').substring(0, 120) || 'Multimedia entry...'
-                : 'Start writing notes in your study session...';
-
-              return (
-                <div
-                  key={goal.id}
-                  onClick={() => {
-                    setSelectedGoalId(goal.id);
-                    navigate('/study', { state: { openNotebook: true, goalId: goal.id } });
-                  }}
-                  className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border transition-all group cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${goal.status === 'active'
-                      ? 'bg-surface-container-low border-primary/20 hover:border-primary/40 shadow-lg'
-                      : 'bg-surface-container-low/60 border-outline-variant/10 hover:border-outline-variant/30'
-                    }`}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${goal.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
-                        <span className="material-symbols-outlined text-xl">description</span>
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-8 justify-between">
+                    <div className="flex-1 w-full max-w-lg">
+                      <div className="flex justify-between items-end mb-3">
+                         <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/80 flex items-center gap-2">
+                           <Activity className="w-3 h-3" /> Integrity Progress
+                         </span>
+                         <span className="text-sm font-headline font-black text-on-surface">{totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%</span>
                       </div>
-                      <div>
-                        <h4 className="text-sm sm:text-lg font-black font-headline uppercase text-on-surface truncate pr-4 leading-tight">{goal.title}</h4>
-                        <span className={`text-[9px] font-label font-bold uppercase tracking-widest ${goal.status === 'active' ? 'text-primary' : 'text-on-surface-variant/40'}`}>
-                          {goal.status === 'active' ? '● Active' : 'Paused'}
-                        </span>
+                      <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden border border-white/5">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-primary transition-all duration-1000 relative shadow-[0_0_15px_rgba(253,184,19,0.8)]"
+                          style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+                        >
+                          <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-r from-transparent to-white/40"></div>
+                        </div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-label text-on-surface-variant font-bold uppercase tracking-widest whitespace-nowrap">
-                      {noteCount > 0 ? `${noteCount} Blocks` : 'Empty'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-on-surface-variant line-clamp-2 mb-4 opacity-50 pl-[52px]">
-                    {preview}
-                  </div>
-                  <div className="flex items-center justify-between pl-[52px]">
-                    <span className="flex items-center gap-2 text-[10px] font-label font-bold text-primary uppercase tracking-widest group-hover:gap-3 transition-all">
-                      Open Notebook <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                    </span>
+                    
+                    <button
+                      onClick={() => navigate('/study', { state: { goalId: roadmap?.goal?.id } })}
+                      className="shrink-0 w-full sm:w-auto px-12 py-5 bg-on-surface text-surface rounded-2xl font-label font-black text-[11px] tracking-[0.25em] uppercase hover:bg-primary hover:text-on-primary-container transition-all shadow-2xl hover:shadow-primary/30 active:scale-95 flex justify-center items-center gap-3 border border-transparent hover:border-white/20"
+                    >
+                      Initialize
+                      <ChevronRight size={16} strokeWidth={3} />
+                    </button>
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
-      </section>
+              </div>
+            ) : (
+              <div className="bg-surface-container-lowest border border-dashed border-white/10 rounded-[2.5rem] p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
+                 <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center border border-white/5 mb-6">
+                   <Zap className="text-on-surface-variant/30" size={32} />
+                 </div>
+                 <h3 className="text-xl font-headline font-black uppercase tracking-widest text-on-surface mb-2">No Active Synapses</h3>
+                 <p className="text-[11px] font-label uppercase tracking-widest text-on-surface-variant mb-8 max-w-sm leading-relaxed">Establish a new neural pathway to begin your learning protocol.</p>
+                 <button onClick={() => navigate('/onboarding')} className="px-10 py-4 bg-primary text-on-primary-container font-label font-bold text-[10px] tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase">
+                   Set New Goal
+                 </button>
+              </div>
+            )}
 
-
-      {/* Curriculum Saturation & Schedule Section (Moved from Analytics) */}
-      {roadmap && (
-        <section className="mt-10 sm:mt-16 animate-in slide-in-from-bottom-8 duration-1000">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/10">
-              <span className="material-symbols-outlined text-secondary">analytics</span>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">Mastery Analytics</h3>
-              <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Verified Integrity Protocol</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Detailed Roadmap */}
-            <div className="lg:col-span-8">
-              <div className="bg-surface-container-low rounded-2xl sm:rounded-[2rem] border border-outline-variant/15 p-5 sm:p-8 relative overflow-hidden h-full">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                  <span className="material-symbols-outlined text-9xl">verified</span>
-                </div>
-
-                {/* Side Navigation Arrows */}
-                {goals.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => {
-                        const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
-                        const prevIndex = (currentIndex - 1 + goals.length) % goals.length;
-                        setSelectedGoalId(goals[prevIndex].id);
-                      }}
-                      className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest/80 backdrop-blur-sm border border-primary/30 hover:border-primary hover:bg-primary/20 flex items-center justify-center transition-all group z-30 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
-                    >
-                      <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:-translate-x-1 transition-transform">chevron_left</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        const currentIndex = goals.findIndex(g => g.id === (roadmap?.goal?.id || selectedGoalId));
-                        const nextIndex = (currentIndex + 1) % goals.length;
-                        setSelectedGoalId(goals[nextIndex].id);
-                      }}
-                      className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-highest/80 backdrop-blur-sm border border-primary/30 hover:border-primary hover:bg-primary/20 flex items-center justify-center transition-all group z-30 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
-                    >
-                      <span className="material-symbols-outlined text-primary text-xl sm:text-2xl group-active:translate-x-1 transition-transform">chevron_right</span>
-                    </button>
-                  </>
-                )}
-
-                <div className={`relative z-10 ${goals.length > 1 ? 'px-8 sm:px-12' : 'px-4 sm:px-6'}`}>
-                  <div className="flex justify-between items-start mb-12">
-                    <div>
-                      <h3 className="font-headline font-bold text-xl sm:text-2xl text-on-surface uppercase tracking-tighter">
-                        {roadmap?.goal?.title || 'Curriculum Saturation'}
-                      </h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <p className="text-on-surface-variant text-xs font-label uppercase tracking-widest">
-                          Overall Mastery: {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                        </p>
-                      </div>
-                    </div>
-
+            {/* High-Density Curriculum List */}
+            {roadmap && activeGoals.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-on-surface-variant text-sm">segment</span>
+                    <h3 className="font-label font-black text-[10px] uppercase tracking-[0.2em] text-on-surface">Curriculum Nodes</h3>
                   </div>
-
-                  {(dataLoading || (roadmap?.goal?.id !== selectedGoalId)) ? (
-                    <div className="flex flex-col items-center justify-center py-20 opacity-60">
-                      <div className="w-16 h-16 rounded-full border-4 border-outline-variant/20 border-t-primary animate-spin mb-4"></div>
-                      <p className="text-xs font-label uppercase tracking-widest text-on-surface-variant font-bold animate-pulse">Syncing Roadmap...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {roadmap.tasks.map((task) => {
-                        const taskPassed = task.parts.filter(p => p.status === 'passed').length;
-                        const taskTotal = task.parts.length;
-                        const progress = taskTotal > 0 ? Math.round((taskPassed / taskTotal) * 100) : 0;
-                        const isExpanded = expandedTasks.has(task.id);
-                        let status = task.status === 'passed' ? 'MASTERED' : task.status === 'active' ? 'IN PROGRESS' : 'LOCKED';
-                        let color = task.status === 'passed' ? 'bg-primary' : task.status === 'active' ? 'bg-secondary animate-pulse' : 'bg-surface-container-highest';
-
-                        return (
-                          <div key={task.id} className="group/item">
-                            <div
-                              className="flex justify-between items-center mb-2 cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => toggleTask(task.id)}
-                            >
-                              <div className="flex items-center gap-3">
-                                {progress === 100 ? (
-                                  <span className="material-symbols-outlined text-primary text-sm">verified</span>
-                                ) : (
-                                  <div className={`h-2 w-2 rounded-full ${color}`}></div>
-                                )}
-                                <span className="text-sm font-bold text-on-surface">{task.title}</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-label font-bold text-on-surface-variant uppercase tracking-widest">{status}</span>
-                                <span className={`material-symbols-outlined text-xs text-on-surface-variant transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                  expand_more
-                                </span>
-                              </div>
-                            </div>
-                            <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
-                              <div className={`h-full ${color} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
-                            </div>
-
-                            {isExpanded && (
-                              <div className="ml-5 mt-4 space-y-4 pb-4 animate-in slide-in-from-top-2 duration-300">
-                                {task.parts.map((part) => (
-                                  <div key={part.id} className="flex justify-between items-center group/part">
-                                    <div className="flex items-center gap-4">
-                                      <span className={`material-symbols-outlined text-[14px] ${part.status === 'passed' ? 'text-primary' :
-                                        part.status === 'active' ? 'text-secondary animate-pulse' :
-                                          'text-on-surface-variant opacity-40'
-                                        }`}>
-                                        {part.status === 'passed' ? 'check_circle' : 'radio_button_unchecked'}
-                                      </span>
-                                      <span className={`text-[12px] font-medium transition-colors ${part.status === 'passed' ? 'text-on-surface font-bold' :
-                                        part.status === 'active' ? 'text-secondary' :
-                                          'text-on-surface-variant/70'
-                                        }`}>
-                                        {part.title.split(' || ')[0]}
+                  <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant border border-white/5 px-2.5 py-1 rounded-md bg-surface-container-lowest">{totalTasks} Nodes</span>
+                </div>
+                
+                <div className="bg-surface-container-lowest border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+                  <div className="divide-y divide-white/5">
+                    {[...(roadmap?.tasks || [])].map((task, idx) => {
+                      const taskPassed = task.parts?.filter(p => p.status === 'passed').length || 0;
+                      const taskTotal = task.parts?.length || 0;
+                      const progress = taskTotal > 0 ? Math.round((taskPassed / taskTotal) * 100) : 0;
+                      const isExpanded = expandedTasks.has(task.id);
+                      
+                      return (
+                        <div key={task.id} className="group">
+                          {/* Task Row */}
+                          <div 
+                            className="px-6 py-5 sm:px-8 sm:py-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 cursor-pointer hover:bg-surface-container-low/50 transition-colors"
+                            onClick={() => toggleTask(task.id)}
+                          >
+                             <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
+                               <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center shrink-0 border border-white/5 text-[10px] font-label font-black text-on-surface-variant/80 group-hover:text-on-surface transition-colors">
+                                 {String(idx + 1).padStart(2, '0')}
+                               </div>
+                               
+                               <div className="flex-1 min-w-0">
+                                 <h4 className="text-[13px] sm:text-sm font-bold text-on-surface truncate group-hover:text-primary transition-colors leading-relaxed">{task.title}</h4>
+                               </div>
+                             </div>
+                             
+                             <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pl-12 sm:pl-0">
+                               <div className="flex items-center gap-3 w-32">
+                                 <span className="text-[9px] font-label text-on-surface-variant tracking-[0.1em] font-bold min-w-[28px]">{progress}%</span>
+                                 <div className="h-1 flex-1 bg-surface-container rounded-full overflow-hidden border border-white/5">
+                                   <div className={`h-full ${progress === 100 ? 'bg-primary shadow-[0_0_10px_rgba(253,184,19,0.5)]' : 'bg-secondary'} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
+                                 </div>
+                               </div>
+                               
+                               <div className="flex items-center gap-4">
+                                 <span className={`text-[8px] sm:text-[9px] font-label font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-md border ${
+                                   task.status === 'passed' ? 'bg-primary/10 text-primary border-primary/20' : 
+                                   task.status === 'active' ? 'bg-secondary/10 text-secondary border-secondary/20' : 
+                                   'bg-surface-container-highest/50 text-on-surface-variant/60 border-transparent'
+                                 }`}>
+                                   {task.status === 'passed' ? 'Verified' : task.status}
+                                 </span>
+                                 <span className={`material-symbols-outlined text-sm text-on-surface-variant/40 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                    expand_more
+                                 </span>
+                               </div>
+                             </div>
+                          </div>
+                          
+                          {/* Expandable Parts List */}
+                          {isExpanded && (
+                            <div className="bg-[#0f1115] px-6 sm:px-8 py-5 border-t border-white/5 shadow-inner">
+                              <div className="space-y-4 sm:pl-[3.25rem] relative before:absolute before:left-6 sm:before:left-[1.625rem] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
+                                {(task.parts || []).map(part => (
+                                  <div key={part.id} className="flex items-center justify-between group/part relative pl-8 sm:pl-0">
+                                    <div className="absolute left-0 sm:-left-6 top-1/2 w-4 h-px bg-white/10"></div>
+                                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                                      {part.status === 'passed' ? (
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      ) : part.status === 'active' ? (
+                                        <Circle className="w-3.5 h-3.5 text-secondary fill-secondary/20 animate-pulse shrink-0" />
+                                      ) : (
+                                        <Circle className="w-3.5 h-3.5 text-on-surface-variant/20 shrink-0" />
+                                      )}
+                                      <span className={`text-[11px] sm:text-xs truncate ${part.status === 'passed' ? 'text-on-surface font-bold' : part.status === 'active' ? 'text-secondary font-bold' : 'text-on-surface-variant/70 font-medium'}`}>
+                                        {(part.title || '').split(' || ')[0]}
                                       </span>
                                     </div>
-                                    <span className={`text-[8px] font-label uppercase tracking-[0.1em] px-2 py-0.5 rounded border ${part.status === 'passed' ? 'border-primary/30 text-primary bg-primary/5' :
-                                      part.status === 'active' ? 'border-secondary/30 text-secondary bg-secondary/5' :
-                                        'border-outline-variant/20 text-on-surface-variant/40'
-                                      }`}>
+                                    <span className={`shrink-0 ml-4 text-[8px] font-label font-bold uppercase tracking-[0.2em] ${part.status === 'passed' ? 'text-primary/70' : part.status === 'active' ? 'text-secondary/70' : 'text-on-surface-variant/30'}`}>
                                       {part.status}
                                     </span>
                                   </div>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Schedule & Routine */}
-            <div className="lg:col-span-4 space-y-8">
-              {/* Badge/Rank */}
-              <div className="bg-gradient-to-br from-primary/20 to-secondary/10 border border-primary/20 p-8 rounded-[2rem] text-center relative overflow-hidden shadow-2xl shadow-primary/5">
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4 shadow-xl shadow-primary/40">
-                    <span className="material-symbols-outlined text-white text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>military_tech</span>
-                  </div>
-                  <h4 className="text-lg font-black font-headline uppercase mb-1">
-                    {totalTasks > 0 && (completedTasks / totalTasks) >= 0.8 ? 'Verified Master' : 'Neural Initiate'}
-                  </h4>
-                  <p className="text-[10px] text-on-surface-variant font-label leading-relaxed px-4 uppercase tracking-wider opacity-60">
-                    Verification Protocol Active
-                  </p>
-                </div>
-              </div>
-
-              {/* Nudge Schedule */}
-              <div className="bg-surface-container-low border border-outline-variant/15 p-8 rounded-[2rem]">
-                <h4 className="font-headline font-bold text-on-surface mb-6 uppercase tracking-tighter text-lg">Nudge Routine</h4>
-                <div className="space-y-6">
-                  {(user.study_schedule || ['12:00', '18:00']).sort().map((time, i) => {
-                    const isNext = time === nextSchedule;
-                    return (
-                      <div key={i} className="flex items-start gap-4">
-                        <div className={`mt-1.5 w-2 h-2 rounded-full ${isNext ? 'bg-secondary animate-pulse shadow-[0_0_12px_rgba(0,179,89,0.4)]' : 'bg-on-surface-variant/30'}`}></div>
-                        <div>
-                          <div className={`text-sm font-bold ${isNext ? 'text-on-surface' : 'text-on-surface-variant/60'}`}>{time}</div>
-                          <div className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest opacity-40">
-                            {isNext ? 'Next Sync' : `Session ${i + 1}`}
-                          </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="w-full mt-8 py-3 border border-outline-variant/30 rounded-xl font-label text-[9px] font-bold tracking-widest text-on-surface hover:bg-surface-container-highest transition-colors uppercase"
-                >
-                  Edit Routine
-                </button>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: AUXILIARY SYSTEMS (30%) */}
+          <div className="lg:col-span-4 flex flex-col gap-6 lg:gap-8">
+            
+            {/* Minimal Auxiliary Header */}
+            <div className="flex items-center gap-3 mb-2 px-2 hidden lg:flex">
+               <Cpu className="w-3 h-3 text-on-surface-variant" />
+               <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface">Auxiliary Systems</span>
+            </div>
+
+            {/* Coach / Telegram Widget */}
+            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex items-start gap-5 hover:border-white/10 hover:bg-surface-container-low transition-all group cursor-pointer shadow-lg" onClick={() => navigate('/settings')}>
+              <div className="w-12 h-12 rounded-2xl bg-surface-container border border-white/5 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-secondary/10 group-hover:border-secondary/20 transition-all">
+                <Send className="w-5 h-5 text-on-surface-variant group-hover:text-secondary transition-colors" />
+              </div>
+              <div>
+                <h4 className="text-sm font-headline font-black text-on-surface mb-1.5 flex items-center gap-2">
+                  Coach Link
+                  {user.telegram_chat_id ? (
+                     <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(253,184,19,0.8)] animate-pulse"></span>
+                  ) : (
+                     <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
+                  )}
+                </h4>
+                <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed">
+                  {user.telegram_chat_id ? 'Active. Receiving scheduled neural nudges.' : 'Offline. Connect Telegram in settings.'}
+                </p>
               </div>
             </div>
-          </div>
-        </section>
-      )}
 
-      {/* System Documentation Section (Moved from Docs) */}
-      <section className="mt-16 sm:mt-24 mb-8 sm:mb-12 animate-in slide-in-from-bottom-8 duration-1000">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/10">
-            <BookOpen className="text-primary" size={24} />
-          </div>
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tighter text-on-surface">System Documentation</h3>
-            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em] opacity-40">Operating Manual // Protocol AXIOM</p>
+            {/* Neural Notebook Preview */}
+            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col hover:border-white/10 hover:bg-surface-container-low transition-all shadow-lg group">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-surface-container border border-white/5 flex items-center justify-center">
+                    <BookText className="w-3.5 h-3.5 text-on-surface-variant group-hover:text-primary transition-colors" />
+                  </div>
+                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Notebook</span>
+                </div>
+                <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant border border-white/5 px-2.5 py-1 rounded-md bg-surface-container-lowest">
+                  {Array.isArray(roadmap?.goal?.notes) ? roadmap.goal.notes.length : 0} Blocks
+                </span>
+              </div>
+              <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed mb-8 line-clamp-3 italic">
+                "{(Array.isArray(roadmap?.goal?.notes) ? roadmap.goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '')?.substring(0, 100) : null) || 'Capture insights, research, and technical notes during your focused session.'}"
+              </p>
+              <button 
+                onClick={() => {
+                  if(roadmap?.goal?.id) navigate('/study', { state: { openNotebook: true, goalId: roadmap?.goal?.id } });
+                }}
+                className="w-full py-3.5 bg-surface-container hover:bg-primary text-on-surface hover:text-on-primary-container rounded-xl font-label text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-md group-hover:shadow-primary/20"
+              >
+                Open Editor
+              </button>
+            </div>
+
+            {/* Minimal Archive List */}
+            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col flex-1 shadow-lg min-h-[300px]">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <History className="w-4 h-4 text-on-surface-variant" />
+                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Path Archive</span>
+                </div>
+                <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant">{archivedGoals.length}</span>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2">
+                {archivedGoals.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center opacity-30 mt-8">
+                    <History className="w-8 h-8 mb-3 stroke-[1.5]" />
+                    <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em]">No Archived Data</span>
+                  </div>
+                ) : (
+                  archivedGoals.map(goal => (
+                    <div key={goal.id} className="group/archive flex items-center justify-between gap-4 p-3.5 rounded-xl border border-transparent hover:border-white/5 hover:bg-surface-container-lowest transition-all">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-[11px] font-bold text-on-surface truncate mb-1 group-hover/archive:text-primary transition-colors">{goal.title}</h4>
+                        <span className="text-[8px] font-label font-bold uppercase text-on-surface-variant/50 tracking-[0.2em] flex items-center gap-1.5">
+                           <span className="w-1 h-1 rounded-full bg-on-surface-variant/30"></span>
+                           {goal.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover/archive:opacity-100 transition-opacity shrink-0">
+                        <button onClick={() => handleToggleStatus(goal.id)} className="w-7 h-7 flex items-center justify-center bg-surface-container hover:bg-primary/20 rounded-md hover:text-primary text-on-surface-variant transition-colors border border-white/5" title="Reactivate">
+                          <Play size={10} fill="currentColor" />
+                        </button>
+                        <button onClick={() => handleDeleteGoal(goal.id)} className="w-7 h-7 flex items-center justify-center bg-surface-container hover:bg-error/20 rounded-md hover:text-error text-on-surface-variant transition-colors border border-white/5" title="Purge">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Document Card 1: Verified Mastery */}
-          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-              <Zap size={120} />
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                <ShieldCheck className="text-primary" size={20} />
-              </div>
-              <h4 className="text-lg font-bold font-headline uppercase">Verified Mastery</h4>
-            </div>
-            <p className="text-xs text-on-surface-variant leading-relaxed opacity-70">
-              Axiom doesn't just track time; it verifies understanding. Before advancing through your roadmap, the system generates custom MCQ gates. Failure to pass triggers a mandatory review session, ensuring cognitive retention before expansion.
-            </p>
-          </div>
-
-          {/* Document Card 2: Neural Bridge */}
-          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-secondary/20 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-              <Cpu size={120} />
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
-                <span className="material-symbols-outlined text-secondary">send</span>
-              </div>
-              <h4 className="text-lg font-bold font-headline uppercase">The Neural Bridge</h4>
-            </div>
-            <p className="text-xs text-on-surface-variant leading-relaxed opacity-70">
-              Your growth continues outside this interface. The Neural Bridge synchronizes your progress with Telegram, sending high-precision "nudges" at your scheduled times. This keeps your goals top-of-mind and enables active recall on-the-go.
-            </p>
-          </div>
-
-          {/* Document Card 3: Sudden Death */}
-          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-error/20 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-              <span className="material-symbols-outlined text-8xl">bolt</span>
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center border border-error/20">
-                <span className="material-symbols-outlined text-error">warning</span>
-              </div>
-              <h4 className="text-lg font-bold font-headline uppercase">Sudden Death Protocol</h4>
-            </div>
-            <p className="text-xs text-on-surface-variant leading-relaxed opacity-70">
-              For high-accountability paths, the Sudden Death Protocol ensures maximum focus. If activated, missing consecutive study sessions or failing verification gates multiple times will pause your neural path, requiring manual re-initialization.
-            </p>
-          </div>
-
-          {/* Document Card 4: Agentic Roadmaps */}
-          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-primary/20 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-              <span className="material-symbols-outlined text-8xl">account_tree</span>
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                <span className="material-symbols-outlined text-primary">psychology</span>
-              </div>
-              <h4 className="text-lg font-bold font-headline uppercase">Agentic Synthesis</h4>
-            </div>
-            <p className="text-xs text-on-surface-variant leading-relaxed opacity-70">
-              Every roadmap is synthesized in real-time using SOTA LLMs. Axiom analyzes the core concepts, prerequisites, and practical applications of your goal to build a non-linear path that adapts as you master individual nodes.
-            </p>
-          </div>
-
-          {/* Document Card 5: Neural Notebook */}
-          <div className="p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] bg-surface-container-low/40 border border-outline-variant/10 hover:border-secondary/20 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
-              <span className="material-symbols-outlined text-8xl">edit_note</span>
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
-                <span className="material-symbols-outlined text-secondary">book</span>
-              </div>
-              <h4 className="text-lg font-bold font-headline uppercase">Smart Notebook</h4>
-            </div>
-            <p className="text-xs text-on-surface-variant leading-relaxed opacity-70">
-              Your insights are preserved in the Smart Notebook. While studying, you can capture rich-text notes, images, and links. These notes are locked to each specific learning path and can be exported as high-fidelity documents or shared to the social feed.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-16 pt-8 border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center gap-6 opacity-40">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Axiom" className="h-6 w-auto grayscale" />
-            <span className="text-[9px] font-label uppercase tracking-widest">System Version 2.4.0-Final</span>
+        
+        {/* System Footer Info */}
+        <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 opacity-30">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-lg">code_blocks</span>
+            <span className="text-[9px] font-label font-bold uppercase tracking-[0.25em]">Axiom System v3.0-Pro</span>
           </div>
           <div className="flex gap-6">
-            <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Privacy Shield</span>
-            <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Safety</span>
-            <span className="text-[9px] font-label uppercase tracking-widest cursor-help hover:text-primary transition-colors">Ethics</span>
+            <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] cursor-pointer hover:text-primary transition-colors">Neural Integrity</span>
+            <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] cursor-pointer hover:text-primary transition-colors">Documentation</span>
           </div>
         </div>
-      </section>
 
+      </div>
     </div>
   );
 };
