@@ -535,15 +535,7 @@ const Study = () => {
             </div>
           </div>
 
-          <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-8">
-            <div className="flex items-center justify-between mb-4">
-               <span className="text-[9px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/40">Efficiency</span>
-               <span className="text-[9px] font-label font-black text-primary">84%</span>
-            </div>
-            <div className="h-1 bg-surface-container-highest rounded-full overflow-hidden">
-               <div className="h-full bg-primary w-[84%]"></div>
-            </div>
-          </div>
+          {/* Efficiency block removed */}
         </div>
 
         {/* Main: Module Focus */}
@@ -651,23 +643,7 @@ const Study = () => {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 w-64 h-64 bg-primary/5 blur-[100px] pointer-events-none rounded-full"></div>
           
           <div className="flex flex-col items-center gap-6 relative z-10">
-            {/* Neural Streak & Progress Indicator */}
-            <div className="flex items-center gap-10 mb-4 scale-90 sm:scale-100">
-               <div className="flex flex-col items-center">
-                  <div className="text-3xl font-black text-primary leading-none">{user?.current_streak || 0}</div>
-                  <div className="text-[8px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 mt-1">Day Streak</div>
-               </div>
-               <div className="w-[1px] h-8 bg-outline-variant/20"></div>
-               <div className="flex flex-col items-center">
-                  <div className="text-3xl font-black text-on-surface leading-none">{progressPercent}%</div>
-                  <div className="text-[8px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 mt-1">Map Sync</div>
-               </div>
-                <div className="w-[1px] h-8 bg-outline-variant/20"></div>
-                <div className="flex flex-col items-center">
-                  <div className="text-3xl font-black text-secondary leading-none">{passedParts}</div>
-                  <div className="text-[8px] font-label tracking-[0.3em] uppercase text-on-surface-variant/40 mt-1">Verified</div>
-               </div>
-            </div>
+            {/* Neural Streak & Progress Indicator removed */}
 
              <div className="relative">
                 <button 
