@@ -146,15 +146,15 @@ const Dashboard = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 blur-[120px] rounded-[100%] pointer-events-none"></div>
 
       <div className="max-w-[1600px] mx-auto relative z-10">
-        
+
         {/* Minimal Header */}
         <div className="flex items-center justify-between mb-8">
-           <div>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tighter text-on-surface mb-1 font-headline uppercase">
-                Welcome back, {user.full_name || user.email.split('@')[0]}
-              </h2>
-              <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em]">Command Center // Neural Link Active</p>
-           </div>
+          <div>
+            <h2 className="text-2xl sm:text-4xl font-black tracking-tighter text-on-surface mb-1 font-headline uppercase">
+              Welcome back, {user.full_name || user.email.split('@')[0]}
+            </h2>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em]">Command Center // Neural Link Active</p>
+          </div>
         </div>
 
         {/* KPI Header Row */}
@@ -166,7 +166,7 @@ const Dashboard = () => {
               <span className="text-[10px] font-label text-primary mb-1 uppercase tracking-widest">Focusing</span>
             </div>
           </div>
-          
+
           <div className="bg-surface-container-low/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:border-white/10 transition-colors group">
             <span className="text-[9px] font-label font-black tracking-[0.2em] uppercase text-on-surface-variant/60 mb-3 flex items-center justify-between">
               Consistency
@@ -200,51 +200,11 @@ const Dashboard = () => {
 
         {/* Main Split View */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-          
+
           {/* LEFT COLUMN: FOCUS ZONE (70%) */}
           <div className="lg:col-span-8 flex flex-col gap-8">
-            
-            {/* Path Switcher (Pills) */}
-            <div>
-               <div className="flex items-center gap-4 mb-4">
-                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                 <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface">Active Protocols</span>
-               </div>
-               
-               <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-3">
-                 {activeGoals.map(goal => {
-                   const isSelected = goal.id === (roadmap?.goal?.id || selectedGoalId);
-                   return (
-                     <button
-                       key={goal.id}
-                       onClick={() => {
-                         if (!isSelected) {
-                           setActivationLoading(true);
-                           setSelectedGoalId(goal.id);
-                           refreshData().then(() => setActivationLoading(false));
-                         }
-                       }}
-                       className={`shrink-0 whitespace-nowrap px-6 py-3 rounded-full font-label font-bold text-[10px] tracking-widest uppercase transition-all flex items-center gap-3 border ${
-                         isSelected 
-                           ? 'bg-primary text-on-primary-container border-primary shadow-[0_0_20px_rgba(253,184,19,0.3)] shadow-primary/20 scale-[1.02]' 
-                           : 'bg-surface-container-lowest text-on-surface-variant border-white/5 hover:bg-surface-container hover:text-on-surface'
-                       }`}
-                     >
-                       {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-on-primary-container animate-pulse"></span>}
-                       {goal.title.length > 25 ? goal.title.substring(0, 25) + '...' : goal.title}
-                     </button>
-                   );
-                 })}
-                 {activeGoals.length === 0 && (
-                    <div className="px-6 py-3 rounded-full font-label font-bold text-[10px] tracking-widest uppercase bg-surface-container-lowest text-on-surface-variant/30 border border-white/5 border-dashed">
-                      No Active Paths Detected
-                    </div>
-                 )}
-                 <button onClick={() => navigate('/onboarding')} className="shrink-0 w-10 h-10 rounded-full bg-surface-container-lowest border border-white/5 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary/50 transition-colors">
-                    <span className="material-symbols-outlined text-lg">add</span>
-                 </button>
-               </div>
-            </div>
+
+
 
             {/* Path Hero (Current Selection) */}
             {activeGoals.length > 0 ? (
@@ -252,18 +212,18 @@ const Dashboard = () => {
                 {/* Subtle Background Glow inside card */}
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100"></div>
                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center gap-3 mb-8">
                     <span className="px-3 py-1.5 bg-surface-container text-on-surface rounded-md text-[9px] font-label font-black tracking-[0.2em] uppercase border border-white/10 shadow-lg">Focus Zone</span>
                     {activePartTitle && (
-                       <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 animate-in fade-in zoom-in duration-500">
-                         <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                         {activePartTitle}
-                       </span>
+                      <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 animate-in fade-in zoom-in duration-500">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                        {activePartTitle}
+                      </span>
                     )}
                   </div>
-                  
+
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black font-headline text-on-surface uppercase tracking-tighter leading-[1.1] mb-12 max-w-4xl">
                     {roadmap?.goal?.title || 'Loading Context...'}
                   </h2>
@@ -271,13 +231,13 @@ const Dashboard = () => {
                   <div className="flex flex-col sm:flex-row sm:items-end gap-8 justify-between">
                     <div className="flex-1 w-full max-w-lg">
                       <div className="flex justify-between items-end mb-3">
-                         <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/80 flex items-center gap-2">
-                           <Activity className="w-3 h-3" /> Integrity Progress
-                         </span>
-                         <span className="text-sm font-headline font-black text-on-surface">{totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%</span>
+                        <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/80 flex items-center gap-2">
+                          <Activity className="w-3 h-3" /> Integrity Progress
+                        </span>
+                        <span className="text-sm font-headline font-black text-on-surface">{totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%</span>
                       </div>
                       <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden border border-white/5">
-                        <div 
+                        <div
                           className="h-full bg-gradient-to-r from-primary to-primary transition-all duration-1000 relative shadow-[0_0_15px_rgba(253,184,19,0.8)]"
                           style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
                         >
@@ -285,7 +245,7 @@ const Dashboard = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <button
                       onClick={() => navigate('/study', { state: { goalId: roadmap?.goal?.id } })}
                       className="shrink-0 w-full sm:w-auto px-12 py-5 bg-on-surface text-surface rounded-2xl font-label font-black text-[11px] tracking-[0.25em] uppercase hover:bg-primary hover:text-on-primary-container transition-all shadow-2xl hover:shadow-primary/30 active:scale-95 flex justify-center items-center gap-3 border border-transparent hover:border-white/20"
@@ -298,14 +258,14 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="bg-surface-container-lowest border border-dashed border-white/10 rounded-[2.5rem] p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
-                 <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center border border-white/5 mb-6">
-                   <Zap className="text-on-surface-variant/30" size={32} />
-                 </div>
-                 <h3 className="text-xl font-headline font-black uppercase tracking-widest text-on-surface mb-2">No Active Synapses</h3>
-                 <p className="text-[11px] font-label uppercase tracking-widest text-on-surface-variant mb-8 max-w-sm leading-relaxed">Establish a new neural pathway to begin your learning protocol.</p>
-                 <button onClick={() => navigate('/onboarding')} className="px-10 py-4 bg-primary text-on-primary-container font-label font-bold text-[10px] tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase">
-                   Set New Goal
-                 </button>
+                <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center border border-white/5 mb-6">
+                  <Zap className="text-on-surface-variant/30" size={32} />
+                </div>
+                <h3 className="text-xl font-headline font-black uppercase tracking-widest text-on-surface mb-2">No Active Synapses</h3>
+                <p className="text-[11px] font-label uppercase tracking-widest text-on-surface-variant mb-8 max-w-sm leading-relaxed">Establish a new neural pathway to begin your learning protocol.</p>
+                <button onClick={() => navigate('/onboarding')} className="px-10 py-4 bg-primary text-on-primary-container font-label font-bold text-[10px] tracking-[0.2em] rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase">
+                  Set New Goal
+                </button>
               </div>
             )}
 
@@ -319,7 +279,7 @@ const Dashboard = () => {
                   </div>
                   <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant border border-white/5 px-2.5 py-1 rounded-md bg-surface-container-lowest">{totalTasks} Nodes</span>
                 </div>
-                
+
                 <div className="bg-surface-container-lowest border border-white/5 rounded-3xl overflow-hidden shadow-xl">
                   <div className="divide-y divide-white/5">
                     {[...(roadmap?.tasks || [])].map((task, idx) => {
@@ -327,47 +287,46 @@ const Dashboard = () => {
                       const taskTotal = task.parts?.length || 0;
                       const progress = taskTotal > 0 ? Math.round((taskPassed / taskTotal) * 100) : 0;
                       const isExpanded = expandedTasks.has(task.id);
-                      
+
                       return (
                         <div key={task.id} className="group">
                           {/* Task Row */}
-                          <div 
+                          <div
                             className="px-6 py-5 sm:px-8 sm:py-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 cursor-pointer hover:bg-surface-container-low/50 transition-colors"
                             onClick={() => toggleTask(task.id)}
                           >
-                             <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
-                               <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center shrink-0 border border-white/5 text-[10px] font-label font-black text-on-surface-variant/80 group-hover:text-on-surface transition-colors">
-                                 {String(idx + 1).padStart(2, '0')}
-                               </div>
-                               
-                               <div className="flex-1 min-w-0">
-                                 <h4 className="text-[13px] sm:text-sm font-bold text-on-surface truncate group-hover:text-primary transition-colors leading-relaxed">{task.title}</h4>
-                               </div>
-                             </div>
-                             
-                             <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pl-12 sm:pl-0">
-                               <div className="flex items-center gap-3 w-32">
-                                 <span className="text-[9px] font-label text-on-surface-variant tracking-[0.1em] font-bold min-w-[28px]">{progress}%</span>
-                                 <div className="h-1 flex-1 bg-surface-container rounded-full overflow-hidden border border-white/5">
-                                   <div className={`h-full ${progress === 100 ? 'bg-primary shadow-[0_0_10px_rgba(253,184,19,0.5)]' : 'bg-secondary'} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
-                                 </div>
-                               </div>
-                               
-                               <div className="flex items-center gap-4">
-                                 <span className={`text-[8px] sm:text-[9px] font-label font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-md border ${
-                                   task.status === 'passed' ? 'bg-primary/10 text-primary border-primary/20' : 
-                                   task.status === 'active' ? 'bg-secondary/10 text-secondary border-secondary/20' : 
-                                   'bg-surface-container-highest/50 text-on-surface-variant/60 border-transparent'
-                                 }`}>
-                                   {task.status === 'passed' ? 'Verified' : task.status}
-                                 </span>
-                                 <span className={`material-symbols-outlined text-sm text-on-surface-variant/40 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                    expand_more
-                                 </span>
-                               </div>
-                             </div>
+                            <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center shrink-0 border border-white/5 text-[10px] font-label font-black text-on-surface-variant/80 group-hover:text-on-surface transition-colors">
+                                {String(idx + 1).padStart(2, '0')}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-[13px] sm:text-sm font-bold text-on-surface truncate group-hover:text-primary transition-colors leading-relaxed">{task.title}</h4>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pl-12 sm:pl-0">
+                              <div className="flex items-center gap-3 w-32">
+                                <span className="text-[9px] font-label text-on-surface-variant tracking-[0.1em] font-bold min-w-[28px]">{progress}%</span>
+                                <div className="h-1 flex-1 bg-surface-container rounded-full overflow-hidden border border-white/5">
+                                  <div className={`h-full ${progress === 100 ? 'bg-primary shadow-[0_0_10px_rgba(253,184,19,0.5)]' : 'bg-secondary'} transition-all duration-1000`} style={{ width: `${progress}%` }}></div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-4">
+                                <span className={`text-[8px] sm:text-[9px] font-label font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-md border ${task.status === 'passed' ? 'bg-primary/10 text-primary border-primary/20' :
+                                    task.status === 'active' ? 'bg-secondary/10 text-secondary border-secondary/20' :
+                                      'bg-surface-container-highest/50 text-on-surface-variant/60 border-transparent'
+                                  }`}>
+                                  {task.status === 'passed' ? 'Verified' : task.status}
+                                </span>
+                                <span className={`material-symbols-outlined text-sm text-on-surface-variant/40 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                  expand_more
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          
+
                           {/* Expandable Parts List */}
                           {isExpanded && (
                             <div className="bg-[#0f1115] px-6 sm:px-8 py-5 border-t border-white/5 shadow-inner">
@@ -406,11 +365,11 @@ const Dashboard = () => {
 
           {/* RIGHT COLUMN: AUXILIARY SYSTEMS (30%) */}
           <div className="lg:col-span-4 flex flex-col gap-6 lg:gap-8">
-            
+
             {/* Minimal Auxiliary Header */}
             <div className="flex items-center gap-3 mb-2 px-2 hidden lg:flex">
-               <Cpu className="w-3 h-3 text-on-surface-variant" />
-               <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface">Auxiliary Systems</span>
+              <Cpu className="w-3 h-3 text-on-surface-variant" />
+              <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface">Auxiliary Systems</span>
             </div>
 
             {/* Coach / Telegram Widget */}
@@ -422,9 +381,9 @@ const Dashboard = () => {
                 <h4 className="text-sm font-headline font-black text-on-surface mb-1.5 flex items-center gap-2">
                   Coach Link
                   {user.telegram_chat_id ? (
-                     <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(253,184,19,0.8)] animate-pulse"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(253,184,19,0.8)] animate-pulse"></span>
                   ) : (
-                     <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
                   )}
                 </h4>
                 <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed">
@@ -449,9 +408,9 @@ const Dashboard = () => {
               <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed mb-8 line-clamp-3 italic">
                 "{(Array.isArray(roadmap?.goal?.notes) ? roadmap.goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '')?.substring(0, 100) : null) || 'Capture insights, research, and technical notes during your focused session.'}"
               </p>
-              <button 
+              <button
                 onClick={() => {
-                  if(roadmap?.goal?.id) navigate('/study', { state: { openNotebook: true, goalId: roadmap?.goal?.id } });
+                  if (roadmap?.goal?.id) navigate('/study', { state: { openNotebook: true, goalId: roadmap?.goal?.id } });
                 }}
                 className="w-full py-3.5 bg-surface-container hover:bg-primary text-on-surface hover:text-on-primary-container rounded-xl font-label text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-md group-hover:shadow-primary/20"
               >
@@ -459,49 +418,85 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* Minimal Archive List */}
+            {/* Neural Registry */}
             <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col flex-1 shadow-lg min-h-[300px]">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <History className="w-4 h-4 text-on-surface-variant" />
-                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Path Archive</span>
+                  <Cpu className="w-4 h-4 text-on-surface-variant animate-pulse" />
+                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Neural Registry</span>
                 </div>
-                <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant">{archivedGoals.length}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant/80 border border-white/5 px-2 py-0.5 rounded bg-surface-container-lowest">{goals.length}</span>
+                  <button 
+                    onClick={() => navigate('/onboarding')} 
+                    className="w-7 h-7 rounded-full bg-surface-container hover:bg-primary/20 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors border border-white/5"
+                    title="Add Neural Path"
+                  >
+                    <span className="material-symbols-outlined text-sm font-bold">add</span>
+                  </button>
+                </div>
               </div>
               
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2">
-                {archivedGoals.length === 0 ? (
+                {goals.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-30 mt-8">
                     <History className="w-8 h-8 mb-3 stroke-[1.5]" />
-                    <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em]">No Archived Data</span>
+                    <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em]">No Pathways Established</span>
                   </div>
                 ) : (
-                  archivedGoals.map(goal => (
-                    <div key={goal.id} className="group/archive flex items-center justify-between gap-4 p-3.5 rounded-xl border border-transparent hover:border-white/5 hover:bg-surface-container-lowest transition-all">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-[11px] font-bold text-on-surface truncate mb-1 group-hover/archive:text-primary transition-colors">{goal.title}</h4>
-                        <span className="text-[8px] font-label font-bold uppercase text-on-surface-variant/50 tracking-[0.2em] flex items-center gap-1.5">
-                           <span className="w-1 h-1 rounded-full bg-on-surface-variant/30"></span>
-                           {goal.status}
-                        </span>
+                  goals.map(goal => {
+                    const isSelected = goal.id === (roadmap?.goal?.id || selectedGoalId);
+                    const isActive = goal.status === 'active';
+                    
+                    return (
+                      <div 
+                        key={goal.id} 
+                        onClick={() => {
+                          if (!isSelected) {
+                            setActivationLoading(true);
+                            setSelectedGoalId(goal.id);
+                            refreshData().then(() => setActivationLoading(false));
+                          }
+                        }}
+                        className={`group/archive flex items-center justify-between gap-4 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-primary/5 border-primary/25 shadow-[0_0_15px_rgba(253,184,19,0.05)]'
+                            : 'border-transparent hover:border-white/5 hover:bg-surface-container-lowest'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <h4 className={`text-[11px] font-bold truncate mb-1 transition-colors ${isSelected ? 'text-primary' : 'text-on-surface group-hover/archive:text-primary'}`}>{goal.title}</h4>
+                          <span className="text-[8px] font-label font-bold uppercase tracking-[0.2em] flex items-center gap-1.5">
+                             <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-primary animate-pulse' : 'bg-on-surface-variant/30'}`}></span>
+                             <span className={isActive ? 'text-primary/80' : 'text-on-surface-variant/50'}>{goal.status}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 opacity-0 group-hover/archive:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            onClick={() => handleToggleStatus(goal.id)} 
+                            className="w-7 h-7 flex items-center justify-center bg-surface-container hover:bg-primary/20 rounded-md hover:text-primary text-on-surface-variant transition-colors border border-white/5" 
+                            title={isActive ? 'Deactivate (Pause)' : 'Activate (Play)'}
+                          >
+                            {isActive ? <Pause size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteGoal(goal.id)} 
+                            className="w-7 h-7 flex items-center justify-center bg-surface-container hover:bg-error/20 rounded-md hover:text-error text-on-surface-variant transition-colors border border-white/5" 
+                            title="Purge"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 opacity-0 group-hover/archive:opacity-100 transition-opacity shrink-0">
-                        <button onClick={() => handleToggleStatus(goal.id)} className="w-7 h-7 flex items-center justify-center bg-surface-container hover:bg-primary/20 rounded-md hover:text-primary text-on-surface-variant transition-colors border border-white/5" title="Reactivate">
-                          <Play size={10} fill="currentColor" />
-                        </button>
-                        <button onClick={() => handleDeleteGoal(goal.id)} className="w-7 h-7 flex items-center justify-center bg-surface-container hover:bg-error/20 rounded-md hover:text-error text-on-surface-variant transition-colors border border-white/5" title="Purge">
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
 
           </div>
         </div>
-        
+
         {/* System Footer Info */}
         <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 opacity-30">
           <div className="flex items-center gap-3">
