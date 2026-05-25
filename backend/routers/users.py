@@ -10,9 +10,13 @@ from models import User
 from schemas import (
     RegisterRequest, LoginRequest, TokenResponse,
     LinkTelegramRequest, UserResponse, UpdateScheduleRequest,
-    UpdateProfileRequest
+    UpdateProfileRequest, ForgotPasswordRequest, ResetPasswordRequest,
+    GoogleLoginRequest
 )
-from auth import hash_password, verify_password, create_token, get_current_user
+from auth import (
+    hash_password, verify_password, create_token, get_current_user,
+    create_password_reset_token, verify_password_reset_token, verify_google_token
+)
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -65,6 +69,73 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     token = create_token(str(user.id))
     return TokenResponse(access_token=token)
+
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    email = req.email.lower().strip()
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if user:
+        token = create_password_reset_token(email)
+        # Mock sending email
+        print(f"--- MOCK EMAIL ---")
+        print(f"To: {email}")
+        print(f"Subject: Reset your Axiom password")
+        print(f"Link: http://localhost:5173/login?reset_token={token}")
+        print(f"------------------")
+        return {"message": "Password reset link sent to email.", "mock_link": f"http://localhost:5173/login?reset_token={token}"}
+    return {"message": "If that email is registered, a reset link was sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    email = verify_password_reset_token(req.token)
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.password_hash = hash_password(req.new_password)
+    await db.commit()
+    return {"message": "Password successfully reset. You can now log in."}
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    import secrets
+    import string
+    
+    idinfo = verify_google_token(req.credential)
+    email = idinfo.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Google token does not contain an email")
+        
+    email = email.lower().strip()
+    name = idinfo.get("name")
+    picture = idinfo.get("picture")
+    
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        # Generate a random password for Google-auth users
+        random_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32))
+        user = User(
+            email=email,
+            password_hash=hash_password(random_password),
+            full_name=name,
+            profile_image_url=picture,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        
+    token = create_token(str(user.id))
+    return TokenResponse(access_token=token)
+
 
 
 @router.post("/link-telegram")
