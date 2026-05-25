@@ -4,6 +4,8 @@ import logging
 import bcrypt
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +62,52 @@ def create_token(user_id: str) -> str:
         "jti": str(uuid.uuid4()),  # Unique token ID for auditing
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def create_password_reset_token(email: str) -> str:
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=15)
+    payload = {
+        "sub": email,
+        "type": "reset",
+        "exp": expire,
+        "iat": now,
+        "jti": str(uuid.uuid4()),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def verify_password_reset_token(token: str) -> str:
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "reset":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired reset token")
+
+
+def verify_google_token(token: str) -> dict:
+    import requests
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    if not client_id:
+        raise HTTPException(status_code=500, detail="Google authentication is not configured.")
+    
+    # The frontend uses useGoogleLogin which returns an access_token.
+    # We verify it and get the user's profile by calling the userinfo endpoint.
+    response = requests.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    
+    if response.status_code != 200:
+        logger.error(f"Google token verification failed: {response.text}")
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+        
+    return response.json()
 
 
 async def get_current_user(
