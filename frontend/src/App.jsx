@@ -12,28 +12,34 @@ import Study from './pages/Study';
 import Settings from './pages/Settings';
 import ScrollToTop from './components/ScrollToTop';
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 function App() {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id.apps.googleusercontent.com';
+
   return (
-    <AuthProvider>
-      <DataProvider>
-        <Router>
-          <ToastProvider>
-            <ScrollToTop />
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Auth />} />
-                <Route path="/register" element={<Auth />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/study" element={<Study />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
-            </Layout>
-          </ToastProvider>
-        </Router>
-      </DataProvider>
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={clientId}>
+      <AuthProvider>
+        <DataProvider>
+          <Router>
+            <ToastProvider>
+              <ScrollToTop />
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/login" element={<Auth />} />
+                  <Route path="/register" element={<Auth />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/study" element={<Study />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </Layout>
+            </ToastProvider>
+          </Router>
+        </DataProvider>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
 

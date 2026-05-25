@@ -66,6 +66,21 @@ export const register = (email, password, timezone = 'Asia/Kolkata', schedule = 
 export const login = (email, password) =>
   request('POST', '/auth/login', { email, password });
 
+export const forgotPassword = (email) =>
+  request('POST', '/auth/forgot-password', { email });
+
+export const resetPassword = (token, newPassword) => {
+  const pwErrors = validatePassword(newPassword);
+  if (pwErrors.length > 0) {
+    return Promise.reject(new Error(`Password requirements: ${pwErrors.join(', ')}`));
+  }
+  return request('POST', '/auth/reset-password', { token, new_password: newPassword });
+};
+
+export const googleLogin = (credential) =>
+  request('POST', '/auth/google', { credential });
+
+
 export const linkTelegram = (chatId) =>
   request('POST', '/auth/link-telegram', { telegram_chat_id: chatId });
 
