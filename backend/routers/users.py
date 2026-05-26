@@ -4,6 +4,9 @@ import cloudinary
 import cloudinary.uploader
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from email.message import EmailMessage
+import aiosmtplib
+import logging
 
 from database import get_db
 from models import User
@@ -79,13 +82,57 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     
     if user:
         token = create_password_reset_token(email)
-        # Mock sending email
-        print(f"--- MOCK EMAIL ---")
-        print(f"To: {email}")
-        print(f"Subject: Reset your Axiom password")
-        print(f"Link: http://localhost:5173/login?reset_token={token}")
-        print(f"------------------")
-        return {"message": "Password reset link sent to email.", "mock_link": f"http://localhost:5173/login?reset_token={token}"}
+        reset_url = f"http://localhost:5173/login?reset_token={token}"
+        
+        # Prepare email
+        msg = EmailMessage()
+        msg["From"] = os.getenv("SMTP_USERNAME")
+        msg["To"] = email
+        msg["Subject"] = "Reset your Axiom password"
+        msg.set_content(
+            f"Hello,\n\nYou requested to reset your Axiom password.\n"
+            f"Click the link below to set a new password:\n{reset_url}\n\n"
+            f"If you did not request this, please ignore this email.\n"
+        )
+        msg.add_alternative(
+            f"""
+            <html>
+                <body style="font-family: 'Inter', sans-serif; background-color: #0e0e10; color: #ffffff; padding: 20px;">
+                    <h2 style="color: #fdb813;">Axiom AI</h2>
+                    <p>Hello,</p>
+                    <p>You requested to reset your Axiom password.</p>
+                    <a href="{reset_url}" style="display: inline-block; padding: 12px 24px; background-color: #fdb813; color: #000000; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">Reset Password</a>
+                    <p style="color: #8c909f; font-size: 12px; margin-top: 25px;">If you didn't request this, you can safely ignore this email.</p>
+                </body>
+            </html>
+            """,
+            subtype="html"
+        )
+        
+        smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        smtp_username = os.getenv("SMTP_USERNAME")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        
+        if smtp_username and smtp_password:
+            try:
+                await aiosmtplib.send(
+                    msg,
+                    hostname=smtp_server,
+                    port=smtp_port,
+                    start_tls=True,
+                    username=smtp_username,
+                    password=smtp_password
+                )
+            except Exception as e:
+                logging.getLogger("axiom.auth").error(f"Failed to send reset email to {email}: {e}")
+                print(f"--- FAILED TO SEND REAL EMAIL, FALLBACK TO MOCK ---")
+                print(f"To: {email}\nLink: {reset_url}\n------------------")
+        else:
+            print(f"--- MOCK EMAIL (No SMTP Credentials) ---")
+            print(f"To: {email}\nLink: {reset_url}\n------------------")
+            
+        return {"message": "If that email is registered, a reset link was sent."}
     return {"message": "If that email is registered, a reset link was sent."}
 
 
