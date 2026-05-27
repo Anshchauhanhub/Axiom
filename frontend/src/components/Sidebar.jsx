@@ -10,9 +10,8 @@ const Sidebar = () => {
 
   const navItems = [
     { name: 'Home', icon: 'home', path: '/dashboard' },
-    // { name: 'Social Feed', icon: 'public', path: '/social' },
     { name: 'Onboarding', icon: 'person_add', path: '/onboarding' },
-    { name: 'Study', icon: 'menu_book', path: '/study' },
+    { name: 'Study', icon: 'school', path: '/study' },
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
 
