@@ -54,10 +54,14 @@ const Dashboard = () => {
         if (found) break;
       }
 
-      // Initialize expanded tasks with active ones
+      // Initialize expanded tasks with the first active one
       if (roadmap.tasks) {
-        const activeTasks = roadmap.tasks.filter(t => t.status === 'active').map(t => t.id);
-        setExpandedTasks(new Set(activeTasks));
+        const activeTask = roadmap.tasks.find(t => t.status === 'active');
+        if (activeTask) {
+          setExpandedTasks(new Set([activeTask.id]));
+        } else {
+          setExpandedTasks(new Set());
+        }
       }
     }
   }, [roadmap]);
@@ -67,6 +71,7 @@ const Dashboard = () => {
     if (newExpanded.has(taskId)) {
       newExpanded.delete(taskId);
     } else {
+      newExpanded.clear();
       newExpanded.add(taskId);
     }
     setExpandedTasks(newExpanded);
@@ -153,7 +158,7 @@ const Dashboard = () => {
             <h2 className="text-2xl sm:text-4xl font-black tracking-tighter text-on-surface mb-1 font-headline uppercase">
               Welcome back, {user.full_name || user.email.split('@')[0]}
             </h2>
-            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-[0.3em]">Command Center // Neural Link Active</p>
+
           </div>
         </div>
 
@@ -201,7 +206,7 @@ const Dashboard = () => {
         {/* Main Split View */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
 
-          {/* LEFT COLUMN: FOCUS ZONE (70%) */}
+          {/* LEFT COLUMN: FOCUS ZONE */}
           <div className="lg:col-span-8 flex flex-col gap-8">
 
 
@@ -210,21 +215,21 @@ const Dashboard = () => {
             {activeGoals.length > 0 ? (
               <div className="bg-surface-container-low/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 sm:p-10 relative overflow-hidden group shadow-2xl">
                 {/* Subtle Background Glow inside card */}
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none transition-opacity duration-700 opacity-60 group-hover:opacity-100"></div>
+                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none transition-opacity duration-700 opacity-100"></div>
                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
 
                 <div className="relative z-10">
                   <div className="flex items-center gap-3 mb-8">
-                    <span className="px-3 py-1.5 bg-surface-container text-on-surface rounded-md text-[9px] font-label font-black tracking-[0.2em] uppercase border border-white/10 shadow-lg">Focus Zone</span>
+
                     {activePartTitle && (
-                      <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 animate-in fade-in zoom-in duration-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                        {activePartTitle}
+                      <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 animate-in fade-in zoom-in duration-500 max-w-full overflow-hidden">
+                        <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse"></span>
+                        <span className="truncate">{activePartTitle}</span>
                       </span>
                     )}
                   </div>
 
-                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black font-headline text-on-surface uppercase tracking-tighter leading-[1.1] mb-12 max-w-4xl">
+                  <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black font-headline text-on-surface uppercase tracking-tighter leading-[1.1] mb-12 max-w-4xl break-words">
                     {roadmap?.goal?.title || 'Loading Context...'}
                   </h2>
 
@@ -248,7 +253,7 @@ const Dashboard = () => {
 
                     <button
                       onClick={() => navigate('/study', { state: { goalId: roadmap?.goal?.id } })}
-                      className="shrink-0 w-full sm:w-auto px-12 py-5 bg-on-surface text-surface rounded-2xl font-label font-black text-[11px] tracking-[0.25em] uppercase hover:bg-primary hover:text-on-primary-container transition-all shadow-2xl hover:shadow-primary/30 active:scale-95 flex justify-center items-center gap-3 border border-transparent hover:border-white/20"
+                      className="shrink-0 w-full sm:w-auto px-12 py-5 bg-primary text-on-primary-container rounded-2xl font-label font-black text-[11px] tracking-[0.25em] uppercase hover:brightness-110 transition-all shadow-2xl shadow-primary/30 active:scale-95 flex justify-center items-center gap-3 border border-white/10"
                     >
                       Initialize
                       <ChevronRight size={16} strokeWidth={3} />
@@ -272,16 +277,10 @@ const Dashboard = () => {
             {/* High-Density Curriculum List */}
             {roadmap && activeGoals.length > 0 && (
               <div className="mt-4">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-on-surface-variant text-sm">segment</span>
-                    <h3 className="font-label font-black text-[10px] uppercase tracking-[0.2em] text-on-surface">Curriculum Nodes</h3>
-                  </div>
-                  <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant border border-white/5 px-2.5 py-1 rounded-md bg-surface-container-lowest">{totalTasks} Nodes</span>
-                </div>
+
 
                 <div className="bg-surface-container-lowest border border-white/5 rounded-3xl overflow-hidden shadow-xl">
-                  <div className="divide-y divide-white/5">
+                  <div className="divide-y divide-white/5 max-h-[550px] overflow-y-auto custom-scrollbar">
                     {[...(roadmap?.tasks || [])].map((task, idx) => {
                       const taskPassed = task.parts?.filter(p => p.status === 'passed').length || 0;
                       const taskTotal = task.parts?.length || 0;
@@ -363,74 +362,23 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* RIGHT COLUMN: AUXILIARY SYSTEMS (30%) */}
+          {/* RIGHT COLUMN: AUXILIARY SYSTEMS */}
           <div className="lg:col-span-4 flex flex-col gap-6 lg:gap-8">
 
-            {/* Minimal Auxiliary Header */}
-            <div className="flex items-center gap-3 mb-2 px-2 hidden lg:flex">
-              <Cpu className="w-3 h-3 text-on-surface-variant" />
-              <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface">Auxiliary Systems</span>
-            </div>
 
-            {/* Coach / Telegram Widget */}
-            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex items-start gap-5 hover:border-white/10 hover:bg-surface-container-low transition-all group cursor-pointer shadow-lg" onClick={() => navigate('/settings')}>
-              <div className="w-12 h-12 rounded-2xl bg-surface-container border border-white/5 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-secondary/10 group-hover:border-secondary/20 transition-all">
-                <Send className="w-5 h-5 text-on-surface-variant group-hover:text-secondary transition-colors" />
-              </div>
-              <div>
-                <h4 className="text-sm font-headline font-black text-on-surface mb-1.5 flex items-center gap-2">
-                  Coach Link
-                  {user.telegram_chat_id ? (
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(253,184,19,0.8)] animate-pulse"></span>
-                  ) : (
-                    <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
-                  )}
-                </h4>
-                <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed">
-                  {user.telegram_chat_id ? 'Active. Receiving scheduled neural nudges.' : 'Offline. Connect Telegram in settings.'}
-                </p>
-              </div>
-            </div>
 
-            {/* Neural Notebook Preview */}
-            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col hover:border-white/10 hover:bg-surface-container-low transition-all shadow-lg group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-surface-container border border-white/5 flex items-center justify-center">
-                    <BookText className="w-3.5 h-3.5 text-on-surface-variant group-hover:text-primary transition-colors" />
-                  </div>
-                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Notebook</span>
-                </div>
-                <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant border border-white/5 px-2.5 py-1 rounded-md bg-surface-container-lowest">
-                  {Array.isArray(roadmap?.goal?.notes) ? roadmap.goal.notes.length : 0} Blocks
-                </span>
-              </div>
-              <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed mb-8 line-clamp-3 italic">
-                "{(Array.isArray(roadmap?.goal?.notes) ? roadmap.goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '')?.substring(0, 100) : null) || 'Capture insights, research, and technical notes during your focused session.'}"
-              </p>
-              <button
-                onClick={() => {
-                  if (roadmap?.goal?.id) navigate('/study', { state: { openNotebook: true, goalId: roadmap?.goal?.id } });
-                }}
-                className="w-full py-3.5 bg-surface-container hover:bg-primary text-on-surface hover:text-on-primary-container rounded-xl font-label text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-md group-hover:shadow-primary/20"
-              >
-                Open Editor
-              </button>
-            </div>
-
-            {/* Neural Registry */}
-            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col flex-1 shadow-lg min-h-[300px]">
+            {/* Learning Paths */}
+            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col flex-1 shadow-lg min-h-[300px] max-h-[400px]">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <Cpu className="w-4 h-4 text-on-surface-variant animate-pulse" />
-                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Neural Registry</span>
+                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Learning Paths</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em] text-on-surface-variant/80 border border-white/5 px-2 py-0.5 rounded bg-surface-container-lowest">{goals.length}</span>
                   <button 
                     onClick={() => navigate('/onboarding')} 
                     className="w-7 h-7 rounded-full bg-surface-container hover:bg-primary/20 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors border border-white/5"
-                    title="Add Neural Path"
+                    title="Add Learning Path"
                   >
                     <span className="material-symbols-outlined text-sm font-bold">add</span>
                   </button>
@@ -444,7 +392,19 @@ const Dashboard = () => {
                     <span className="text-[9px] font-label font-bold uppercase tracking-[0.2em]">No Pathways Established</span>
                   </div>
                 ) : (
-                  goals.map(goal => {
+                  [...goals].sort((a, b) => {
+                    const aSelected = a.id === (roadmap?.goal?.id || selectedGoalId);
+                    const bSelected = b.id === (roadmap?.goal?.id || selectedGoalId);
+                    if (aSelected && !bSelected) return -1;
+                    if (!aSelected && bSelected) return 1;
+
+                    const aActive = a.status === 'active';
+                    const bActive = b.status === 'active';
+                    if (aActive && !bActive) return -1;
+                    if (!aActive && bActive) return 1;
+
+                    return 0;
+                  }).map(goal => {
                     const isSelected = goal.id === (roadmap?.goal?.id || selectedGoalId);
                     const isActive = goal.status === 'active';
                     
@@ -491,6 +451,48 @@ const Dashboard = () => {
                     );
                   })
                 )}
+              </div>
+            </div>
+
+            {/* Neural Notebook Preview */}
+            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col hover:border-white/10 hover:bg-surface-container-low transition-all shadow-lg group">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-surface-container border border-white/5 flex items-center justify-center">
+                    <BookText className="w-3.5 h-3.5 text-on-surface-variant group-hover:text-primary transition-colors" />
+                  </div>
+                  <span className="text-[10px] font-label font-black tracking-[0.2em] uppercase text-on-surface">Notebook</span>
+                </div>
+
+              </div>
+              <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed mb-8 line-clamp-3 italic">
+                "{(Array.isArray(roadmap?.goal?.notes) ? roadmap.goal.notes.find(b => b.type === 'text')?.content?.replace(/<[^>]*>?/gm, '')?.substring(0, 100) : null) || 'Capture insights, research, and technical notes during your focused session.'}"
+              </p>
+              <button
+                onClick={() => navigate('/notebooks')}
+                className="w-full py-3.5 bg-primary text-on-primary-container rounded-xl font-label text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-md shadow-primary/20 hover:brightness-110"
+              >
+                Open Editor
+              </button>
+            </div>
+
+            {/* Coach / Telegram Widget */}
+            <div className="bg-surface-container-low/40 backdrop-blur-md border border-white/5 rounded-3xl p-6 sm:p-8 flex items-start gap-5 hover:border-white/10 hover:bg-surface-container-low transition-all group cursor-pointer shadow-lg" onClick={() => navigate('/settings')}>
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-all">
+                <Send className="w-5 h-5 text-primary transition-colors" />
+              </div>
+              <div>
+                <h4 className="text-sm font-headline font-black text-on-surface mb-1.5 flex items-center gap-2">
+                  Coach Link
+                  {user.telegram_chat_id ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(253,184,19,0.8)] animate-pulse"></span>
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
+                  )}
+                </h4>
+                <p className="text-[11px] font-medium text-on-surface-variant/70 leading-relaxed">
+                  {user.telegram_chat_id ? 'Active. Receiving scheduled neural nudges.' : 'Offline. Connect Telegram in settings.'}
+                </p>
               </div>
             </div>
 

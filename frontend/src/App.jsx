@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import Auth from './pages/Auth';
 import Study from './pages/Study';
+import Notebooks from './pages/Notebooks';
 import Settings from './pages/Settings';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -32,6 +33,7 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/study" element={<Study />} />
+                  <Route path="/notebooks" element={<Notebooks />} />
                   <Route path="/settings" element={<Settings />} />
                 </Routes>
               </Layout>
