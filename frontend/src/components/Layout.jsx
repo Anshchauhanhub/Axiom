@@ -7,19 +7,20 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const path = location.pathname.replace(/\/$/, '') || '/';
   const hideNavigation = ['/', '/login', '/register'].includes(path);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
 
   return (
     <div className={`min-h-screen bg-background text-on-surface font-body selection:bg-primary/30 flex flex-col ${hideNavigation ? 'overflow-x-hidden' : ''}`}>
       {!hideNavigation && (
         <>
-          <Sidebar />
+          <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           <TopNav />
         </>
       )}
-      <main className={`flex-1 flex flex-col items-center justify-start max-w-7xl mx-auto w-full ${
+      <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 ${
         hideNavigation 
           ? 'p-0 max-w-none' 
-          : 'pt-4 pb-24 px-3 sm:px-4 lg:pt-8 lg:pb-12 lg:pl-80'
+          : `pt-4 pb-24 px-3 sm:px-4 lg:pt-8 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
       }`}>
         {children}
       </main>

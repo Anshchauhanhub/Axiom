@@ -288,7 +288,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
               }}
               onFocus={() => setActiveBlockId(block.id)}
               onKeyDown={(e) => handleKeyDown(e, block.id)}
-              className={`outline-none min-h-[1.5em] text-slate-800 font-serif text-[14px] leading-relaxed whitespace-pre-wrap selection:bg-primary/20 text-${block.alignment || 'left'}`}
+              className={`outline-none min-h-[1.5em] text-slate-800 font-serif text-[14px] leading-relaxed whitespace-pre-wrap break-words selection:bg-primary/20 text-${block.alignment || 'left'}`}
               placeholder="Start typing or press '/' for commands..."
             />
           </div>
@@ -317,7 +317,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
                 content={block.content}
                 onUpdate={(html) => handleUpdateBlock(block.id, { content: html })}
                 onFocus={() => setActiveBlockId(block.id)}
-                className="outline-none min-h-[1.5em] font-serif text-lg leading-relaxed whitespace-pre-wrap"
+                className="outline-none min-h-[1.5em] font-serif text-lg leading-relaxed whitespace-pre-wrap break-words"
                 placeholder="Enter callout note..."
               />
             </div>

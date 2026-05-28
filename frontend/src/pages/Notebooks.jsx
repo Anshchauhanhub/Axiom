@@ -25,7 +25,7 @@ const Notebooks = () => {
       {/* Background glow effect */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 blur-[120px] rounded-[100%] pointer-events-none"></div>
 
-      <div className="max-w-[1600px] mx-auto relative z-10 px-4 sm:px-8">
+      <div className="w-full mx-auto relative z-10 px-4 sm:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-12 pt-8">
           <div>
