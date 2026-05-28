@@ -1,66 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { 
-  onboardingChat, finalizeGoal, getChatSessions, getSessionMessages, deleteChatSession, 
-  clearChatHistory, generateYoutubeRoadmap 
-} from '../services/api';
-import { useData } from '../context/DataContext';
-import NeuralLoader from '../components/NeuralLoader';
-import MessageBubble from '../components/MessageBubble';
-import { 
-  Send, Activity, ChevronRight, History, 
-  BrainCircuit, Search, Video, MessageSquare, 
-  ArrowRight, Sparkles, Globe, Zap,
-  Plus, Mic, Edit3, Compass, MessageCircle, Trash2
-} from 'lucide-react';
+import re
 
-const Onboarding = () => {
-  const { user, loginUser } = useAuth();
-  const { refreshData } = useData();
-  const navigate = useNavigate();
+def rewrite():
+    path = "/home/ansh/projects/Axiom/frontend/src/pages/Onboarding.jsx"
+    with open(path, "r") as f:
+        content = f.read()
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+    # 1. Update imports
+    content = content.replace(
+        "onboardingChat, finalizeGoal",
+        "onboardingChat, finalizeGoal, getChatSessions, getSessionMessages, deleteChatSession"
+    )
+    content = content.replace(
+        "import { \n  Send, Activity, ChevronRight, History, \n  BrainCircuit, Search, Video, MessageSquare, \n  ArrowRight, Sparkles, Globe, Zap,\n  Plus, Mic, Edit3, Compass\n} from 'lucide-react';",
+        "import { \n  Send, Activity, ChevronRight, History, \n  BrainCircuit, Search, Video, MessageSquare, \n  ArrowRight, Sparkles, Globe, Zap,\n  Plus, Mic, Edit3, Compass, MessageCircle, Trash2\n} from 'lucide-react';"
+    )
 
-  // Auth state
-  const [authStep, setAuthStep] = useState(!user);
-  const [mode, setMode] = useState('register');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  // Mode Selection
-  const [onboardingMode, setOnboardingMode] = useState(null); // 'chat' or 'youtube'
-
-
+    # 2. Add State
+    state_addition = """
   // Chat state
   const [chatSessions, setChatSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+"""
+    content = content.replace("  // Chat state", state_addition)
 
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [phase, setPhase] = useState('discovery');
-  const [draftRoadmap, setDraftRoadmap] = useState(null);
-  const [goalTitle, setGoalTitle] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-
-  // YouTube state
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-
-  const scrollRef = useRef(null);
-  const messagesEndRef = useRef(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    if (!user && !loading) {
-      navigate('/login');
-    }
-  }, [user, loading, navigate]);
-
-  useEffect(() => {
+    # 3. Replace useEffect for fresh session
+    old_use_effect = """  useEffect(() => {
+    const startFreshSession = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          await clearChatHistory();
+        } catch (e) {
+          console.error("Failed to clear history:", e);
+        }
+        setMessages([]);
+        setPhase('discovery');
+        setDraftRoadmap(null);
+        setLoading(false);
+      }
+    };
+    startFreshSession();
+  }, [user]);"""
+    
+    new_use_effect = """  useEffect(() => {
     if (user) {
       loadChatSessions();
     }
@@ -109,190 +91,27 @@ const Onboarding = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  };"""
+    content = content.replace(old_use_effect, new_use_effect)
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
-
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const observer = new MutationObserver(() => {
-      scrollToBottom();
-    });
-    observer.observe(container, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping) return;
-
-    const userMsg = { role: 'user', content: inputText };
-    setMessages(prev => [...prev, userMsg]);
-    setInputText('');
-    setIsTyping(true);
-
-    try {
-      const res = await onboardingChat([...messages, userMsg], currentSessionId);
+    # 4. Update handleSendMessage
+    content = content.replace(
+        "const res = await onboardingChat([...messages, userMsg]);",
+        """const res = await onboardingChat([...messages, userMsg], currentSessionId);
       if (res.session_id && !currentSessionId) {
          setCurrentSessionId(res.session_id);
          loadChatSessions();
-      }
-      const fullMessage = res.message || "I'm preparing your learning path...";
-      let displayedMessage = "";
-      
-      if (res.phase) setPhase(res.phase);
-      if (res.draft_roadmap) {
-        setDraftRoadmap(res.draft_roadmap);
-        setGoalTitle(res.goal_title || inputText || userMsg.content);
-      }
+      }"""
+    )
 
-      setError('');
-      setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase || phase }]);
-
-      const tokens = fullMessage.split(/(\s+)/);
-      for (let i = 0; i < tokens.length; i++) {
-        displayedMessage += tokens[i];
-        setMessages(prev => {
-          const newHistory = [...prev];
-          newHistory[newHistory.length - 1] = { ...newHistory[newHistory.length - 1], content: displayedMessage };
-          return newHistory;
-        });
-        if (tokens[i].trim()) {
-          await new Promise(r => setTimeout(r, 10 + Math.random() * 20));
-        }
-      }
-    } catch (e) {
-      setError("Connection interrupted. Please retry.");
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleYoutubeSynthesis = async (e) => {
-    e.preventDefault();
-    if (!youtubeUrl.trim()) return;
-    setLoading(true);
-    setError('');
-    try {
-      const res = await generateYoutubeRoadmap(youtubeUrl);
-      setDraftRoadmap(res.draft_roadmap);
-      setGoalTitle(res.goal_title);
-      setPhase('ready');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFinalize = async () => {
-    if (!draftRoadmap) return;
-    setLoading(true);
-    try {
-      const title = goalTitle || draftRoadmap[0]?.title || "My Mastery Goal";
-      await finalizeGoal(title, draftRoadmap);
-      await refreshData();
-      navigate('/');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRefine = () => {
-    setDraftRoadmap(null);
-    setPhase('discovery');
-    setError('');
-  };
-
-  if (!user && loading) {
-    return <NeuralLoader message="INITIALIZING AUTH PROTOCOL" />;
-  }
-
-  if (!user) return null; // Should be handled by useEffect redirect
-
-  if (!onboardingMode) {
-    return (
-      <div className="w-full max-w-6xl mx-auto px-4 py-12 flex-1 flex flex-col justify-center relative z-10">
-        {/* Background Decorative Elements */}
-        <div className="fixed inset-0 neural-grid opacity-20 pointer-events-none -z-10"></div>
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[160px] pointer-events-none -z-10 animate-neural-pulse"></div>
-
-        <div className="text-center mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5">
-            <Sparkles className="text-primary animate-pulse" size={16} />
-            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.3em]">Session Initialized</span>
-          </div>
-          <h1 className="text-6xl sm:text-8xl font-black font-headline uppercase tracking-tighter text-on-surface italic mb-8 leading-none">
-            SELECT YOUR <span className="text-primary drop-shadow-[0_0_30px_rgba(253,184,19,0.5)]">PATH</span>
-          </h1>
-          <p className="text-on-surface-variant/70 font-label text-sm sm:text-base tracking-[0.2em] uppercase max-w-3xl mx-auto leading-relaxed px-4">
-            Axiom is ready to synthesize your curriculum. Choose your method of knowledge acquisition.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto w-full px-4 sm:px-0">
-          {/* Neural Chat Card */}
-          <button 
-            onClick={() => setOnboardingMode('chat')}
-            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-primary/50 hover:shadow-[0_0_80px_rgba(253,184,19,0.15)] overflow-hidden animate-in slide-in-from-left-12 duration-1000"
-          >
-            {/* Scanner Effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
-            
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:rotate-12 group-hover:scale-125">
-              <MessageSquare size={200} strokeWidth={1} />
-            </div>
-
-            <div className="relative z-20">
-              <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center mb-12 border border-primary/20 group-hover:neural-glow group-hover:scale-110 transition-all duration-500 animate-float">
-                <MessageSquare className="text-primary" size={40} />
-              </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-primary transition-colors duration-500">Learning Chat</h3>
-              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
-                Engage in direct dialogue with our high-accountability coach to architect a custom path.
-              </p>
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 text-primary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-primary group-hover:text-black transition-all duration-500">
-                Launch Chat <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
-              </div>
-            </div>
-          </button>
-
-          {/* Playlist Synthesis Card */}
-          <button 
-            onClick={() => setOnboardingMode('youtube')}
-            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-secondary/50 hover:shadow-[0_0_80px_rgba(0,179,89,0.15)] overflow-hidden animate-in slide-in-from-right-12 duration-1000"
-          >
-            {/* Scanner Effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
-
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:-rotate-12 group-hover:scale-125">
-              <Video size={200} strokeWidth={1} />
-            </div>
-
-            <div className="relative z-20">
-              <div className="w-24 h-24 rounded-[2.5rem] bg-secondary/10 flex items-center justify-center mb-12 border border-secondary/20 group-hover:neural-glow-secondary group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:1s]">
-                <Video className="text-secondary" size={40} />
-              </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">Playlist Import</h3>
-              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
-                Import external knowledge by transforming YouTube playlists into structured learning modules.
-              </p>
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-secondary group-hover:text-black transition-all duration-500">
-                Paste URL <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+    # 5. Restructure Layout
+    # Find the start of the return statement for the active modes
+    layout_start_idx = content.find("return (\n    <div className=\"w-full flex-1 min-h-[500px] flex flex-col animate-in fade-in duration-1000\">")
+    
+    # We will replace the entire return block to inject the split layout properly.
+    # It's safer to just provide the replacement content for everything from return onwards.
+    
+    new_return = """return (
     <div className="w-full flex-1 min-h-[500px] flex animate-in fade-in duration-1000">
       {loading && <NeuralLoader message="PROCESSING..." />}
 
@@ -525,3 +344,14 @@ const Onboarding = () => {
 };
 
 export default Onboarding;
+"""
+
+    content = content[:layout_start_idx] + new_return
+    
+    with open(path, "w") as f:
+        f.write(content)
+    
+    print("Rewritten successfully.")
+
+if __name__ == "__main__":
+    rewrite()

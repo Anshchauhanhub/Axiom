@@ -491,9 +491,9 @@ const Study = () => {
 
   const renderWorkbench = () => {
     return (
-      <div className="flex flex-col lg:flex-row gap-8 h-full max-w-[1600px] mx-auto pb-24 animate-in slide-in-from-bottom-5 duration-700">
+      <div className="flex flex-col lg:flex-row gap-8 h-full w-full mx-auto pb-24 animate-in slide-in-from-bottom-5 duration-700">
         {/* Sidebar: Path Logic */}
-        <div className="w-full lg:w-80 flex flex-col gap-6">
+        <div className={`w-full lg:w-80 flex-col gap-6 shrink-0 transition-all duration-500 ${showNotes ? 'hidden' : 'flex'}`}>
           <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-8">
             <div className="flex items-center gap-3 mb-8">
               <span className="material-symbols-outlined text-primary text-xl">account_tree</span>
@@ -552,12 +552,7 @@ const Study = () => {
                    <span className="text-[10px] font-label tracking-[0.4em] text-primary uppercase font-black">Active Context</span>
                    <h2 className="text-3xl font-black font-headline text-on-surface uppercase tracking-tight mt-1">{activeTask.title}</h2>
                 </div>
-                <div className="flex items-center gap-2">
-                   <div className="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant/10 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                      <span className="text-[9px] font-label font-black uppercase tracking-widest">Live Focus</span>
-                   </div>
-                </div>
+
               </div>
 
               <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 p-4 sm:p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
@@ -856,7 +851,7 @@ const Study = () => {
       
       <div className={`flex w-full h-full relative ${showNotes ? 'flex-1 overflow-hidden' : ''}`}>
         <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
-          <div className={`max-w-[1400px] mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-8' : ''}`}>
+          <div className={`w-full mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-8' : ''}`}>
              {phaseContent}
           </div>
         </main>

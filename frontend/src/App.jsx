@@ -10,7 +10,8 @@ import Onboarding from './pages/Onboarding';
 import Auth from './pages/Auth';
 import Study from './pages/Study';
 import Notebooks from './pages/Notebooks';
-import Settings from './pages/Settings';
+
+import Calendar from './pages/Calendar';
 import ScrollToTop from './components/ScrollToTop';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -34,7 +35,8 @@ function App() {
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/study" element={<Study />} />
                   <Route path="/notebooks" element={<Notebooks />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/calendar" element={<Calendar />} />
+
                 </Routes>
               </Layout>
             </ToastProvider>

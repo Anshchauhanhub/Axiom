@@ -16,6 +16,7 @@ const Dashboard = () => {
   const [activationLoading, setActivationLoading] = useState(false);
   const [nextSchedule, setNextSchedule] = useState('');
   const [expandedTasks, setExpandedTasks] = useState(new Set());
+  const [heroIndex, setHeroIndex] = useState(0);
 
   useEffect(() => {
     refreshData();
@@ -34,6 +35,15 @@ const Dashboard = () => {
     const interval = setInterval(getNextTime, 60000);
     return () => clearInterval(interval);
   }, [user]);
+
+  useEffect(() => {
+    const activeGoals = goals.filter(g => g.status === 'active');
+    if (activeGoals.length <= 1) return;
+    const interval = setInterval(() => {
+      setHeroIndex((prev) => (prev + 1) % activeGoals.length);
+    }, 6000); // Rotate every 6 seconds
+    return () => clearInterval(interval);
+  }, [goals]);
 
 
 
@@ -150,7 +160,7 @@ const Dashboard = () => {
       {/* Background glow effect */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 blur-[120px] rounded-[100%] pointer-events-none"></div>
 
-      <div className="max-w-[1600px] mx-auto relative z-10">
+      <div className="w-full mx-auto relative z-10">
 
         {/* Minimal Header */}
         <div className="flex items-center justify-between mb-8">
@@ -211,57 +221,93 @@ const Dashboard = () => {
 
 
 
-            {/* Path Hero (Current Selection) */}
-            {activeGoals.length > 0 ? (
-              <div className="bg-surface-container-low/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 sm:p-10 relative overflow-hidden group shadow-2xl">
+            {/* Path Hero (Auto-rotating Netflix style) */}
+            {activeGoals.length > 0 ? (() => {
+              const currentGoal = activeGoals[heroIndex] || activeGoals[0];
+              const isSelected = currentGoal.id === roadmap?.goal?.id;
+              const displayTitle = currentGoal.title;
+              const displayPartTitle = isSelected ? activePartTitle : 'NEW PATHWAY AVAILABLE';
+              const displayProgress = isSelected ? (totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0) : 0;
+
+              return (
+              <div className="bg-surface-container-low/40 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 sm:p-10 relative overflow-hidden group shadow-2xl transition-all duration-500">
                 {/* Subtle Background Glow inside card */}
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none transition-opacity duration-700 opacity-100"></div>
                 <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
 
-                <div className="relative z-10">
+                <div key={currentGoal.id} className="relative z-10 animate-in fade-in duration-1000">
                   <div className="flex items-center gap-3 mb-8">
-
-                    {activePartTitle && (
-                      <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 animate-in fade-in zoom-in duration-500 max-w-full overflow-hidden">
-                        <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse"></span>
-                        <span className="truncate">{activePartTitle}</span>
-                      </span>
-                    )}
+                    <span className="text-[10px] font-label text-primary font-bold tracking-[0.2em] uppercase flex items-center gap-2 max-w-full overflow-hidden">
+                      {isSelected && <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse"></span>}
+                      <span className="truncate">{displayPartTitle}</span>
+                    </span>
                   </div>
 
                   <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black font-headline text-on-surface uppercase tracking-tighter leading-[1.1] mb-12 max-w-4xl break-words">
-                    {roadmap?.goal?.title || 'Loading Context...'}
+                    {displayTitle}
                   </h2>
 
                   <div className="flex flex-col sm:flex-row sm:items-end gap-8 justify-between">
-                    <div className="flex-1 w-full max-w-lg">
-                      <div className="flex justify-between items-end mb-3">
-                        <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/80 flex items-center gap-2">
-                          <Activity className="w-3 h-3" /> Integrity Progress
-                        </span>
-                        <span className="text-sm font-headline font-black text-on-surface">{totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%</span>
-                      </div>
-                      <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden border border-white/5">
-                        <div
-                          className="h-full bg-gradient-to-r from-primary to-primary transition-all duration-1000 relative shadow-[0_0_15px_rgba(253,184,19,0.8)]"
-                          style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
-                        >
-                          <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-r from-transparent to-white/40"></div>
+                    <div className="flex-1 w-full max-w-lg h-[46px]">
+                        <div className="animate-in fade-in duration-500">
+                          <div className="flex justify-between items-end mb-3">
+                            <span className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/80 flex items-center gap-2">
+                              <Activity className="w-3 h-3" /> Progress
+                            </span>
+                            <span className="text-sm font-headline font-black text-on-surface">{displayProgress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden border border-white/5">
+                            <div
+                              className="h-full bg-gradient-to-r from-primary to-primary transition-all duration-1000 relative shadow-[0_0_15px_rgba(253,184,19,0.8)]"
+                              style={{ width: `${displayProgress}%` }}
+                            >
+                              <div className="absolute top-0 right-0 bottom-0 w-20 bg-gradient-to-r from-transparent to-white/40"></div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
                     </div>
 
                     <button
-                      onClick={() => navigate('/study', { state: { goalId: roadmap?.goal?.id } })}
+                      onClick={() => {
+                        if (!isSelected) {
+                          handleSwitchGoal(currentGoal.id);
+                        } else {
+                          navigate('/study', { state: { goalId: currentGoal.id } });
+                        }
+                      }}
                       className="shrink-0 w-full sm:w-auto px-12 py-5 bg-primary text-on-primary-container rounded-2xl font-label font-black text-[11px] tracking-[0.25em] uppercase hover:brightness-110 transition-all shadow-2xl shadow-primary/30 active:scale-95 flex justify-center items-center gap-3 border border-white/10"
                     >
-                      Initialize
+                      {isSelected ? 'Initialize' : 'Switch Focus'}
                       <ChevronRight size={16} strokeWidth={3} />
                     </button>
                   </div>
                 </div>
+                
+                {/* Carousel Next Arrow */}
+                {activeGoals.length > 1 && (
+                  <button
+                    onClick={() => setHeroIndex((prev) => (prev + 1) % activeGoals.length)}
+                    className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border border-primary/50 text-primary flex items-center justify-center bg-black/20 hover:bg-primary/10 hover:border-primary transition-all z-20 group cursor-pointer"
+                  >
+                    <ChevronRight size={20} className="group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                )}
+                
+                {/* Carousel Indicators */}
+                {activeGoals.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                    {activeGoals.map((_, idx) => (
+                      <button 
+                        key={idx} 
+                        onClick={() => setHeroIndex(idx)}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${idx === heroIndex ? 'bg-primary w-4' : 'bg-white/30 hover:bg-white/50'}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
+              );
+            })() : (
               <div className="bg-surface-container-lowest border border-dashed border-white/10 rounded-[2.5rem] p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
                 <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center border border-white/5 mb-6">
                   <Zap className="text-on-surface-variant/30" size={32} />

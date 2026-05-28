@@ -130,6 +130,9 @@ export const getRoadmap = (goalId) =>
 export const getPartContent = (partId) =>
   request('GET', `/goals/parts/${partId}/content`);
 
+export const getAllTasks = () =>
+  request('GET', '/goals/all-tasks');
+
 // --- Quiz ---
 export const startQuiz = (partId) => request('POST', `/quiz/start/${partId}`);
 
@@ -139,8 +142,16 @@ export const submitQuiz = (quizToken, answers) =>
 export const getActiveQuiz = () => request('GET', '/quiz/active');
 
 // --- Conversational Onboarding ---
-export const onboardingChat = (messages) =>
-  request('POST', '/goals/chat', { messages });
+export const onboardingChat = (messages, sessionId = null) =>
+  request('POST', '/goals/chat', { messages, session_id: sessionId });
+
+export const getChatSessions = () => request('GET', '/goals/chat-sessions');
+
+export const getSessionMessages = (sessionId) =>
+  request('GET', `/goals/chat-sessions/${sessionId}/messages`);
+
+export const deleteChatSession = (sessionId) =>
+  request('DELETE', `/goals/chat-sessions/${sessionId}`);
 
 export const finalizeGoal = (title, roadmap) =>
   request('POST', '/goals/finalize', { title, roadmap });
