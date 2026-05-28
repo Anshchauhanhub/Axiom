@@ -141,6 +141,15 @@ class RoadmapResponse(BaseModel):
     goal: GoalResponse
     tasks: list[TaskResponse]
 
+class CalendarTaskResponse(BaseModel):
+    id: str
+    title: str
+    status: str
+    task_title: str
+    goal_title: str
+    goal_id: str
+    completed_at: Optional[datetime] = None
+
 
 # --- Quiz ---
 class QuizQuestion(BaseModel):
@@ -177,14 +186,26 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class ChatSessionResponse(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class OnboardingChatRequest(BaseModel):
     messages: list[ChatMessage]
+    session_id: Optional[str] = None
 
 
 class OnboardingChatResponse(BaseModel):
     message: str
     draft_roadmap: Optional[list[dict]] = None
     phase: str  # "discovery", "syllabus", "draft", "refinement", "ready"
+    session_id: Optional[str] = None
 
 
 class FinalizeGoalRequest(BaseModel):

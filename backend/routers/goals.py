@@ -1,15 +1,16 @@
 from auth import logger
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import User, Goal, Task, Part, ChatMessage
+from models import User, Goal, Task, Part, ChatMessage, ChatSession
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
     PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest,
-    UpdateNotesRequest, YoutubeRoadmapRequest, YoutubeRoadmapResponse
+    UpdateNotesRequest, YoutubeRoadmapRequest, YoutubeRoadmapResponse, CalendarTaskResponse
 )
 from auth import get_current_user
 from services.groq import generate_roadmap, generate_roadmap_from_playlist
@@ -131,6 +132,41 @@ async def get_roadmap(
     )
 
 
+@router.get("/all-tasks", response_model=list[CalendarTaskResponse])
+async def get_all_tasks(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Part)
+        .join(Task)
+        .join(Goal)
+        .options(
+            selectinload(Part.task).selectinload(Task.goal),
+            selectinload(Part.quiz_results)
+        )
+        .where(Goal.user_id == user.id)
+    )
+    parts = result.scalars().all()
+    
+    response = []
+    for p in parts:
+        completed_date = None
+        for qr in p.quiz_results:
+            if qr.is_passed:
+                completed_date = qr.completed_at
+        
+        response.append({
+            "id": str(p.id),
+            "title": p.title,
+            "status": p.status,
+            "task_title": p.task.title,
+            "goal_title": p.task.goal.title,
+            "goal_id": str(p.task.goal.id),
+            "completed_at": completed_date
+        })
+    return response
+
 @router.get("/", response_model=list[GoalResponse])
 async def list_goals(
     user: User = Depends(get_current_user),
@@ -142,33 +178,48 @@ async def list_goals(
     return goals
 
 
-@router.get("/chat/history")
-async def get_chat_history(
+@router.get("/chat-sessions")
+async def get_chat_sessions(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatSession)
+        .where(ChatSession.user_id == user.id)
+        .order_by(ChatSession.updated_at.desc())
+    )
+    sessions = result.scalars().all()
+    return {"sessions": sessions}
+
+
+@router.get("/chat-sessions/{session_id}/messages")
+async def get_session_messages(
+    session_id: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
         select(ChatMessage)
-        .where(ChatMessage.user_id == user.id)
+        .where(ChatMessage.session_id == session_id, ChatMessage.user_id == user.id)
         .order_by(ChatMessage.created_at.asc())
     )
     messages = result.scalars().all()
-    return {"messages": [{"role": m.role, "content": m.content} for m in messages]}
+    return {"messages": [{"role": m.role, "content": m.content, "id": str(m.id)} for m in messages]}
 
 
-@router.delete("/chat/history")
-async def clear_chat_history(
+@router.delete("/chat-sessions/{session_id}")
+async def delete_chat_session(
+    session_id: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Wipe all chat messages for the current user to start a fresh session."""
     from sqlalchemy import delete
     await db.execute(
-        delete(ChatMessage)
-        .where(ChatMessage.user_id == user.id)
+        delete(ChatSession)
+        .where(ChatSession.id == session_id, ChatSession.user_id == user.id)
     )
     await db.commit()
-    return {"message": "Chat history cleared"}
+    return {"message": "Chat session deleted"}
 
 
 @router.post("/chat")
@@ -181,8 +232,27 @@ async def onboarding_chat(
     logger = logging.getLogger("axiom.chat")
     
     try:
+        session_id = req.session_id
+        
+        # If no session_id, create a new session
+        if not session_id:
+            title_text = req.messages[-1].content[:30] + ("..." if len(req.messages[-1].content) > 30 else "")
+            new_session = ChatSession(user_id=user.id, title=title_text)
+            db.add(new_session)
+            await db.commit()
+            await db.refresh(new_session)
+            session_id = str(new_session.id)
+        else:
+            # Update the updated_at timestamp of the session
+            await db.execute(
+                update(ChatSession)
+                .where(ChatSession.id == session_id)
+                .values(updated_at=datetime.now(timezone.utc))
+            )
+            
         # 1. Save the new user message to DB
         user_msg = ChatMessage(
+            session_id=session_id,
             user_id=user.id,
             role="user",
             content=req.messages[-1].content
@@ -204,7 +274,7 @@ async def onboarding_chat(
         # 3. Fetch last 15 messages for context
         history_result = await db.execute(
             select(ChatMessage)
-            .where(ChatMessage.user_id == user.id)
+            .where(ChatMessage.session_id == session_id, ChatMessage.user_id == user.id)
             .order_by(ChatMessage.created_at.desc())
             .limit(15)
         )
@@ -220,9 +290,11 @@ async def onboarding_chat(
         # 5. Generate AI response
         from services.groq import generate_onboarding_response
         response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
+        response_data["session_id"] = session_id
 
         # 6. Save AI response to DB
         assistant_msg = ChatMessage(
+            session_id=session_id,
             user_id=user.id,
             role="assistant",
             content=response_data["message"]
