@@ -18,7 +18,47 @@ from services.synthesis import synthesize_part_content
 from services.youtube import get_playlist_data
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
- 
+
+import pytz
+from datetime import timedelta
+
+def generate_schedule(settings: dict, user_timezone: str, num_parts: int) -> list[datetime]:
+    study_days = settings.get("study_days", [1, 2, 3, 4, 5]) # 0=Sun, 1=Mon
+    study_sessions = settings.get("study_sessions", ["18:00"])
+    
+    if not study_days or not study_sessions:
+        study_days = [0,1,2,3,4,5,6]
+        study_sessions = ["18:00"]
+        
+    try:
+        tz = pytz.timezone(user_timezone)
+    except Exception:
+        tz = timezone.utc
+        
+    now = datetime.now(tz)
+    current_date = now.date()
+    
+    sessions_sorted = sorted([datetime.strptime(s, "%H:%M").time() for s in study_sessions])
+    
+    schedules = []
+    
+    while len(schedules) < num_parts:
+        frontend_day = (current_date.weekday() + 1) % 7
+        if frontend_day in study_days:
+            for s_time in sessions_sorted:
+                try:
+                    dt = tz.localize(datetime.combine(current_date, s_time))
+                except Exception:
+                    dt = datetime.combine(current_date, s_time).replace(tzinfo=tz)
+                
+                # If it's today, only schedule if it's in the future, unless we already moved to future days
+                if dt > now or len(schedules) > 0 or current_date > now.date():
+                    schedules.append(dt)
+                    if len(schedules) == num_parts:
+                        break
+        current_date += timedelta(days=1)
+        
+    return schedules
 
 @router.post("/", response_model=GoalResponse)
 async def create_goal(
@@ -163,7 +203,8 @@ async def get_all_tasks(
             "task_title": p.task.title,
             "goal_title": p.task.goal.title,
             "goal_id": str(p.task.goal.id),
-            "completed_at": completed_date
+            "completed_at": completed_date,
+            "scheduled_at": p.scheduled_at
         })
     return response
 
@@ -346,11 +387,16 @@ async def finalize_goal(
     db: AsyncSession = Depends(get_db),
 ):
     # 2. Create Goal
-    goal = Goal(user_id=user.id, title=req.title, status="active")
+    goal = Goal(user_id=user.id, title=req.title, status="active", settings=req.settings or {})
     db.add(goal)
     await db.flush()
 
-    # 2. Create Tasks & Parts from the approved draft
+    # Generate schedule
+    total_parts = sum(len(task_data.get("parts", [])) for task_data in req.roadmap)
+    schedules = generate_schedule(req.settings or {}, user.timezone, total_parts)
+    schedule_idx = 0
+
+    # 3. Create Tasks & Parts from the approved draft
     tasks_out = []
     for idx, task_data in enumerate(req.roadmap):
         task = Task(
@@ -364,11 +410,15 @@ async def finalize_goal(
 
         parts_out = []
         for pidx, part_title in enumerate(task_data.get("parts", [])):
+            part_schedule = schedules[schedule_idx] if schedule_idx < len(schedules) else None
+            schedule_idx += 1
+            
             part = Part(
                 task_id=task.id,
                 title=part_title,
                 order_index=pidx,
                 status="active" if idx == 0 and pidx == 0 else "locked",
+                scheduled_at=part_schedule
             )
             db.add(part)
             await db.flush()
@@ -420,6 +470,11 @@ async def quick_activate(
         await db.rollback()
         raise HTTPException(status_code=500, detail="Failed to generate roadmap. Please try again later.")
 
+    # Generate schedule
+    total_parts = sum(len(task_data.get("parts", [])) for task_data in roadmap_data)
+    schedules = generate_schedule({}, user.timezone, total_parts)
+    schedule_idx = 0
+
     # 3. Create Tasks and Parts
     tasks_out = []
     for idx, task_data in enumerate(roadmap_data):
@@ -434,11 +489,15 @@ async def quick_activate(
 
         parts_out = []
         for pidx, part_title in enumerate(task_data.get("parts", [])):
+            part_schedule = schedules[schedule_idx] if schedule_idx < len(schedules) else None
+            schedule_idx += 1
+            
             part = Part(
                 task_id=task.id,
                 title=part_title,
                 order_index=pidx,
                 status="active" if idx == 0 and pidx == 0 else "locked",
+                scheduled_at=part_schedule
             )
             db.add(part)
             await db.flush()
