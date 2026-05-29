@@ -24,6 +24,21 @@ class User(Base):
     quiz_results = relationship("QuizResult", back_populates="user", cascade="all, delete-orphan")
     chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
+    personal_tasks = relationship("PersonalTask", back_populates="user", cascade="all, delete-orphan")
+
+
+class PersonalTask(Base):
+    __tablename__ = "personal_tasks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True) # User's reasoning or notes
+    status = Column(String, default="pending") # pending, completed
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User", back_populates="personal_tasks")
 
 
 class Goal(Base):
@@ -34,6 +49,7 @@ class Goal(Base):
     title = Column(String, nullable=False)
     status = Column(String, default="active")  # active, completed, paused
     notes = Column(JSONB, nullable=True) # Block-based multimedia notes
+    settings = Column(JSONB, default=dict) # Goal-specific configurations
 
     user = relationship("User", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
@@ -102,6 +118,7 @@ class Part(Base):
     order_index = Column(Integer, nullable=False, default=0)
     status = Column(String, default="locked")  # locked, active, passed
     content = Column(Text, nullable=True)
+    scheduled_at = Column(DateTime(timezone=True), nullable=True)
 
     task = relationship("Task", back_populates="parts")
     quiz_results = relationship("QuizResult", back_populates="part", cascade="all, delete-orphan")

@@ -44,6 +44,12 @@ const Onboarding = () => {
   const [goalTitle, setGoalTitle] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
+  // Configuration state
+  const [studyDays, setStudyDays] = useState([1, 2, 3, 4, 5]); // 0=Sun, 1=Mon...
+  const [studySessions, setStudySessions] = useState(['18:00']);
+  const [quizLevel, setQuizLevel] = useState('medium');
+  const [quizQuestions, setQuizQuestions] = useState(10);
+
   // YouTube state
   const [youtubeUrl, setYoutubeUrl] = useState('');
 
@@ -193,7 +199,13 @@ const Onboarding = () => {
     setLoading(true);
     try {
       const title = goalTitle || draftRoadmap[0]?.title || "My Mastery Goal";
-      await finalizeGoal(title, draftRoadmap);
+      const settings = {
+        study_days: studyDays,
+        study_sessions: studySessions,
+        quiz_level: quizLevel,
+        quiz_questions: quizQuestions
+      };
+      await finalizeGoal(title, draftRoadmap, settings);
       await refreshData();
       navigate('/');
     } catch (e) {
@@ -208,6 +220,8 @@ const Onboarding = () => {
     setPhase('discovery');
     setError('');
   };
+
+  const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   if (!user && loading) {
     return <NeuralLoader message="INITIALIZING AUTH PROTOCOL" />;
@@ -464,34 +478,142 @@ const Onboarding = () => {
                     {goalTitle && <p className="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.2em] mt-2">{goalTitle}</p>}
                   </header>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 mb-12">
-                    {draftRoadmap.map((task, tidx) => (
-                      <div key={tidx} className="p-6 bg-surface-container-lowest/50 border border-outline-variant/10 rounded-2xl hover:border-primary/30 transition-all group">
-                        <h4 className="font-bold text-sm text-primary mb-3 uppercase tracking-wide flex items-center gap-2">
-                          <span className="text-[10px] opacity-40">0{tidx + 1}</span>
-                          {task.title || task}
-                        </h4>
-                        <ul className="space-y-2">
-                          {(Array.isArray(task.parts) ? task.parts : []).slice(0, 3).map((p, pidx) => (
-                            <li key={pidx} className="flex items-center gap-3 text-xs text-on-surface-variant font-light">
-                              <span className="w-1 h-1 bg-primary/40 rounded-full"></span>
-                              {typeof p === 'string' ? p : p?.title || String(p)}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
+                  {phase === 'configuration' ? (
+                    <div className="relative z-10 text-left animate-in fade-in zoom-in-95 duration-500">
+                      <h4 className="text-xl font-bold font-headline text-white mb-8">Goal Configuration</h4>
+                      
+                      <div className="space-y-8">
+                        {/* Days of week */}
+                        <div>
+                          <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-4">Study Days</label>
+                          <div className="flex gap-2">
+                            {dayNames.map((day, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  if (studyDays.includes(idx)) setStudyDays(studyDays.filter(d => d !== idx));
+                                  else setStudyDays([...studyDays, idx].sort());
+                                }}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                                  studyDays.includes(idx) ? 'bg-primary text-black' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
-                    <button onClick={handleFinalize} className="group relative px-10 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40 w-full sm:w-auto">
-                      <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Activate Learning Path</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </button>
-                    <button onClick={handleRefine} className="px-10 py-5 bg-surface-container-highest/50 text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-full font-label font-bold tracking-[0.3em] uppercase text-[10px] transition-all hover:bg-primary/5 hover:border-primary/30 w-full sm:w-auto">
-                      New Draft
-                    </button>
-                  </div>
+                        {/* Session Times */}
+                        <div>
+                          <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-4">Study Sessions (Times)</label>
+                          <div className="flex flex-col gap-3">
+                            {studySessions.map((time, idx) => (
+                              <div key={idx} className="flex items-center gap-3">
+                                <input
+                                  type="time"
+                                  value={time}
+                                  onChange={(e) => {
+                                    const newSessions = [...studySessions];
+                                    newSessions[idx] = e.target.value;
+                                    setStudySessions(newSessions);
+                                  }}
+                                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary/50"
+                                />
+                                {studySessions.length > 1 && (
+                                  <button onClick={() => setStudySessions(studySessions.filter((_, i) => i !== idx))} className="text-white/20 hover:text-red-400">
+                                    <Trash2 size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => setStudySessions([...studySessions, '18:00'])}
+                              className="w-fit text-xs font-bold text-primary flex items-center gap-2 hover:brightness-125 transition-all mt-2"
+                            >
+                              <Plus size={14} /> ADD SESSION
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Quiz Settings */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                          <div>
+                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-4">Quiz Level</label>
+                            <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
+                              {['easy', 'medium', 'hard'].map(level => (
+                                <button
+                                  key={level}
+                                  onClick={() => setQuizLevel(level)}
+                                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                                    quizLevel === level ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/60'
+                                  }`}
+                                >
+                                  {level}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-4">Questions Per Quiz</label>
+                            <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
+                              {[5, 10, 15].map(count => (
+                                <button
+                                  key={count}
+                                  onClick={() => setQuizQuestions(count)}
+                                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                    quizQuestions === count ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/60'
+                                  }`}
+                                >
+                                  {count}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+
+                      <div className="flex justify-end gap-4 mt-12">
+                        <button onClick={() => setPhase('ready')} className="px-6 py-3 rounded-lg text-white/40 hover:text-white text-xs font-bold uppercase tracking-wider transition-all">Back</button>
+                        <button onClick={handleFinalize} className="px-8 py-3 bg-primary text-black rounded-lg text-xs font-bold uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(253,184,19,0.3)]">
+                          Activate Path <ArrowRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 mb-12">
+                        {draftRoadmap.map((task, tidx) => (
+                          <div key={tidx} className="p-6 bg-surface-container-lowest/50 border border-outline-variant/10 rounded-2xl hover:border-primary/30 transition-all group">
+                            <h4 className="font-bold text-sm text-primary mb-3 uppercase tracking-wide flex items-center gap-2">
+                              <span className="text-[10px] opacity-40">0{tidx + 1}</span>
+                              {task.title || task}
+                            </h4>
+                            <ul className="space-y-2">
+                              {(Array.isArray(task.parts) ? task.parts : []).slice(0, 3).map((p, pidx) => (
+                                <li key={pidx} className="flex items-center gap-3 text-xs text-on-surface-variant font-light">
+                                  <span className="w-1 h-1 bg-primary/40 rounded-full"></span>
+                                  {typeof p === 'string' ? p : p?.title || String(p)}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
+                        <button onClick={() => setPhase('configuration')} className="group relative px-10 py-5 bg-primary text-on-primary-container rounded-full overflow-hidden transition-all duration-300 active:scale-95 shadow-2xl shadow-primary/40 w-full sm:w-auto">
+                          <span className="relative z-10 font-label font-bold tracking-[0.4em] uppercase text-xs">Configure Goal</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </button>
+                        <button onClick={handleRefine} className="px-10 py-5 bg-surface-container-highest/50 text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-full font-label font-bold tracking-[0.3em] uppercase text-[10px] transition-all hover:bg-primary/5 hover:border-primary/30 w-full sm:w-auto">
+                          New Draft
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

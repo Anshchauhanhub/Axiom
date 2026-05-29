@@ -149,6 +149,25 @@ class CalendarTaskResponse(BaseModel):
     goal_title: str
     goal_id: str
     completed_at: Optional[datetime] = None
+    scheduled_at: Optional[datetime] = None
+
+
+class PersonalTaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
+
+
+class PersonalTaskResponse(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: Optional[str] = None
+    status: str
+    scheduled_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # --- Quiz ---
@@ -211,6 +230,7 @@ class OnboardingChatResponse(BaseModel):
 class FinalizeGoalRequest(BaseModel):
     title: str
     roadmap: list[dict]
+    settings: Optional[dict] = None
 
 
 class YoutubeRoadmapRequest(BaseModel):
