@@ -153,15 +153,20 @@ export const getSessionMessages = (sessionId) =>
 export const deleteChatSession = (sessionId) =>
   request('DELETE', `/goals/chat-sessions/${sessionId}`);
 
-export const finalizeGoal = (title, roadmap) =>
-  request('POST', '/goals/finalize', { title, roadmap });
+export const finalizeGoal = (title, roadmap, settings = {}) =>
+  request('POST', '/goals/finalize', { title, roadmap, settings });
 
 export const quickActivateGoal = (title) =>
   request('POST', '/goals/quick-activate', { title });
 
 export const generateYoutubeRoadmap = (url) =>
   request('POST', '/goals/youtube-roadmap', { url });
- 
+
+// --- Personal Workspace ---
+export const getPersonalTasks = () => request('GET', '/personal/');
+export const createPersonalTask = (data) => request('POST', '/personal/', data);
+export const updatePersonalTask = (taskId, status) => request('PUT', `/personal/${taskId}?status_str=${status}`);
+export const deletePersonalTask = (taskId) => request('DELETE', `/personal/${taskId}`);
 export const activateGoal = (goalId) =>
   request('POST', `/goals/${goalId}/activate`);
  
