@@ -8,6 +8,7 @@ import {
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MessageBubble from '../components/MessageBubble';
+import GoalSelectionGrid from '../components/GoalSelectionGrid';
 import { 
   Send, Activity, ChevronRight, History, 
   BrainCircuit, Search, Video, MessageSquare, 
@@ -194,6 +195,57 @@ const Onboarding = () => {
     }
   };
 
+  const handlePredefinedGoal = async (title) => {
+    if (title === "CUSTOM") {
+      setOnboardingMode('chat');
+      return;
+    }
+    
+    setOnboardingMode('chat');
+    startFreshSession();
+    
+    const userMsg = { role: 'user', content: `Generate a comprehensive study plan and curriculum for: ${title}` };
+    setMessages([userMsg]);
+    setIsTyping(true);
+    setPhase('discovery');
+    
+    try {
+      const res = await onboardingChat([userMsg], null);
+      if (res.session_id) {
+         setCurrentSessionId(res.session_id);
+         loadChatSessions();
+      }
+      const fullMessage = res.message || "I'm preparing your learning path...";
+      let displayedMessage = "";
+      
+      if (res.phase) setPhase(res.phase);
+      if (res.draft_roadmap) {
+        setDraftRoadmap(res.draft_roadmap);
+        setGoalTitle(res.goal_title || title);
+      }
+
+      setError('');
+      setMessages(prev => [...prev, { role: 'assistant', content: "", phase: res.phase || phase }]);
+
+      const tokens = fullMessage.split(/(\s+)/);
+      for (let i = 0; i < tokens.length; i++) {
+        displayedMessage += tokens[i];
+        setMessages(prev => {
+          const newHistory = [...prev];
+          newHistory[newHistory.length - 1] = { ...newHistory[newHistory.length - 1], content: displayedMessage };
+          return newHistory;
+        });
+        if (tokens[i].trim()) {
+          await new Promise(r => setTimeout(r, 10 + Math.random() * 20));
+        }
+      }
+    } catch (e) {
+      setError("Connection interrupted. Please retry.");
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   const handleFinalize = async () => {
     if (!draftRoadmap) return;
     setLoading(true);
@@ -237,19 +289,41 @@ const Onboarding = () => {
         <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[160px] pointer-events-none -z-10 animate-neural-pulse"></div>
 
         <div className="text-center mb-16 animate-in fade-in slide-in-from-top-12 duration-1000">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5">
-            <Sparkles className="text-primary animate-pulse" size={16} />
-            <span className="text-[10px] font-label font-black text-primary uppercase tracking-[0.3em]">Session Initialized</span>
-          </div>
           <h1 className="text-6xl sm:text-8xl font-black font-headline uppercase tracking-tighter text-on-surface italic mb-8 leading-none">
             SELECT YOUR <span className="text-primary drop-shadow-[0_0_30px_rgba(253,184,19,0.5)]">PATH</span>
           </h1>
           <p className="text-on-surface-variant/70 font-label text-sm sm:text-base tracking-[0.2em] uppercase max-w-3xl mx-auto leading-relaxed px-4">
-            Axiom is ready to synthesize your curriculum. Choose your method of knowledge acquisition.
+            Choose how you want to build your learning path.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto w-full px-4 sm:px-0">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto w-full px-4 sm:px-0">
+          {/* Predefined Paths Card */}
+          <button 
+            onClick={() => setOnboardingMode('predefined')}
+            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-purple-500/50 hover:shadow-[0_0_80px_rgba(168,85,247,0.15)] overflow-hidden animate-in slide-in-from-bottom-12 duration-1000"
+          >
+            {/* Scanner Effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
+            
+            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:-rotate-12 group-hover:scale-125">
+              <Compass size={200} strokeWidth={1} />
+            </div>
+
+            <div className="relative z-20">
+              <div className="w-24 h-24 rounded-[2.5rem] bg-purple-500/10 flex items-center justify-center mb-12 border border-purple-500/20 group-hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:0.5s]">
+                <Compass className="text-purple-400" size={40} />
+              </div>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-purple-400 transition-colors duration-500">Expert Roadmaps</h3>
+              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
+                Choose from our expert-crafted, predefined master roadmaps.
+              </p>
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-purple-500 group-hover:text-white transition-all duration-500">
+                Browse <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
+              </div>
+            </div>
+          </button>
+
           {/* Neural Chat Card */}
           <button 
             onClick={() => setOnboardingMode('chat')}
@@ -266,7 +340,7 @@ const Onboarding = () => {
               <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center mb-12 border border-primary/20 group-hover:neural-glow group-hover:scale-110 transition-all duration-500 animate-float">
                 <MessageSquare className="text-primary" size={40} />
               </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-primary transition-colors duration-500">Learning Chat</h3>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-primary transition-colors duration-500">AI Architect</h3>
               <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
                 Engage in direct dialogue with our high-accountability coach to architect a custom path.
               </p>
@@ -292,7 +366,7 @@ const Onboarding = () => {
               <div className="w-24 h-24 rounded-[2.5rem] bg-secondary/10 flex items-center justify-center mb-12 border border-secondary/20 group-hover:neural-glow-secondary group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:1s]">
                 <Video className="text-secondary" size={40} />
               </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">Playlist Import</h3>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">YouTube Synthesis</h3>
               <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
                 Import external knowledge by transforming YouTube playlists into structured learning modules.
               </p>
@@ -359,13 +433,13 @@ const Onboarding = () => {
               </button>
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : 'bg-secondary'}`}></span>
-                  <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : 'text-secondary'}`}>
-                    {onboardingMode === 'chat' ? 'Axiom Link Active' : 'Import Engine Active'}
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : onboardingMode === 'youtube' ? 'bg-secondary' : 'bg-purple-500'}`}></span>
+                  <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : onboardingMode === 'youtube' ? 'text-secondary' : 'text-purple-400'}`}>
+                    {onboardingMode === 'chat' ? 'Axiom Link Active' : onboardingMode === 'youtube' ? 'Import Engine Active' : 'Curriculum Engine Active'}
                   </span>
                 </div>
                 <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
-                  {onboardingMode === 'chat' ? 'Axiom Assistant' : 'Playlist Architect'}
+                  {onboardingMode === 'chat' ? 'Axiom Assistant' : onboardingMode === 'youtube' ? 'Playlist Architect' : 'Path Selector'}
                 </h2>
               </div>
             </div>
@@ -422,6 +496,12 @@ const Onboarding = () => {
             {onboardingMode === 'chat' && messages.length > 0 && messages.map((m, i) => (
               <MessageBubble key={i} message={m.content} role={m.role} phase={m.role === 'assistant' ? (m.phase || phase) : null} />
             ))}
+
+            {onboardingMode === 'predefined' && !draftRoadmap && (
+               <div className="h-full w-full py-8">
+                  <GoalSelectionGrid onSelect={handlePredefinedGoal} loading={loading} />
+               </div>
+            )}
 
             {onboardingMode === 'youtube' && !draftRoadmap && (
                <div className="h-full flex flex-col items-center justify-center text-center p-10 max-w-2xl mx-auto">

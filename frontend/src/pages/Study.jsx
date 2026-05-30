@@ -473,19 +473,15 @@ const Study = () => {
     );
   };
 
-  const renderNotesToggle = () => (
+  const renderSideToolbar = () => (
     <button
-      onClick={() => setShowNotes(!showNotes)}
-      className={`fixed bottom-24 lg:bottom-10 right-6 lg:right-10 z-[200] w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center transition-all duration-500 shadow-[0_20px_50px_rgba(253,184,19,0.3)] ${
-        showNotes ? 'bg-error text-white scale-0 rotate-180 opacity-0 pointer-events-none' : 'bg-primary text-on-primary-container hover:scale-110 active:scale-95 glow-gold'
-      }`}
+      onClick={() => setShowNotes(true)}
+      className={`fixed top-1/2 -translate-y-1/2 right-0 z-[200] w-12 h-24 bg-primary text-black rounded-l-[1rem] flex flex-col items-center justify-center transition-all duration-300 hover:w-16 shadow-[-10px_0_30px_rgba(253,184,19,0.2)] group overflow-hidden ${showNotes ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'}`}
+      title="Open Notebook"
     >
-      <span className="material-symbols-outlined text-3xl">
-        {showNotes ? 'close' : 'description'}
-      </span>
-      {!showNotes && (
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full border-[3px] border-background animate-pulse"></div>
-      )}
+      <div className="absolute top-3 right-2 w-2 h-2 bg-secondary rounded-full animate-pulse border border-black/20 z-20"></div>
+      <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform relative z-10">edit_note</span>
+      <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
     </button>
   );
 
@@ -858,7 +854,7 @@ const Study = () => {
         {renderNotebook()}
       </div>
 
-      {renderNotesToggle()}
+      {renderSideToolbar()}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
