@@ -266,15 +266,22 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                     try:
                         result = json.loads(cleaned)
                     except json.JSONDecodeError as e:
-                        logger.error(f"JSON Parse Error in onboarding chat (attempt {attempt+1}): {e}\nRaw Content: {raw_content[:500]}...")
-                        if attempt == 2:
-                            # Last attempt failed — return a safe fallback
-                            return {
-                                "message": "I've processed your request. Could you tell me more about what you'd like to focus on?",
-                                "phase": "discovery",
+                        # If the AI ignored the JSON instruction and just answered in markdown, we can salvage it.
+                        if not raw_content.strip().startswith("{"):
+                            result = {
+                                "message": raw_content,
+                                "phase": "chat"
                             }
-                        current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object with no literal newlines inside string values. Use \\n for line breaks."})
-                        continue
+                        else:
+                            logger.error(f"JSON Parse Error in onboarding chat (attempt {attempt+1}): {e}\nRaw Content: {raw_content[:500]}...")
+                            if attempt == 2:
+                                # Last attempt failed — return a safe fallback
+                                return {
+                                    "message": "I've processed your request. Could you tell me more about what you'd like to focus on?",
+                                    "phase": "discovery",
+                                }
+                            current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object with no literal newlines inside string values. Use \\n for line breaks."})
+                            continue
                     
                     # Normalize draft_roadmap if present
                     if "draft_roadmap" in result and result["draft_roadmap"]:
