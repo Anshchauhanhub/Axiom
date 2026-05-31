@@ -33,12 +33,14 @@ const Layout = ({ children }) => {
         <button 
           title="Ask Axiom AI"
           onClick={() => setIsChatOpen(true)}
+          style={{ borderRadius: '50%' }}
           className="fixed bottom-6 lg:bottom-10 right-6 lg:right-10 z-[100] w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-yellow-400 to-green-500 shadow-[0_10px_40px_rgba(234,179,8,0.4)] overflow-hidden hover:scale-110 active:scale-95 transition-all group border-2 border-white/20 flex items-center justify-center animate-bounce-slow"
         >
           <img 
-            src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=AxiomMaster&backgroundColor=transparent" 
+            src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=AxiomMaster&backgroundColor=transparent&radius=50" 
             alt="AI Agent"
-            className="w-10 h-10 object-cover group-hover:scale-110 transition-transform"
+            style={{ borderRadius: '50%' }}
+            className="w-10 h-10 object-cover group-hover:scale-110 transition-transform rounded-full"
           />
           {/* Notification Dot */}
           <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-white rounded-full border-2 border-green-500 animate-pulse"></div>

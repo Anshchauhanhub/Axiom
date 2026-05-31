@@ -301,16 +301,28 @@ async def onboarding_chat(
         db.add(user_msg)
         await db.commit()
 
-        # 2. Fetch active goal context
+        # 2. Fetch goal context and schedule
         goal_result = await db.execute(
-            select(Goal).where(Goal.user_id == user.id, Goal.status == "active")
+            select(Goal).where(Goal.user_id == user.id)
         )
-        active_goals = goal_result.scalars().all()
+        all_goals = goal_result.scalars().all()
+        
+        active_goals = [g.title for g in all_goals if g.status == "active"]
+        paused_goals = [g.title for g in all_goals if g.status == "paused"]
+        
+        goal_context_lines = []
         if active_goals:
-            titles = ", ".join([g.title for g in active_goals])
-            goal_context = f"Current active study goals: {titles}"
-        else:
-            goal_context = "No active goals yet."
+            goal_context_lines.append(f"Active goals: {', '.join(active_goals)}")
+        if paused_goals:
+            goal_context_lines.append(f"Paused goals: {', '.join(paused_goals)}")
+            
+        if not active_goals and not paused_goals:
+            goal_context_lines.append("No active or paused goals yet.")
+            
+        schedule = user.study_schedule if user.study_schedule else ["None set"]
+        goal_context_lines.append(f"User's study schedule (times): {', '.join(schedule)}")
+        
+        goal_context = "\n".join(goal_context_lines)
 
         # 3. Fetch last 15 messages for context
         history_result = await db.execute(

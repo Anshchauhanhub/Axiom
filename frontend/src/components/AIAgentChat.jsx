@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { onboardingChat, getChatSessions, getSessionMessages } from '../services/api';
 import MessageBubble from './MessageBubble';
-import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRightOpen, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare } from 'lucide-react';
+import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose } from 'lucide-react';
 
 const AIAgentChat = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -11,6 +11,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
   // New State for Toolbar Functionality
   const [isExpanded, setIsExpanded] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [isSidebarMode, setIsSidebarMode] = useState(false); // Toggles between floating panel and right sidebar
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   
@@ -36,7 +37,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
   const fetchSessions = async () => {
     try {
       const data = await getChatSessions();
-      setSessions(data || []);
+      setSessions(data?.sessions || []);
     } catch (e) {
       console.error('Failed to fetch chat sessions', e);
     }
@@ -45,7 +46,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
   const loadSession = async (sessionId) => {
     try {
       const data = await getSessionMessages(sessionId);
-      setMessages(data || []);
+      setMessages(data?.messages || []);
       setCurrentSessionId(sessionId);
       setShowHistory(false); // Close history after selection
     } catch (e) {
@@ -94,65 +95,78 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     setMessages([]);
   };
 
+  // Determine dynamic classes based on modes
+  const layoutClasses = isSidebarMode 
+    ? `top-0 right-0 h-screen rounded-none ${isExpanded ? 'w-full md:w-[800px]' : 'w-full max-w-[400px]'}`
+    : `bottom-4 right-4 lg:bottom-6 lg:right-6 h-[600px] max-h-[calc(100vh-40px)] rounded-2xl ${isExpanded ? 'w-[calc(100%-32px)] md:w-[800px]' : 'w-[calc(100%-32px)] max-w-[400px]'}`;
+
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={onClose}
-      />
-      
-      {/* Chat Drawer */}
-      <div className={`fixed right-0 top-0 h-screen bg-surface-container-low border-l border-white/10 z-[200] flex shadow-[0_0_100px_rgba(0,0,0,0.8)] transition-all duration-500 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} ${isExpanded ? 'w-full md:w-[800px]' : 'w-full max-w-md'}`}>
+      {/* Chat Panel */}
+      <div className={`fixed z-[200] flex flex-row shadow-[0_20px_60px_rgba(0,0,0,0.8)] bg-surface-container-low border border-white/10 transition-all duration-500 ease-in-out overflow-hidden origin-bottom-right ${
+        isOpen 
+          ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
+          : 'opacity-0 scale-95 translate-y-10 pointer-events-none'
+        } ${layoutClasses}`}>
         
-        {/* Optional History Sidebar */}
-        {showHistory && (
-          <div className="w-64 border-r border-white/10 bg-surface-container-lowest flex flex-col animate-in slide-in-from-left duration-300">
-             <div className="p-4 border-b border-white/10">
-               <h3 className="font-bold text-on-surface">Chat History</h3>
-             </div>
-             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-               {sessions.length === 0 ? (
-                 <p className="text-xs text-on-surface-variant p-4 text-center">No history yet.</p>
-               ) : (
-                 sessions.map(s => (
+        {/* History Overlay Panel */}
+        <div className={`absolute inset-0 bg-surface-container-lowest z-20 flex flex-col transition-transform duration-300 ${showHistory ? 'translate-x-0' : '-translate-x-full'}`}>
+           <div className="flex items-center justify-between p-4 border-b border-white/10">
+             <h3 className="font-bold text-on-surface">Conversations</h3>
+             <button onClick={() => setShowHistory(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant transition-colors">
+               <Minus size={16} className="rotate-45" /> {/* Makes it look like an X */}
+             </button>
+           </div>
+           
+           <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+             {sessions.length === 0 ? (
+               <div className="flex-1 flex items-center justify-center text-sm text-on-surface-variant">
+                 No past conversations
+               </div>
+             ) : (
+               <div className="space-y-2">
+                 {sessions.map(s => (
                    <button 
                      key={s.id}
                      onClick={() => loadSession(s.id)}
-                     className={`w-full text-left px-3 py-3 rounded-lg text-sm flex items-center gap-3 transition-colors ${currentSessionId === s.id ? 'bg-primary/20 text-primary' : 'text-on-surface hover:bg-white/5'}`}
+                     className={`w-full text-left px-4 py-3 rounded-xl text-sm flex items-center gap-3 transition-colors ${currentSessionId === s.id ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-white/5'}`}
                    >
-                     <MessageSquare size={16} className="opacity-70" />
+                     <MessageSquare size={16} className="opacity-70 shrink-0" />
                      <span className="truncate flex-1">{s.title || 'Conversation'}</span>
                    </button>
-                 ))
-               )}
-             </div>
-          </div>
-        )}
+                 ))}
+               </div>
+             )}
+           </div>
+           
+           <div className="p-4 border-t border-white/10 bg-surface-container-low">
+             <button onClick={startNewChat} className="w-full py-3 rounded-xl bg-surface-container hover:bg-surface-container-high border border-white/10 text-on-surface flex items-center justify-center gap-2 transition-colors text-sm font-medium">
+               <RefreshCcw size={14} />
+               New conversation
+             </button>
+           </div>
+        </div>
 
         <div className="flex-1 flex flex-col h-full min-w-0 relative">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/10 bg-surface-container-highest/50">
             <div className="flex items-center gap-3">
               <Sparkles size={18} className="text-primary hidden sm:block" />
-              <h3 className="font-bold text-on-surface text-base hidden sm:block">Axiom AI</h3>
-              <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                Online
-              </span>
             </div>
             
             <div className="flex items-center gap-0.5 sm:gap-1 text-on-surface-variant">
-              <button onClick={() => setShowHistory(!showHistory)} title="History" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"><History size={16} /></button>
-              <button onClick={refreshCurrentChat} title="Reset" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"><RefreshCcw size={16} /></button>
-              <button onClick={startNewChat} title="New Chat" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"><MessageSquarePlus size={16} /></button>
+              <button onClick={() => setShowHistory(!showHistory)} title="History" className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${showHistory ? 'bg-white/10 text-white' : 'hover:bg-white/10'}`}><History size={16} /></button>
+              <button onClick={refreshCurrentChat} title="Reset" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"><RefreshCcw size={16} /></button>
+              <button onClick={startNewChat} title="New Chat" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"><MessageSquarePlus size={16} /></button>
               <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
-              <button onClick={() => setShowHistory(!showHistory)} title="Panel" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"><PanelRightOpen size={16} /></button>
-              <button onClick={() => setIsExpanded(!isExpanded)} title="Expand/Collapse" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors">
+              <button onClick={() => setIsSidebarMode(!isSidebarMode)} title="Toggle Layout" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+                {isSidebarMode ? <PanelRightClose size={16} /> : <PanelRight size={16} />}
+              </button>
+              <button onClick={() => setIsExpanded(!isExpanded)} title="Expand/Collapse" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
                 {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
               <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
-              <button onClick={onClose} title="Minimize" className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"><Minus size={16} /></button>
+              <button onClick={onClose} title="Minimize" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"><Minus size={16} /></button>
             </div>
           </div>
 
@@ -161,12 +175,14 @@ const AIAgentChat = ({ isOpen, onClose }) => {
             
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center animate-in fade-in duration-700 max-w-sm mx-auto">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-green-500 flex items-center justify-center p-1.5 shadow-xl shadow-yellow-500/10 mb-6">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-green-500 flex items-center justify-center p-1.5 shadow-xl shadow-yellow-500/10 mb-6 relative" style={{ borderRadius: '50%' }}>
                   <img 
-                    src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=AxiomMaster&backgroundColor=transparent" 
+                    src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=AxiomMaster&backgroundColor=transparent&radius=50" 
                     alt="AI Agent"
+                    style={{ borderRadius: '50%' }}
                     className="w-full h-full object-cover bg-surface-container-low rounded-full"
                   />
+                  <div className="absolute top-0 right-0 w-4 h-4 bg-white rounded-full border-2 border-green-500"></div>
                 </div>
                 <h2 className="text-xl font-bold text-on-surface mb-8">On call and ready, how can I help?</h2>
                 
@@ -213,10 +229,9 @@ const AIAgentChat = ({ isOpen, onClose }) => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Do anything with AI..."
-                className="flex-1 bg-transparent text-sm text-on-surface py-2 pl-4 outline-none font-light placeholder:text-on-surface-variant/50"
+                className="flex-1 bg-transparent text-sm text-on-surface py-2 pl-4 outline-none border-none ring-0 focus:outline-none focus:ring-0 focus:border-transparent shadow-none font-light placeholder:text-on-surface-variant/50"
               />
               <div className="flex items-center gap-2 pr-1">
-                <span className="text-[10px] font-bold text-on-surface-variant bg-white/5 px-2 py-1 rounded-full uppercase tracking-wider hidden sm:block">Axiom</span>
                 <button 
                   type="submit"
                   disabled={loading || !input.trim()}
