@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { onboardingChat, getChatSessions, getSessionMessages } from '../services/api';
+import { onboardingChat, getChatSessions, getSessionMessages, deleteChatSession, getAllTasks } from '../services/api';
 import MessageBubble from './MessageBubble';
-import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose } from 'lucide-react';
+import MoodFace from './MoodFace';
+import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose, Trash2 } from 'lucide-react';
 
 const AIAgentChat = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mood, setMood] = useState(3);
   
   // New State for Toolbar Functionality
   const [isExpanded, setIsExpanded] = useState(false);
@@ -34,6 +36,51 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     }
   }, [showHistory, isOpen]);
 
+  // Auto-calculate mood from task progress
+  useEffect(() => {
+    const calculateMood = async () => {
+      try {
+        const tasks = await getAllTasks();
+        if (!tasks || tasks.length === 0) {
+          setMood(3);
+          return;
+        }
+        const now = new Date();
+        const total = tasks.length;
+        let completed = 0;
+        let overdue = 0;
+
+        tasks.forEach(t => {
+          if (t.completed_at) {
+            completed++;
+          } else {
+            // Count as overdue if: has a past scheduled_at, OR status is still 'active'/'locked' with no completion
+            if (t.scheduled_at && new Date(t.scheduled_at) < now) {
+              overdue++;
+            }
+          }
+        });
+
+        // Also count non-scheduled incomplete active parts as mildly overdue
+        const incomplete = total - completed;
+        const completionRatio = completed / total;
+        const overdueRatio = overdue / total;
+        const incompleteRatio = incomplete / total;
+
+        if (overdueRatio >= 0.3) setMood(1);            // 30%+ overdue → angry
+        else if (overdueRatio >= 0.15) setMood(2);       // 15%+ overdue → disappointed
+        else if (incompleteRatio >= 0.8 && total > 3) setMood(2); // 80%+ incomplete with many tasks → disappointed
+        else if (completionRatio >= 0.7) setMood(5);     // 70%+ done → very happy
+        else if (completionRatio >= 0.4) setMood(4);     // 40%+ done → content
+        else if (completionRatio >= 0.1) setMood(3);     // some progress → neutral
+        else setMood(2);                                  // barely started → disappointed
+      } catch (e) {
+        console.error('Failed to calculate mood', e);
+      }
+    };
+    if (isOpen) calculateMood();
+  }, [isOpen]);
+
   const fetchSessions = async () => {
     try {
       const data = await getChatSessions();
@@ -54,6 +101,19 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleDeleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+    try {
+      await deleteChatSession(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (currentSessionId === sessionId) {
+        startNewChat();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSend = async (text = input) => {
     if (!text.trim() || loading) return;
 
@@ -66,8 +126,12 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     try {
       // Pass the current session ID if it exists so the backend groups them
       const res = await onboardingChat(newMessages, currentSessionId);
-      if (res && res.response) {
-         setMessages([...newMessages, { role: 'assistant', content: res.response }]);
+      const assistantMessage = res?.message || res?.response;
+      if (res?.mood) {
+          setMood(res.mood);
+      }
+      if (assistantMessage) {
+         setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
          // The backend might return a new session ID if one was created
          if (res.session_id && !currentSessionId) {
              setCurrentSessionId(res.session_id);
@@ -100,6 +164,19 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     ? `top-0 right-0 h-screen rounded-none ${isExpanded ? 'w-full md:w-[800px]' : 'w-full max-w-[400px]'}`
     : `bottom-4 right-4 lg:bottom-6 lg:right-6 h-[600px] max-h-[calc(100vh-40px)] rounded-2xl ${isExpanded ? 'w-[calc(100%-32px)] md:w-[800px]' : 'w-[calc(100%-32px)] max-w-[400px]'}`;
 
+  const getMoodStyles = (m) => {
+    switch (m) {
+      case 5: return { bg: 'from-green-400 to-emerald-600', shadow: 'shadow-green-500/20', indicator: 'border-green-500' };
+      case 4: return { bg: 'from-yellow-300 to-green-400', shadow: 'shadow-green-500/20', indicator: 'border-green-400' };
+      case 3: return { bg: 'from-yellow-400 to-green-500', shadow: 'shadow-yellow-500/10', indicator: 'border-green-500' };
+      case 2: return { bg: 'from-orange-400 to-red-400', shadow: 'shadow-orange-500/20', indicator: 'border-orange-500' };
+      case 1: return { bg: 'from-red-500 to-red-800', shadow: 'shadow-red-500/30', indicator: 'border-red-500' };
+      default: return { bg: 'from-yellow-400 to-green-500', shadow: 'shadow-yellow-500/10', indicator: 'border-green-500' };
+    }
+  };
+
+  const moodStyles = getMoodStyles(mood);
+
   return (
     <>
       {/* Chat Panel */}
@@ -126,14 +203,22 @@ const AIAgentChat = ({ isOpen, onClose }) => {
              ) : (
                <div className="space-y-2">
                  {sessions.map(s => (
-                   <button 
-                     key={s.id}
-                     onClick={() => loadSession(s.id)}
-                     className={`w-full text-left px-4 py-3 rounded-xl text-sm flex items-center gap-3 transition-colors ${currentSessionId === s.id ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-white/5'}`}
-                   >
-                     <MessageSquare size={16} className="opacity-70 shrink-0" />
-                     <span className="truncate flex-1">{s.title || 'Conversation'}</span>
-                   </button>
+                   <div key={s.id} className="relative group w-full">
+                     <button 
+                       onClick={() => loadSession(s.id)}
+                       className={`w-full text-left px-4 py-3 rounded-xl text-sm flex items-center gap-3 transition-colors pr-10 ${currentSessionId === s.id ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-white/5'}`}
+                     >
+                       <MessageSquare size={16} className="opacity-70 shrink-0" />
+                       <span className="truncate flex-1">{s.title || 'Conversation'}</span>
+                     </button>
+                     <button 
+                        onClick={(e) => handleDeleteSession(e, s.id)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-error transition-all"
+                        title="Delete conversation"
+                     >
+                        <Trash2 size={14} />
+                     </button>
+                   </div>
                  ))}
                </div>
              )}
@@ -175,14 +260,9 @@ const AIAgentChat = ({ isOpen, onClose }) => {
             
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center animate-in fade-in duration-700 max-w-sm mx-auto">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-green-500 flex items-center justify-center p-1.5 shadow-xl shadow-yellow-500/10 mb-6 relative" style={{ borderRadius: '50%' }}>
-                  <img 
-                    src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=AxiomMaster&backgroundColor=transparent&radius=50" 
-                    alt="AI Agent"
-                    style={{ borderRadius: '50%' }}
-                    className="w-full h-full object-cover bg-surface-container-low rounded-full"
-                  />
-                  <div className="absolute top-0 right-0 w-4 h-4 bg-white rounded-full border-2 border-green-500"></div>
+                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${moodStyles.bg} flex items-center justify-center p-0.5 shadow-xl ${moodStyles.shadow} mb-6 relative transition-all duration-500`} style={{ borderRadius: '50%' }}>
+                  <MoodFace mood={mood} size={68} />
+                  <div className={`absolute top-0 right-0 w-4 h-4 bg-white rounded-full border-2 ${moodStyles.indicator} transition-colors duration-500`}></div>
                 </div>
                 <h2 className="text-xl font-bold text-on-surface mb-8">On call and ready, how can I help?</h2>
                 
