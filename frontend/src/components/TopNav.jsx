@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
-import { getAllTasks } from '../services/api';
+import { getAllTasks, isLoggedIn } from '../services/api';
 
 const TopNav = () => {
   const [notifications, setNotifications] = useState([]);
@@ -9,6 +9,7 @@ const TopNav = () => {
 
   useEffect(() => {
     const fetchNotifications = async () => {
+      if (!isLoggedIn()) return;
       try {
         const tasks = await getAllTasks();
         if (!tasks) return;

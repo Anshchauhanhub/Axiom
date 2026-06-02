@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import AIAgentChat from './AIAgentChat';
 import MoodFace from './MoodFace';
-import { getAllTasks } from '../services/api';
+import { getAllTasks, isLoggedIn } from '../services/api';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -17,7 +17,7 @@ const Layout = ({ children }) => {
 
   // Auto-calculate mood from task progress
   useEffect(() => {
-    if (hideAIAgent) return;
+    if (hideAIAgent || !isLoggedIn()) return;
     const calculateMood = async () => {
       try {
         const tasks = await getAllTasks();
@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
       <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 ${
         hideNavigation 
           ? 'p-0 max-w-none' 
-          : `pt-16 pb-24 px-3 sm:px-4 lg:pt-24 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
+          : `pt-6 pb-24 px-3 sm:px-4 lg:pt-16 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
       }`}>
         {children}
       </main>
