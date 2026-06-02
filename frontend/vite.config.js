@@ -47,6 +47,8 @@ export default defineConfig({
       '/users': apiUrl,
       '/quiz': apiUrl,
       '/telegram': apiUrl,
+      '/social': apiUrl,
+      '/personal': apiUrl,
     }
   },
   preview: {
@@ -56,6 +58,8 @@ export default defineConfig({
       '/users': apiUrl,
       '/quiz': apiUrl,
       '/telegram': apiUrl,
+      '/social': apiUrl,
+      '/personal': apiUrl,
     }
   }
 })
