@@ -186,7 +186,7 @@ const Calendar = () => {
 
             {/* Sidebar: Task List */}
             <div className="w-full lg:w-80 flex flex-col shrink-0">
-                <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-6 h-[calc(100vh-8rem)] sticky top-24 flex flex-col shadow-2xl overflow-hidden">
+                <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-6 max-h-[50vh] lg:h-[calc(100vh-8rem)] lg:sticky lg:top-24 flex flex-col shadow-2xl overflow-hidden">
 
                     {!activeGoalId ? (
                         <>
@@ -420,7 +420,7 @@ const Calendar = () => {
 
             {/* Main Calendar View */}
             <div className="flex-1 min-w-0 flex flex-col">
-                <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-6 h-[calc(100vh-8rem)] sticky top-24 flex flex-col shadow-2xl overflow-hidden">
+                <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-4 sm:p-6 min-h-[400px] lg:h-[calc(100vh-8rem)] lg:sticky lg:top-24 flex flex-col shadow-2xl overflow-hidden">
 
                     {/* Header */}
                     <div className="flex items-center justify-between mb-8 px-4">
