@@ -122,12 +122,33 @@
       /* Mobile Navigation Fixes */
       @media (max-width: 1024px) {
         body {
-          overscroll-behavior-y: none; /* Prevent pull-to-refresh if needed, or just for cleaner PWA feel */
+          -webkit-text-size-adjust: 100%;
         }
+      }
+
+      /* Mobile Touch Optimizations */
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Smooth scrolling for all scroll containers */
+      .custom-scrollbar,
+      main,
+      [class*="overflow-y-auto"],
+      [class*="overflow-x-auto"] {
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Fix for iOS notch / dynamic island */
+      @supports (padding-top: env(safe-area-inset-top)) {
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .mt-safe { margin-top: env(safe-area-inset-top); }
+        .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
       }
     </style>
   </head>
-  <body class="bg-background text-on-surface">
+  <body class="bg-background text-on-surface overflow-x-hidden">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

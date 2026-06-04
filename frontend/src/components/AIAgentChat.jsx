@@ -162,7 +162,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
   // Determine dynamic classes based on modes
   const layoutClasses = isSidebarMode 
     ? `top-0 right-0 h-screen rounded-none ${isExpanded ? 'w-full md:w-[800px]' : 'w-full max-w-[400px]'}`
-    : `bottom-4 right-4 lg:bottom-6 lg:right-6 h-[600px] max-h-[calc(100vh-40px)] rounded-2xl ${isExpanded ? 'w-[calc(100%-32px)] md:w-[800px]' : 'w-[calc(100%-32px)] max-w-[400px]'}`;
+    : `inset-0 sm:inset-auto sm:bottom-4 sm:right-4 lg:bottom-6 lg:right-6 h-full sm:h-[600px] sm:max-h-[calc(100vh-40px)] rounded-none sm:rounded-2xl ${isExpanded ? 'sm:w-[calc(100%-32px)] md:w-[800px]' : 'sm:w-[calc(100%-32px)] sm:max-w-[400px]'}`;
 
   const getMoodStyles = (m) => {
     switch (m) {
