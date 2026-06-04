@@ -72,17 +72,20 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className={`min-h-screen bg-background text-on-surface font-body selection:bg-primary/30 flex flex-col ${hideNavigation ? 'overflow-x-hidden' : ''}`}>
+    <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary/30 flex flex-col overflow-x-hidden w-full relative">
       {!hideNavigation && (
         <>
+          {/* Mobile Header Background to prevent overlap */}
+          <div className="lg:hidden fixed top-0 left-0 w-full h-20 bg-[#0e0e10]/95 backdrop-blur-xl border-b border-white/5 z-[50] pt-safe"></div>
+          
           <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           <TopNav />
         </>
       )}
-      <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 ${
+      <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 relative z-10 ${
         hideNavigation 
           ? 'p-0 max-w-none' 
-          : `pt-16 pb-8 px-3 sm:px-4 lg:pt-16 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
+          : `pt-24 pb-8 px-3 sm:px-4 lg:pt-16 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
       }`}>
         {children}
       </main>

@@ -88,17 +88,17 @@ const TopNav = () => {
   const hasUrgent = notifications.some(n => n.type === 'urgent');
 
   return (
-    <div className="fixed top-0 right-0 p-4 lg:p-6 z-50 pointer-events-auto">
+    <div className="fixed top-4 right-4 lg:top-6 lg:right-6 z-[99] pointer-events-auto">
       <div className="relative" ref={dropdownRef}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative p-3 rounded-full transition-all duration-300 ${isOpen ? 'bg-surface-container-highest text-primary' : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'} border border-white/5 shadow-lg backdrop-blur-md`}
+          className={`relative w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 ${isOpen ? 'bg-[#1c1b1d] text-primary' : 'bg-[#131315]/90 hover:bg-[#1c1b1d] text-white/80 hover:text-white'} border border-white/10 shadow-lg backdrop-blur-lg active:scale-95`}
         >
           <Bell size={20} className={hasUrgent && !isOpen ? 'animate-pulse text-red-400' : ''} />
           
           {/* Notification Badge */}
           {notifications.length > 0 && notifications[0].type !== 'success' && (
-            <span className={`absolute top-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background ${hasUrgent ? 'bg-red-500' : 'bg-orange-500'}`}></span>
+            <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background ${hasUrgent ? 'bg-red-500' : 'bg-orange-500'}`}></span>
           )}
         </button>
 
