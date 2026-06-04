@@ -11,6 +11,7 @@ const Calendar = () => {
     const [activeGoalId, setActiveGoalId] = useState(null);
     const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
     const [newPersonalTask, setNewPersonalTask] = useState({ title: '', description: '', date: '', time: '' });
+    const [showLegend, setShowLegend] = useState(false);
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -182,7 +183,7 @@ const Calendar = () => {
     };
 
     return (
-        <div className="w-full flex flex-col lg:flex-row gap-8 animate-in slide-in-from-bottom-5 duration-700">
+        <div className="w-full flex flex-col-reverse lg:flex-row gap-8 animate-in slide-in-from-bottom-5 duration-700">
 
             {/* Sidebar: Task List */}
             <div className="w-full lg:w-80 flex flex-col shrink-0">
@@ -423,32 +424,13 @@ const Calendar = () => {
                 <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-4 sm:p-6 min-h-[400px] lg:h-[calc(100vh-8rem)] lg:sticky lg:top-24 flex flex-col shadow-2xl overflow-hidden">
 
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-8 px-4">
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-surface-container/50 px-4 py-2 rounded-xl border border-outline-variant/5 justify-items-start">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-secondary"></div>
-                                <span className="text-[9px] font-label font-bold uppercase tracking-widest text-on-surface-variant/60">Done</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                                <span className="text-[9px] font-label font-bold uppercase tracking-widest text-on-surface-variant/60">Active</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
-                                <span className="text-[9px] font-label font-bold uppercase tracking-widest text-on-surface-variant/60">Late</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                                <span className="text-[9px] font-label font-bold uppercase tracking-widest text-on-surface-variant/60">Personal</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                            <button onClick={prevMonth} className="p-2 bg-surface-container-low hover:bg-primary/20 hover:text-primary text-on-surface-variant border border-outline-variant/10 rounded-full transition-all"><ChevronLeft size={20} /></button>
-                            <h2 className="text-2xl font-black font-headline text-on-surface uppercase tracking-tight min-w-[200px] text-center">
+                    <div className="flex items-center justify-center mb-8 px-2 sm:px-4">
+                        <div className="flex items-center justify-between md:justify-center gap-4 sm:gap-6 w-full md:w-auto">
+                            <button onClick={prevMonth} className="p-2 sm:p-3 bg-surface-container-low hover:bg-primary/20 hover:text-primary text-on-surface-variant border border-outline-variant/10 rounded-full transition-all shrink-0"><ChevronLeft size={20} /></button>
+                            <h2 className="text-xl sm:text-2xl font-black font-headline text-on-surface uppercase tracking-tight text-center truncate flex-1 md:flex-none">
                                 {monthNames[month]} <span className="text-primary">{year}</span>
                             </h2>
-                            <button onClick={nextMonth} className="p-2 bg-surface-container-low hover:bg-primary/20 hover:text-primary text-on-surface-variant border border-outline-variant/10 rounded-full transition-all"><ChevronRight size={20} /></button>
+                            <button onClick={nextMonth} className="p-2 sm:p-3 bg-surface-container-low hover:bg-primary/20 hover:text-primary text-on-surface-variant border border-outline-variant/10 rounded-full transition-all shrink-0"><ChevronRight size={20} /></button>
                         </div>
                     </div>
 
