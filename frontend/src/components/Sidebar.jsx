@@ -57,12 +57,11 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
           key={item.name}
           to={item.path}
           title={isCollapsed && !isMobile ? item.name : undefined}
-          className={`flex items-center transition-all duration-300 rounded-xl ${
-            isCollapsed && !isMobile ? 'justify-center p-3' : 'gap-3.5 px-4 py-3.5'
-          } ${isActive(item.path)
-            ? 'text-white border-l-2 border-primary bg-gradient-to-r from-primary/10 to-transparent'
-            : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
-          }`}
+          className={`flex items-center transition-all duration-300 rounded-xl ${isCollapsed && !isMobile ? 'justify-center p-3' : 'gap-3.5 px-4 py-3.5'
+            } ${isActive(item.path)
+              ? 'text-white border-l-2 border-primary bg-gradient-to-r from-primary/10 to-transparent'
+              : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
+            }`}
         >
           <span className="material-symbols-outlined text-xl">{item.icon}</span>
           {(isMobile || !isCollapsed) && (
@@ -73,14 +72,14 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
     </nav>
   );
 
-  // Shared profile / auth section
-  const renderProfileSection = (isMobile = false) => (
-    <div className={`mt-auto space-y-6 w-full ${isCollapsed && !isMobile ? 'px-0' : 'px-4'}`} ref={isMobile ? undefined : menuRef}>
+  // Desktop-only profile / auth section (with popup menu)
+  const renderDesktopProfileSection = () => (
+    <div className={`mt-auto space-y-6 w-full ${isCollapsed ? 'px-0' : 'px-4'}`} ref={menuRef}>
       {user ? (
         <div className="relative">
-          <button 
+          <button
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-            className={`flex w-full items-center p-2 rounded-xl hover:bg-[#1c1b1d] active:bg-[#252527] transition-colors ${isCollapsed && !isMobile ? 'justify-center' : 'gap-3'}`}
+            className={`flex w-full items-center p-2 rounded-xl hover:bg-[#1c1b1d] active:bg-[#252527] transition-colors ${isCollapsed ? 'justify-center' : 'gap-3'}`}
           >
             <div className="w-10 h-10 shrink-0 rounded-full border border-outline-variant/30 bg-surface-container flex items-center justify-center overflow-hidden">
               {user.profile_image_url ? (
@@ -89,7 +88,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
                 <span className="text-xs font-bold text-white">{user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}</span>
               )}
             </div>
-            {(isMobile || !isCollapsed) && (
+            {!isCollapsed && (
               <div className="flex flex-col min-w-0 text-left">
                 <span className="text-xs font-bold text-on-surface truncate pr-2">{user.full_name || user.email.split('@')[0]}</span>
                 <span className="text-[10px] text-on-surface-variant font-label uppercase truncate">Personal Workspace</span>
@@ -97,7 +96,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
             )}
           </button>
 
-          {/* Profile Menu Popup */}
+          {/* Profile Menu Popup (desktop only) */}
           {isProfileMenuOpen && (
             <div className="absolute bottom-[calc(100%+10px)] left-2 w-64 bg-[#1c1b1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 py-2">
               <div className="px-4 py-3 flex items-center gap-3">
@@ -113,14 +112,13 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
                   <span className="text-[10px] text-white/60 truncate uppercase tracking-wider">{user.email}</span>
                 </div>
               </div>
-              
+
               <div className="px-2 pt-2">
                 <div className="h-px bg-white/10 w-full mb-2"></div>
-                <button 
+                <button
                   onClick={() => {
                     setIsProfileMenuOpen(false);
                     setIsSettingsOpen(true);
-                    setIsMobileOpen(false);
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                 >
@@ -131,10 +129,9 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
 
               <div className="px-2">
                 <div className="h-px bg-white/10 w-full my-2"></div>
-                <button 
+                <button
                   onClick={() => {
                     setIsProfileMenuOpen(false);
-                    setIsMobileOpen(false);
                     logout();
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-error/80 hover:text-error hover:bg-error/10 rounded-lg transition-colors"
@@ -149,10 +146,10 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
       ) : (
         <Link
           to="/login"
-          title={isCollapsed && !isMobile ? "Login" : undefined}
-          className={`w-full py-3 bg-primary-container/20 text-primary border border-primary/20 rounded-lg font-label text-[10px] font-bold tracking-[0.2em] hover:bg-primary-container hover:text-on-primary-container transition-all uppercase block text-center flex items-center justify-center ${isCollapsed && !isMobile ? 'px-0' : ''}`}
+          title={isCollapsed ? "Login" : undefined}
+          className={`w-full py-3 bg-primary-container/20 text-primary border border-primary/20 rounded-lg font-label text-[10px] font-bold tracking-[0.2em] hover:bg-primary-container hover:text-on-primary-container transition-all uppercase block text-center flex items-center justify-center ${isCollapsed ? 'px-0' : ''}`}
         >
-          {isCollapsed && !isMobile ? <span className="material-symbols-outlined">login</span> : 'LOGIN / REGISTER'}
+          {isCollapsed ? <span className="material-symbols-outlined">login</span> : 'LOGIN / REGISTER'}
         </Link>
       )}
     </div>
@@ -160,13 +157,17 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
 
   return (
     <>
-      {/* Mobile Hamburger Button (top-left) */}
+      {/* Mobile Logo Button (top-left) */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-[60] w-11 h-11 rounded-xl bg-[#131315]/90 backdrop-blur-lg border border-white/10 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-[60] flex items-center justify-center group active:scale-95 transition-all"
         aria-label="Open menu"
       >
-        <Menu size={20} />
+        <img
+          src="/logo.png"
+          alt="Axiom Logo"
+          className="w-14 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] group-hover:scale-110 transition-transform duration-500"
+        />
       </button>
 
       {/* Mobile Slide-out Sidebar Drawer */}
@@ -198,14 +199,72 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
             </div>
 
             {renderNavLinks(true)}
-            {renderProfileSection(true)}
+
+            {/* Mobile: Direct Settings & Profile (no popup needed) */}
+            <div className="mt-auto w-full px-2 space-y-1.5">
+              {/* Divider */}
+              <div className="h-px bg-white/5 mx-2 my-2"></div>
+
+              {/* Settings Button — direct, no popup */}
+              <button
+                onClick={() => {
+                  setIsMobileOpen(false);
+                  setTimeout(() => setIsSettingsOpen(true), 100);
+                }}
+                className="flex w-full items-center gap-3.5 px-4 py-3.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10 transition-all"
+              >
+                <span className="material-symbols-outlined text-xl">settings</span>
+                <span className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">Settings</span>
+              </button>
+
+              {/* Sign Out */}
+              {user && (
+                <button
+                  onClick={() => {
+                    setIsMobileOpen(false);
+                    logout();
+                  }}
+                  className="flex w-full items-center gap-3.5 px-4 py-3.5 rounded-xl text-red-400/60 hover:bg-red-400/5 hover:text-red-400 active:bg-red-400/10 transition-all"
+                >
+                  <span className="material-symbols-outlined text-xl">logout</span>
+                  <span className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">Sign Out</span>
+                </button>
+              )}
+
+              {/* Profile Info */}
+              {user && (
+                <div className="flex items-center gap-3 px-4 py-3 mt-1 rounded-xl bg-white/3 border border-white/5">
+                  <div className="w-10 h-10 shrink-0 rounded-full border border-outline-variant/30 bg-surface-container flex items-center justify-center overflow-hidden">
+                    {user.profile_image_url ? (
+                      <img src={user.profile_image_url.startsWith('http') ? user.profile_image_url : `${API_BASE}${user.profile_image_url}`} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold text-white">{user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-on-surface truncate">{user.full_name || user.email.split('@')[0]}</span>
+                    <span className="text-[10px] text-on-surface-variant font-label uppercase truncate">Personal Workspace</span>
+                  </div>
+                </div>
+              )}
+
+              {!user && (
+                <Link
+                  to="/login"
+                  onClick={() => setIsMobileOpen(false)}
+                  className="w-full py-3 bg-primary-container/20 text-primary border border-primary/20 rounded-lg font-label text-[10px] font-bold tracking-[0.2em] hover:bg-primary-container hover:text-on-primary-container transition-all uppercase block text-center"
+                >
+                  LOGIN / REGISTER
+                </Link>
+              )}
+            </div>
           </aside>
         </div>
       )}
 
       {/* Desktop SideNavBar */}
       <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-full transition-all duration-300 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40 ${isCollapsed ? 'w-20 items-center px-2' : 'w-56'}`}>
-        
+
         {/* Header / Logo */}
         <div className={`mb-8 px-2 flex ${isCollapsed ? 'flex-col items-center pt-2' : 'items-center justify-between'}`}>
           {isCollapsed ? (
@@ -225,8 +284,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
                   className="w-20 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] transition-all duration-500 group-hover:scale-110"
                 />
               </Link>
-              <button 
-                onClick={toggleCollapse} 
+              <button
+                onClick={toggleCollapse}
                 className="text-white/60 hover:text-white hover:bg-[#1c1b1d] p-1.5 rounded-lg transition-colors -mr-2"
               >
                 <PanelLeftClose size={20} />
@@ -236,7 +295,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
         </div>
 
         {renderNavLinks(false)}
-        {renderProfileSection(false)}
+        {renderDesktopProfileSection()}
       </aside>
 
       {/* Settings Modal */}

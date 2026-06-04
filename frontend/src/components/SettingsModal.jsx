@@ -140,14 +140,14 @@ const SettingsModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden min-h-0">
-          {/* Left Tab Navigation */}
-          <div className="w-[200px] shrink-0 border-r border-white/5 py-3 px-2 flex flex-col gap-1 bg-[#0e0e10]/50 overflow-y-auto">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-0">
+          {/* Top/Left Tab Navigation */}
+          <div className="w-full md:w-[200px] shrink-0 border-b md:border-b-0 md:border-r border-white/5 py-3 px-2 flex flex-row md:flex-col gap-1 bg-[#0e0e10]/50 overflow-x-auto md:overflow-y-auto no-scrollbar">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all text-left ${
+                className={`flex-1 md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all text-center md:text-left whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'bg-white/8 text-white'
                     : 'text-white/50 hover:text-white/80 hover:bg-white/3'
@@ -158,8 +158,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
               </button>
             ))}
 
-            {/* Logout at bottom of sidebar */}
-            <div className="mt-auto pt-4 border-t border-white/5 mx-1">
+            {/* Logout at bottom of sidebar (desktop only) */}
+            <div className="hidden md:block mt-auto pt-4 border-t border-white/5 mx-1">
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-red-400/80 hover:text-red-400 hover:bg-red-400/5 transition-all text-left"
