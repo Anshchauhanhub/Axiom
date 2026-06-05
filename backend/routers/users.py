@@ -155,7 +155,7 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
     import secrets
     import string
     
-    idinfo = verify_google_token(req.credential)
+    idinfo = await verify_google_token(req.credential)
     email = idinfo.get("email")
     if not email:
         raise HTTPException(status_code=400, detail="Google token does not contain an email")
@@ -258,12 +258,16 @@ async def upload_profile_image(
         raise HTTPException(status_code=400, detail="File provided is not an image.")
 
     try:
-        # Upload directly to Cloudinary
+        # Upload to Cloudinary with on-the-fly optimization
         upload_result = cloudinary.uploader.upload(
             file.file,
             folder="axiom/profiles/",
             public_id=str(user.id),
-            overwrite=True
+            overwrite=True,
+            transformation=[
+                {"width": 400, "height": 400, "crop": "fill"},
+                {"quality": "auto:good", "fetch_format": "auto"}
+            ]
         )
         
         # Update user with the secure URL from Cloudinary
