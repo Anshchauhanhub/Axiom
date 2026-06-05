@@ -160,6 +160,7 @@ const Auth = () => {
         await loginUser(res.access_token);
         navigate('/onboarding');
       } catch (err) {
+        alert("API Error (/auth/google): " + err.message);
         setError(err.message || 'Google authentication failed');
         setLoading(false);
       }
