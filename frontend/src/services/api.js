@@ -1,4 +1,5 @@
-export const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
+const BASE_URL = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
+export const API_BASE = `${BASE_URL}/api/v1`;
 
 // --- Token Management ---
 export const getToken = () => localStorage.getItem('axiom_token');
@@ -178,22 +179,6 @@ export const toggleGoalStatus = (goalId) =>
 
 export const updateGoalNotes = (goalId, notes) =>
   request('PATCH', `/goals/${goalId}/notes`, { notes });
-
-// --- Social ---
-export const createSocialPost = (postData) =>
-  request('POST', '/social/', postData);
-
-export const getSocialFeed = () =>
-  request('GET', '/social/feed');
-
-export const toggleSocialLike = (postId) =>
-  request('POST', `/social/posts/${postId}/toggle-like`);
-
-export const getSocialComments = (postId) =>
-  request('GET', `/social/posts/${postId}/comments`);
-
-export const addSocialComment = (postId, content) =>
-  request('POST', `/social/posts/${postId}/comments`, { content });
 
 export const getChatHistory = () =>
   request('GET', '/goals/chat/history');

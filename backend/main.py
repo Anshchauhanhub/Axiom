@@ -2,7 +2,7 @@ import os
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
@@ -18,8 +18,6 @@ from routers.goals import router as goals_router
 from routers.quiz import router as quiz_router
 from routers.telegram import router as telegram_router, set_bot_app
 from routers.personal import router as personal_router
-# from routers.social import router as social_router
-# from routers.social_ws import router as social_ws_router
 from bot import create_bot_app
 from services.scheduler import start_scheduler, set_bot
 
@@ -136,16 +134,16 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Register routers
-app.include_router(auth_router)
-app.include_router(profile_router)
-app.include_router(goals_router)
-app.include_router(quiz_router)
-app.include_router(telegram_router)
-app.include_router(personal_router, prefix="/personal", tags=["Personal Tasks"])
-# app.include_router(social_router)
-# app.include_router(social_ws_router)
- 
+# Register routers with API versioning
+api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(auth_router)
+api_router.include_router(profile_router)
+api_router.include_router(goals_router)
+api_router.include_router(quiz_router)
+api_router.include_router(telegram_router)
+api_router.include_router(personal_router, prefix="/personal", tags=["Personal Tasks"])
+
+app.include_router(api_router) 
 # Serve Static Files (Frontend Build)
 # In production, Vite builds to /frontend/dist. We copy this to /backend/static in Docker.
 STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
@@ -160,10 +158,9 @@ if os.path.exists(STATIC_DIR):
     @app.get("/{full_path:path}", response_class=FileResponse)
     async def serve_spa(request: Request, full_path: str):
         # Exclude common API-like prefixes
-        if full_path.startswith(("auth", "goals", "quiz", "telegram", "profile", "users", "api")):
+        if full_path.startswith("api/"):
              from fastapi.responses import JSONResponse
              return JSONResponse(status_code=404, content={"detail": "API endpoint not found", "path": full_path})
-             
         # Check if requested file exists in STATIC_DIR (like logo.png, favicon.ico)
         file_path = os.path.join(STATIC_DIR, full_path)
         

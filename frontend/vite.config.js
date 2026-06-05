@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const apiUrl = process.env.API_URL || 'http://localhost:8000';
@@ -7,6 +8,7 @@ const apiUrl = process.env.API_URL || 'http://localhost:8000';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -42,24 +44,16 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/auth': apiUrl,
-      '/goals': apiUrl,
-      '/users': apiUrl,
-      '/quiz': apiUrl,
-      '/telegram': apiUrl,
-      '/social': apiUrl,
-      '/personal': apiUrl,
+      '/api/v1': apiUrl
     }
   },
   preview: {
     proxy: {
-      '/auth': apiUrl,
-      '/goals': apiUrl,
-      '/users': apiUrl,
-      '/quiz': apiUrl,
-      '/telegram': apiUrl,
-      '/social': apiUrl,
-      '/personal': apiUrl,
+      '/api/v1': apiUrl
     }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
   }
 })
