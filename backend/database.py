@@ -40,5 +40,6 @@ async def get_db():
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Database initialization is now handled via Alembic migrations.
+    # Run `alembic upgrade head` to apply schema changes.
+    pass

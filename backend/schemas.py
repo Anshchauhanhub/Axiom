@@ -242,43 +242,4 @@ class YoutubeRoadmapResponse(BaseModel):
     goal_title: str
 
 
-# --- Social ---
-class PostCreateRequest(BaseModel):
-    goal_id: Optional[uuid.UUID] = None
-    content: Union[list, dict, str]
-    post_type: str = "lesson"
 
-
-class PostResponse(BaseModel):
-    id: uuid.UUID
-    user_id: uuid.UUID
-    goal_id: Optional[uuid.UUID] = None
-    content: Union[list, dict, str]
-    post_type: str
-    created_at: datetime
-    user_email: Optional[str] = None
-    user_full_name: Optional[str] = None
-    user_profile_image: Optional[str] = None
-    likes_count: int = 0
-    comments_count: int = 0
-    is_liked_by_me: bool = False
-
-    class Config:
-        from_attributes = True
-
-
-class CommentCreateRequest(BaseModel):
-    content: str
-
-
-class CommentResponse(BaseModel):
-    id: uuid.UUID
-    post_id: uuid.UUID
-    user_id: uuid.UUID
-    content: str
-    created_at: datetime
-    user_full_name: Optional[str] = None
-    user_profile_image: Optional[str] = None
-
-    class Config:
-        from_attributes = True

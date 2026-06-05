@@ -1,4 +1,177 @@
-/* Shared Design System Utilities */
+/* ═══════════════════════════════════════════════════════════════════════
+   Axiom AI — Design System (Tailwind v4 CSS-first)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@import "tailwindcss";
+
+/* ─── Theme: Colors, Fonts, Border Radii ─────────────────────────────── */
+@theme {
+  /* Primary (Gold) */
+  --color-primary: #fdb813;
+  --color-primary-container: #fdb813;
+  --color-primary-fixed: #ffdf99;
+  --color-primary-fixed-dim: #fdb813;
+  --color-on-primary: #251a00;
+  --color-on-primary-container: #251a00;
+  --color-on-primary-fixed: #001a42;
+  --color-on-primary-fixed-variant: #004395;
+  --color-inverse-primary: #005ac2;
+  --color-surface-tint: #fdb813;
+
+  /* Secondary (Green) */
+  --color-secondary: #00b359;
+  --color-secondary-container: #00b359;
+  --color-secondary-fixed: #acedff;
+  --color-secondary-fixed-dim: #00b359;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #00424e;
+  --color-on-secondary-fixed: #001f26;
+  --color-on-secondary-fixed-variant: #004e5c;
+
+  /* Tertiary (Orange) */
+  --color-tertiary: #ffb786;
+  --color-tertiary-container: #e65100;
+  --color-tertiary-fixed: #ffdcc6;
+  --color-tertiary-fixed-dim: #ffb786;
+  --color-on-tertiary: #502400;
+  --color-on-tertiary-container: #461f00;
+  --color-on-tertiary-fixed: #311400;
+  --color-on-tertiary-fixed-variant: #723600;
+
+  /* Error */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+
+  /* Surfaces */
+  --color-background: #0e0e10;
+  --color-on-background: #e5e1e4;
+  --color-surface: #0e0e10;
+  --color-surface-dim: #0e0e10;
+  --color-surface-bright: #39393b;
+  --color-surface-variant: #353437;
+  --color-surface-container: #201f22;
+  --color-surface-container-low: #1c1b1d;
+  --color-surface-container-high: #2a2a2c;
+  --color-surface-container-highest: #353437;
+  --color-surface-container-lowest: #0e0e10;
+  --color-on-surface: #e5e1e4;
+  --color-on-surface-variant: #c2c6d6;
+  --color-inverse-surface: #e5e1e4;
+  --color-inverse-on-surface: #313032;
+
+  /* Outline */
+  --color-outline: #8c909f;
+  --color-outline-variant: #424754;
+
+  /* Fonts */
+  --font-headline: "Inter";
+  --font-body: "Inter";
+  --font-label: "Space Grotesk";
+
+  /* Border Radii */
+  --radius: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+}
+
+
+/* ─── Base Styles (from index.html <style>) ──────────────────────────── */
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Glass Panel Utility */
+.glass-panel {
+  background: rgba(53, 52, 55, 0.6);
+  backdrop-filter: blur(12px);
+}
+
+/* Glow Utilities */
+.glow-gold {
+  box-shadow: 0 0 40px -10px rgba(253, 184, 19, 0.25);
+}
+.glow-green {
+  box-shadow: 0 0 40px -10px rgba(0, 179, 89, 0.2);
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(253, 184, 19, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(253, 184, 19, 0.4);
+}
+
+/* Safe Area Utilities (iOS notch / dynamic island) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.mt-safe {
+  margin-top: env(safe-area-inset-top);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .mt-safe { margin-top: env(safe-area-inset-top); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Mobile Navigation Fixes */
+@media (max-width: 1024px) {
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* Mobile Touch Optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scrolling for all scroll containers */
+.custom-scrollbar,
+main,
+[class*="overflow-y-auto"],
+[class*="overflow-x-auto"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* No-scrollbar utility (used in Settings modal) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide TopNav when Notebook is open */
+body.notebook-open #top-nav {
+  display: none !important;
+}
+
+
+/* ─── Design System Utilities ────────────────────────────────────────── */
+
 @layer utilities {
   .axiom-glow {
     box-shadow: 0 0 30px -5px rgba(253, 184, 19, 0.4);
@@ -17,7 +190,9 @@
   }
 }
 
-/* Markdown Content Styling */
+
+/* ─── Markdown Prose Styling ─────────────────────────────────────────── */
+
 .prose-invert {
   --tw-prose-body: #e5e1e4;
   --tw-prose-headings: #fdb813;
@@ -26,18 +201,13 @@
   --tw-prose-bullets: #fdb813;
 }
 
-/* Animations */
-@keyframes slide-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
+/* ─── Animations ─────────────────────────────────────────────────────── */
+
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .animate-slide-in-up {
   animation: slide-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -46,22 +216,14 @@
   0%, 100% { opacity: 0.5; filter: blur(8px); }
   50% { opacity: 0.8; filter: blur(12px); }
 }
-
 .animate-pulse-glow {
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
 @keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(100%) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+  from { opacity: 0; transform: translateX(100%) scale(0.9); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
 }
-
 .animate-toast-in {
   animation: toast-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -70,7 +232,6 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
 }
-
 .animate-float {
   animation: float 5s ease-in-out infinite;
 }
@@ -80,7 +241,6 @@
   50% { opacity: 1; }
   to { transform: translateY(200%); opacity: 0; }
 }
-
 .animate-scan {
   animation: scan 3s linear infinite;
 }
@@ -90,12 +250,13 @@
   50% { transform: scale(1.05); opacity: 0.8; }
   100% { transform: scale(1); opacity: 1; }
 }
-
 .animate-axiom-pulse {
   animation: axiom-pulse 2s ease-in-out infinite;
 }
 
-/* Smart Notebook Styling */
+
+/* ─── Smart Notebook Editor Styling ──────────────────────────────────── */
+
 .axiom-editor h1 {
   font-size: 20px;
   font-weight: 900;
@@ -180,4 +341,3 @@
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
 }
-
