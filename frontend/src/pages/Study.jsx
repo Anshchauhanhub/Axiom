@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { startQuiz, submitQuiz, getPartContent, updateGoalNotes, createSocialPost } from '../services/api';
+import { startQuiz, submitQuiz, getPartContent, updateGoalNotes } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MultimediaEditor from '../components/MultimediaEditor';
-
+import StudySidebar from '../components/study/StudySidebar';
+import StudyWorkbenchMain from '../components/study/StudyWorkbenchMain';
 const Study = () => {
   const { user, refreshUser } = useAuth();
   const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId, setSelectedGoalId } = useData();
@@ -101,6 +102,16 @@ const Study = () => {
       window.history.replaceState({ ...location.state, openNotebook: false }, '');
     }
   }, [location.state, goals, phase]);
+
+  // Hide global TopNav notification icon when Notebook is open to prevent overlap
+  useEffect(() => {
+    if (showNotes) {
+      document.body.classList.add('notebook-open');
+    } else {
+      document.body.classList.remove('notebook-open');
+    }
+    return () => document.body.classList.remove('notebook-open');
+  }, [showNotes]);
 
   useEffect(() => {
     if (!activeGoal || !showNotes) return;
@@ -223,23 +234,7 @@ const Study = () => {
   };
 
 
-  const handleShare = async () => {
-    if (!notes || !Array.isArray(notes)) return;
-    setLoading(true);
-    try {
-      await createSocialPost({
-        goal_id: activeGoal?.id,
-        content: { blocks: notes },
-        post_type: 'lesson'
-      });
-      alert('🚀 Shared to Axiom Social!');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to share: ' + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleExport = () => {
     if (!notes || !Array.isArray(notes)) return;
@@ -461,7 +456,7 @@ const Study = () => {
                   key={activeGoal.id}
                   initialContent={notes}
                   onSave={(newNotes) => setNotes(newNotes)}
-                  onShare={handleShare}
+
                   isSaving={isSaving}
                   user={user}
                   activeGoalTitle={activeGoal.title}
@@ -488,114 +483,17 @@ const Study = () => {
   const renderWorkbench = () => {
     return (
       <div className="flex flex-col lg:flex-row gap-8 h-full w-full mx-auto pb-24 animate-in slide-in-from-bottom-5 duration-700">
-        {/* Sidebar: Path Logic */}
-        <div className={`w-full lg:w-80 flex-col gap-6 shrink-0 transition-all duration-500 ${showNotes ? 'hidden' : 'flex'}`}>
-          <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-8">
-            <div className="flex items-center gap-3 mb-8">
-              <span className="material-symbols-outlined text-primary text-xl">account_tree</span>
-              <span className="text-[10px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant">Neural Path</span>
-            </div>
-            
-            <div className="space-y-4 relative">
-              <div className="absolute left-4 top-2 bottom-2 w-[1px] bg-outline-variant/20"></div>
-              {roadmap.tasks.map((task, idx) => {
-                const isActive = activeTask?.id === task.id;
-                const isLocked = task.status === 'locked';
-                const isPassed = task.status === 'passed';
-                
-                return (
-                  <button
-                    key={task.id}
-                    onClick={() => !isLocked && handleSelectTask(task)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 ${
-                      isActive 
-                        ? 'bg-primary/10 border border-primary/20 scale-[1.02] shadow-lg' 
-                        : isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'hover:bg-surface-container/50 border border-transparent'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-                      isActive ? 'bg-primary border-primary text-on-primary-container' : isPassed ? 'bg-secondary border-secondary text-on-secondary-container' : 'bg-surface border-outline-variant text-on-surface-variant'
-                    }`}>
-                      {isPassed ? (
-                        <span className="material-symbols-outlined text-sm">check</span>
-                      ) : (
-                        <span className="text-[10px] font-black">{idx + 1}</span>
-                      )}
-                    </div>
-                    <span className={`text-[11px] font-label font-black text-left uppercase tracking-tight flex-1 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
-                      {task.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Efficiency block removed */}
-        </div>
-
-        {/* Main: Module Focus */}
+        <StudySidebar 
+          showNotes={showNotes}
+          roadmap={roadmap}
+          activeTask={activeTask}
+          handleSelectTask={handleSelectTask}
+        />
         <div className="flex-1 min-w-0">
-          {!activeTask ? (
-            <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-surface-container-low/20 rounded-[3.5rem] border border-dashed border-outline-variant/30">
-              <span className="material-symbols-outlined text-6xl text-on-surface-variant/20 mb-6">target</span>
-              <h3 className="text-xl font-headline font-black text-on-surface-variant/40 uppercase tracking-widest">Select logic node to begin focus</h3>
-            </div>
-          ) : (
-            <div className="space-y-8 h-full">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
-                <div>
-                   <span className="text-[10px] font-label tracking-[0.4em] text-primary uppercase font-black">Active Context</span>
-                   <h2 className="text-3xl font-black font-headline text-on-surface uppercase tracking-tight mt-1">{activeTask.title}</h2>
-                </div>
-
-              </div>
-
-              <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 p-4 sm:p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                   <span className="material-symbols-outlined text-9xl">molecular_autonomy</span>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-6 relative z-10">
-                  {activeTask.parts.map((part, pidx) => {
-                    const isActive = part.status === 'active';
-                    const isPassed = part.status === 'passed';
-                    const isLocked = part.status === 'locked';
-                    
-                    return (
-                      <div 
-                        key={part.id} 
-                        onClick={() => !isLocked && handleStartLearning(part.id, part.title)}
-                        className={`group flex items-center justify-between p-6 sm:p-8 rounded-[2.5rem] border-2 transition-all duration-500 ${
-                          !isLocked 
-                            ? 'bg-surface-container-low/80 border-outline-variant/10 cursor-pointer hover:border-primary/40 hover:bg-surface-container-low hover:translate-x-2' 
-                            : 'opacity-40 border-transparent grayscale'
-                        }`}
-                      >
-                        <div className="flex items-center gap-6">
-                           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                             isActive ? 'bg-primary text-on-primary-container shadow-2xl' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest/50 text-on-surface-variant'
-                           }`}>
-                             <span className="material-symbols-outlined text-3xl">
-                               {isPassed ? 'check_circle' : isActive ? 'bolt' : 'lock_open'}
-                             </span>
-                           </div>
-                           <div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-[9px] font-label tracking-[0.2em] uppercase text-on-surface-variant/40 font-black">Segment {pidx + 1}</span>
-                                {isActive && <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>}
-                              </div>
-                              <h4 className="text-xl font-black text-on-surface group-hover:text-primary transition-colors">{part.title.split(' || ')[0]}</h4>
-                           </div>
-                        </div>
-                        <span className="material-symbols-outlined text-on-surface-variant/20 group-hover:text-primary transition-all group-hover:translate-x-1">arrow_forward</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+          <StudyWorkbenchMain
+            activeTask={activeTask}
+            handleStartLearning={handleStartLearning}
+          />
         </div>
       </div>
     );
@@ -842,12 +740,12 @@ const Study = () => {
   }
 
   return (
-    <div className={`transition-all duration-700 ease-in-out min-h-screen ${showNotes ? 'fixed inset-0 z-[100] bg-[#08090b] flex flex-col overflow-hidden' : 'relative'}`}>
+    <div className={`transition-all duration-700 ease-in-out w-full ${showNotes ? 'h-[85vh] sm:h-[90vh] bg-surface-container-lowest/80 backdrop-blur-2xl rounded-[2rem] border border-white/10 shadow-2xl flex flex-col overflow-hidden z-20 relative' : 'min-h-screen relative'}`}>
       {renderLoaders()}
       
       <div className={`flex w-full h-full relative ${showNotes ? 'flex-1 overflow-hidden' : ''}`}>
         <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
-          <div className={`w-full mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-8' : ''}`}>
+          <div className={`w-full mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-6' : ''}`}>
              {phaseContent}
           </div>
         </main>
