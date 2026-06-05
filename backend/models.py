@@ -45,7 +45,7 @@ class Goal(Base):
     __tablename__ = "goals"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     status = Column(String, default="active")  # active, completed, paused
     notes = Column(JSONB, nullable=True) # Block-based multimedia notes
@@ -55,52 +55,14 @@ class Goal(Base):
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
 
 
-class SocialPost(Base):
-    __tablename__ = "social_posts"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    goal_id = Column(UUID(as_uuid=True), ForeignKey("goals.id", ondelete="SET NULL"), nullable=True)
-    content = Column(JSONB, nullable=False)  # Multimedia content blocks
-    post_type = Column(String, default="lesson")  # lesson, achievement, roadmap
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-    user = relationship("User")
-    goal = relationship("Goal")
-    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
-    comments = relationship("SocialComment", back_populates="post", cascade="all, delete-orphan")
-
-
-class PostLike(Base):
-    __tablename__ = "post_likes"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    post_id = Column(UUID(as_uuid=True), ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-    post = relationship("SocialPost", back_populates="likes")
-    user = relationship("User")
-
-
-class SocialComment(Base):
-    __tablename__ = "social_comments"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    post_id = Column(UUID(as_uuid=True), ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-    post = relationship("SocialPost", back_populates="comments")
-    user = relationship("User")
 
 
 class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    goal_id = Column(UUID(as_uuid=True), ForeignKey("goals.id", ondelete="CASCADE"), nullable=False)
+    goal_id = Column(UUID(as_uuid=True), ForeignKey("goals.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     order_index = Column(Integer, nullable=False)
     status = Column(String, default="locked")  # locked, active, passed
@@ -113,7 +75,7 @@ class Part(Base):
     __tablename__ = "parts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     order_index = Column(Integer, nullable=False, default=0)
     status = Column(String, default="locked")  # locked, active, passed
@@ -130,8 +92,8 @@ class QuizResult(Base):
     __tablename__ = "quiz_results"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    part_id = Column(UUID(as_uuid=True), ForeignKey("parts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    part_id = Column(UUID(as_uuid=True), ForeignKey("parts.id", ondelete="CASCADE"), nullable=False, index=True)
     score_percent = Column(Float, nullable=False)
     is_passed = Column(Boolean, default=False)
     completed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

@@ -88,7 +88,7 @@ const TopNav = () => {
   const hasUrgent = notifications.some(n => n.type === 'urgent');
 
   return (
-    <div className="fixed top-4 right-4 lg:top-6 lg:right-6 z-[99] pointer-events-auto">
+    <div id="top-nav" className="fixed top-4 right-4 lg:top-6 lg:right-6 z-[99] pointer-events-auto">
       <div className="relative" ref={dropdownRef}>
         <button 
           onClick={() => setIsOpen(!isOpen)}

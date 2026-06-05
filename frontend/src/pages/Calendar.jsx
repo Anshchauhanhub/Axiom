@@ -468,11 +468,11 @@ const Calendar = () => {
                                                 </div>
 
                                                 {dayTasks.length > 0 && (
-                                                    <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
+                                                    <div className="absolute bottom-1.5 left-1 right-1 flex items-center justify-center gap-0.5 sm:gap-1 overflow-hidden">
                                                         {Array.from(new Set(dayTasks.map(task => getTaskStatusInfo(task).dotClass))).map((dotClass, idx) => (
                                                             <div
                                                                 key={idx}
-                                                                className={`w-2 h-2 rounded-full shadow-sm shadow-black/40 ${dotClass}`}
+                                                                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shadow-sm shadow-black/40 shrink-0 ${dotClass}`}
                                                             ></div>
                                                         ))}
                                                     </div>

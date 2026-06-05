@@ -79,10 +79,10 @@ const Layout = ({ children }) => {
           <div className="lg:hidden fixed top-0 left-0 w-full h-20 bg-[#0e0e10]/95 backdrop-blur-xl border-b border-white/5 z-[50] pt-safe"></div>
           
           <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-          <TopNav />
+          {path !== '/notebooks' && <TopNav />}
         </>
       )}
-      <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 relative z-10 ${
+      <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 relative ${
         hideNavigation 
           ? 'p-0 max-w-none' 
           : `pt-24 pb-8 px-3 sm:px-4 lg:pt-16 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
