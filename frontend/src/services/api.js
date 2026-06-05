@@ -32,7 +32,7 @@ async function request(method, path, body = null) {
   const opts = { method, headers: headers() };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${API_BASE}${path}`, opts);
-  if (res.status === 401 && path !== '/auth/login' && path !== '/auth/register') {
+  if (res.status === 401 && !['/auth/login', '/auth/register', '/auth/google'].includes(path)) {
     clearToken();
     window.location.href = '/login';
     throw new Error('Session expired');

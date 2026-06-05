@@ -91,10 +91,6 @@ def verify_password_reset_token(token: str) -> str:
 
 async def verify_google_token(token: str) -> dict:
     import httpx
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    if not client_id:
-        raise HTTPException(status_code=500, detail="Google authentication is not configured.")
-    
     # The frontend uses useGoogleLogin which returns an access_token.
     # We verify it and get the user's profile by calling the userinfo endpoint asynchronously.
     async with httpx.AsyncClient() as client:
