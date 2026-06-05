@@ -173,7 +173,25 @@ const Dashboard = () => {
         </div>
 
         {/* KPI Header Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-10">
+        {goals.length === 0 && !dataLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-container-low/20 rounded-[3.5rem] border border-dashed border-outline-variant/30 mt-8 animate-in slide-in-from-bottom-4">
+            <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-8 border border-primary/20">
+              <span className="material-symbols-outlined text-5xl text-primary animate-pulse">neurology</span>
+            </div>
+            <h3 className="text-3xl font-headline font-black text-on-surface uppercase tracking-tight mb-4">No Neural Paths Found</h3>
+            <p className="text-on-surface-variant max-w-md mb-8 leading-relaxed">
+              Your cognitive workspace is currently empty. Initialize a new learning path to begin your mastery journey.
+            </p>
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="px-8 py-4 bg-primary text-black font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-primary/90 transition-all hover:scale-105 shadow-xl shadow-primary/20"
+            >
+              Create your first learning goal &rarr;
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-10">
           <div className="bg-surface-container-low/50 border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:border-white/10 transition-colors">
             <span className="text-[9px] font-label font-black tracking-[0.2em] uppercase text-on-surface-variant/60 mb-3">Active Paths</span>
             <div className="flex items-end gap-3">
@@ -557,6 +575,8 @@ const Dashboard = () => {
           </div>
         </div>
 
+          </>
+        )}
       </div>
     </div>
   );
