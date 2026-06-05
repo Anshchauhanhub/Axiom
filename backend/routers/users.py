@@ -155,7 +155,15 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
     import secrets
     import string
     
-    idinfo = await verify_google_token(req.credential)
+    logger.info(f"🔐 Google login attempt started")
+    
+    try:
+        idinfo = await verify_google_token(req.credential)
+        logger.info(f"✅ Google token verified, email: {idinfo.get('email')}")
+    except Exception as e:
+        logger.error(f"❌ Google token verification FAILED: {e}")
+        raise
+    
     email = idinfo.get("email")
     if not email:
         raise HTTPException(status_code=400, detail="Google token does not contain an email")
@@ -179,8 +187,12 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
         db.add(user)
         await db.commit()
         await db.refresh(user)
+        logger.info(f"✅ New Google user created: {email}, id: {user.id}")
+    else:
+        logger.info(f"✅ Existing Google user found: {email}, id: {user.id}")
         
     token = create_token(str(user.id))
+    logger.info(f"✅ JWT created for user {user.id}, token length: {len(token)}")
     return TokenResponse(access_token=token)
 
 
