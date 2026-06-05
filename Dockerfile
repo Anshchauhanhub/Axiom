@@ -8,8 +8,18 @@ COPY frontend/package.json frontend/package-lock.json* ./
 # Install dependencies with legacy peer deps to resolve vite-plugin-pwa issues
 RUN npm install --legacy-peer-deps
 
-# Copy the rest of the frontend code and build
+# Copy the rest of the frontend code
 COPY frontend/ ./
+
+# Expose Render Environment Variables to the build step
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_API_BASE
+ARG VITE_SENTRY_DSN
+
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_API_BASE=$VITE_API_BASE
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+
 RUN npm run build
 
 # Stage 2: Setup Python Backend
