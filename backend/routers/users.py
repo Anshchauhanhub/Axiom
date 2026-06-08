@@ -8,6 +8,8 @@ from email.message import EmailMessage
 import aiosmtplib
 import logging
 
+logger = logging.getLogger(__name__)
+
 from database import get_db
 from models import User
 from schemas import (
