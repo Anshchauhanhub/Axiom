@@ -156,8 +156,11 @@ const Auth = () => {
       try {
         setLoading(true);
         setError('');
+        alert('DEBUG: Google token received! Length: ' + (tokenResponse.access_token || 'MISSING').length);
         const res = await googleLogin(tokenResponse.access_token);
+        alert('DEBUG: Backend returned JWT! Length: ' + (res.access_token || 'MISSING').length);
         await loginUser(res.access_token);
+        alert('DEBUG: loginUser completed, navigating...');
         navigate('/onboarding');
       } catch (err) {
         alert("API Error (/auth/google): " + err.message);
@@ -165,7 +168,14 @@ const Auth = () => {
         setLoading(false);
       }
     },
-    onError: () => setError('Google authentication failed'),
+    onError: (errorResponse) => {
+      alert('GOOGLE AUTH ERROR: ' + JSON.stringify(errorResponse));
+      setError('Google authentication failed');
+    },
+    onNonOAuthError: (error) => {
+      alert('GOOGLE NON-OAUTH ERROR: ' + JSON.stringify(error));
+      setError('Google popup was closed or blocked');
+    },
   });
 
   const RequirementItem = ({ text, met }) => (
