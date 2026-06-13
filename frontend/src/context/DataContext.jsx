@@ -39,6 +39,8 @@ export const DataProvider = ({ children }) => {
     }
 
     setLoading(true);
+    // Clear stale roadmap so UI shows proper loading state and catches errors
+    setRoadmap(null);
     try {
       const rm = await getRoadmap(goalId);
       setRoadmap(rm);

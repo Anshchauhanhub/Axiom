@@ -43,7 +43,13 @@ const Study = () => {
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
-    if (roadmap && goals) {
+    
+    if (!dataLoading && goals && goals.length === 0) {
+      navigate('/onboarding');
+      return;
+    }
+
+    if (roadmap && goals && goals.length > 0) {
       let foundTask = null;
       let foundGoal = null;
 
@@ -87,12 +93,17 @@ const Study = () => {
       }
       
       // Fix: Only reset to 'select' if we are in the initial loading state.
-      // This prevents refreshData() calls from kicking the user out of the Result or Learning phases.
+      if (phase === 'loading') {
+        setPhase('select');
+      }
+    } else if (!dataLoading && goals && goals.length > 0 && !roadmap) {
+      // If we finished loading data but roadmap is still null (e.g. API error),
+      // we must break out of the loading phase so the user isn't stuck forever.
       if (phase === 'loading') {
         setPhase('select');
       }
     }
-  }, [user, roadmap, goals, navigate, phase, activeGoal?.id, selectedGoalId, location.state?.goalId]);
+  }, [user, dataLoading, roadmap, goals, navigate, phase, activeGoal?.id, selectedGoalId, location.state?.goalId]);
 
   // Auto-open notebook when navigating from Dashboard Neural Notebook section
   useEffect(() => {
