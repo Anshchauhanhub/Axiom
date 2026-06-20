@@ -16,9 +16,11 @@ const Auth = () => {
   
   const queryParams = new URLSearchParams(location.search);
   const resetToken = queryParams.get('reset_token');
+  const roleParam = queryParams.get('role');
   
   const initialMode = resetToken ? 'reset-password' : (location.pathname.includes('register') ? 'register' : 'login');
   const [mode, setMode] = useState(initialMode);
+  const [accountType, setAccountType] = useState(roleParam === 'creator' ? 'creator' : 'student');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -140,7 +142,10 @@ const Auth = () => {
         setTimeout(() => setMode('login'), 3000);
       } else {
         const fn = mode === 'register' ? register : login;
-        const res = await fn(email, password);
+        const res = mode === 'register'
+          ? await fn(email, password, 'Asia/Kolkata', ['12:00', '18:00'], accountType)
+          : await fn(email, password, accountType);
+        localStorage.setItem('axiom_account_type', accountType);
         await loginUser(res.access_token);
         navigate('/onboarding');
       }
@@ -151,30 +156,31 @@ const Auth = () => {
     }
   };
 
+  const accountTypeRef = useRef(accountType);
+  useEffect(() => {
+    accountTypeRef.current = accountType;
+  }, [accountType]);
+
   const handleGoogleAuth = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
         setError('');
-        alert('DEBUG: Google token received! Length: ' + (tokenResponse.access_token || 'MISSING').length);
-        const res = await googleLogin(tokenResponse.access_token);
-        alert('DEBUG: Backend returned JWT! Length: ' + (res.access_token || 'MISSING').length);
+        const currentAccountType = accountTypeRef.current;
+        const res = await googleLogin(tokenResponse.access_token, currentAccountType);
+        localStorage.setItem('axiom_account_type', currentAccountType);
         await loginUser(res.access_token);
-        alert('DEBUG: loginUser completed, navigating...');
         navigate('/onboarding');
       } catch (err) {
-        alert("API Error (/auth/google): " + err.message);
         setError(err.message || 'Google authentication failed');
         setLoading(false);
       }
     },
     onError: (errorResponse) => {
-      alert('GOOGLE AUTH ERROR: ' + JSON.stringify(errorResponse));
       setError('Google authentication failed');
     },
     onNonOAuthError: (error) => {
-      alert('GOOGLE NON-OAUTH ERROR: ' + JSON.stringify(error));
-      setError('Google popup was closed or blocked');
+      // Do nothing if the user manually closes the popup
     },
   });
 
@@ -211,8 +217,8 @@ const Auth = () => {
             {mode === 'login' ? 'Welcome' : 'Join'} <span className="text-primary drop-shadow-glow">Axiom</span>
           </h1>
           <p className="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.3em]">
-            {mode === 'login' ? 'Sign in to continue your journey' : 
-             mode === 'register' ? 'Create your account to get started' : 
+            {mode === 'login' ? (accountType === 'creator' ? 'Creator login to manage your learners' : 'Sign in to continue your journey') : 
+             mode === 'register' ? (accountType === 'creator' ? 'Create your creator workspace' : 'Create your account to get started') : 
              mode === 'forgot-password' ? 'Reset your password' : 'Enter your new password'}
           </p>
         </div>
@@ -220,6 +226,35 @@ const Auth = () => {
         <div className="auth-glass rounded-[3rem] border border-white/5 p-8 sm:p-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           {/* Subtle Scanner Line */}
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent auth-scan" />
+
+          {(mode === 'login' || mode === 'register') && (
+            <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-white/5 bg-surface-container-lowest/40 p-1">
+              <button
+                type="button"
+                onClick={() => setAccountType('student')}
+                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 transition-all ${
+                  accountType === 'student'
+                    ? 'bg-primary text-black shadow-[0_12px_30px_rgba(253,184,19,0.18)]'
+                    : 'text-on-surface-variant/50 hover:bg-white/5 hover:text-on-surface'
+                }`}
+              >
+                <ShieldCheck size={15} />
+                <span className="font-label text-[10px] font-black uppercase tracking-[0.18em]">Student</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType('creator')}
+                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 transition-all ${
+                  accountType === 'creator'
+                    ? 'bg-primary text-black shadow-[0_12px_30px_rgba(253,184,19,0.18)]'
+                    : 'text-on-surface-variant/50 hover:bg-white/5 hover:text-on-surface'
+                }`}
+              >
+                <Sparkles size={15} />
+                <span className="font-label text-[10px] font-black uppercase tracking-[0.18em]">Creator</span>
+              </button>
+            </div>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             {mode !== 'reset-password' && (
@@ -232,7 +267,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-surface-container-lowest/50 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-on-surface font-label text-sm focus:ring-2 focus:ring-primary/40 focus:border-primary/20 outline-none transition-all placeholder:text-white/10"
-                    placeholder="name@nexus.com"
+                    placeholder={accountType === 'creator' ? 'creator@academy.com' : 'name@nexus.com'}
                     required
                   />
                 </div>
@@ -304,8 +339,8 @@ const Auth = () => {
               <div className="relative z-10 flex items-center justify-center gap-3">
                 <span className="font-label font-black text-xs uppercase tracking-[0.3em]">
                   {loading ? 'Processing...' : (
-                    mode === 'login' ? 'Sign In' : 
-                    mode === 'register' ? 'Sign Up' : 
+                    mode === 'login' ? (accountType === 'creator' ? 'Creator Sign In' : 'Sign In') : 
+                    mode === 'register' ? (accountType === 'creator' ? 'Creator Sign Up' : 'Sign Up') : 
                     mode === 'forgot-password' ? 'Send Reset Link' : 'Update Password'
                   )}
                 </span>
