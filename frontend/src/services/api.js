@@ -2,9 +2,9 @@ const BASE_URL = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http:/
 export const API_BASE = `${BASE_URL}/api/v1`;
 
 // --- Token Management ---
-export const getToken = () => localStorage.getItem('axiom_token');
-export const setToken = (token) => localStorage.setItem('axiom_token', token);
-export const clearToken = () => localStorage.removeItem('axiom_token');
+export const getToken = () => localStorage.getItem('edxiom_token');
+export const setToken = (token) => localStorage.setItem('edxiom_token', token);
+export const clearToken = () => localStorage.removeItem('edxiom_token');
 export const isLoggedIn = () => !!getToken();
 
 const headers = () => ({
@@ -41,7 +41,8 @@ async function request(method, path, body = null) {
   if (res.status === 429) {
     throw new Error('Too many requests. Please wait a moment and try again.');
   }
-  const data = await res.json();
+  const contentType = res.headers.get('content-type') || '';
+  const data = contentType.includes('application/json') ? await res.json() : {};
   if (!res.ok) throw new Error(sanitizeError(data.detail || 'Request failed'));
   return data;
 }
@@ -57,16 +58,16 @@ export function validatePassword(password) {
 }
 
 // --- Auth ---
-export const register = (email, password, timezone = 'Asia/Kolkata', schedule = ['12:00', '18:00']) => {
+export const register = (email, password, timezone = 'Asia/Kolkata', schedule = ['12:00', '18:00'], accountType = 'student') => {
   const pwErrors = validatePassword(password);
   if (pwErrors.length > 0) {
     return Promise.reject(new Error(`Password requirements: ${pwErrors.join(', ')}`));
   }
-  return request('POST', '/auth/register', { email, password, timezone, study_schedule: schedule });
+  return request('POST', '/auth/register', { email, password, timezone, study_schedule: schedule, account_type: accountType });
 };
 
-export const login = (email, password) =>
-  request('POST', '/auth/login', { email, password });
+export const login = (email, password, accountType = 'student') =>
+  request('POST', '/auth/login', { email, password, account_type: accountType });
 
 export const forgotPassword = (email) =>
   request('POST', '/auth/forgot-password', { email });
@@ -79,8 +80,8 @@ export const resetPassword = (token, newPassword) => {
   return request('POST', '/auth/reset-password', { token, new_password: newPassword });
 };
 
-export const googleLogin = (credential) =>
-  request('POST', '/auth/google', { credential });
+export const googleLogin = (credential, accountType = 'student') =>
+  request('POST', '/auth/google', { credential, account_type: accountType });
 
 
 export const linkTelegram = (chatId) =>
@@ -186,4 +187,3 @@ export const getChatHistory = () =>
 
 export const clearChatHistory = () =>
   request('DELETE', '/goals/chat/history');
-

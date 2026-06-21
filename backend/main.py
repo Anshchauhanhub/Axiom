@@ -22,7 +22,7 @@ from bot import create_bot_app
 from services.scheduler import start_scheduler, set_bot
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("axiom")
+logger = logging.getLogger("edxiom")
 
 # Track bot state globally
 _bot_started = False
@@ -33,11 +33,11 @@ _bot_app_ref = None
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     global _bot_started, _bot_app_ref
-    logger.info("🚀 Axiom AI Backend starting...")
+    logger.info("🚀 Edxiom AI Backend starting...")
 
     # Initialize database tables
     await init_db()
-    logger.info("✅ Database tables created/verified.")
+    logger.info("✅ Database tables verified.")
 
     # Start nudge scheduler
     start_scheduler()
@@ -99,14 +99,14 @@ async def lifespan(app: FastAPI):
             await _bot_app_ref.shutdown()
         except Exception as e:
             logger.warning(f"Bot shutdown warning: {e}")
-    logger.info("👋 Axiom AI Backend shut down.")
+    logger.info("👋 Edxiom AI Backend shut down.")
 
 
 # Conditionally disable API docs in production
 _is_dev = os.getenv("APP_ENV", "development") == "development"
 
 app = FastAPI(
-    title="Axiom AI",
+    title="Edxiom AI",
     description="High-Accountability AI Learning Coach Backend",
     version="1.0.0",
     lifespan=lifespan,
@@ -128,10 +128,10 @@ _allowed_origins = os.getenv(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _allowed_origins],
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "*"],
 )
 
 # Register routers with API versioning
@@ -191,7 +191,7 @@ async def root():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {
-        "name": "Axiom AI API",
+        "name": "Edxiom AI API",
         "status": "operational",
         "version": "1.0.0",
     }

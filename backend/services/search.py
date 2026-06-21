@@ -1,7 +1,7 @@
 from ddgs import DDGS
 import logging
 
-logger = logging.getLogger("axiom.search")
+logger = logging.getLogger("edxiom.search")
 
 async def search_internet(query: str, max_results: int = 5) -> str:
     """

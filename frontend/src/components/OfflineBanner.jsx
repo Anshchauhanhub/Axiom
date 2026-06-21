@@ -23,7 +23,7 @@ const OfflineBanner = () => {
       <div className="max-w-md w-full bg-surface-container-high p-8 rounded-3xl border border-error/20 shadow-2xl">
         <span className="material-symbols-outlined text-5xl text-error mb-4">wifi_off</span>
         <h2 className="text-2xl font-black text-on-surface uppercase tracking-tight mb-2">Connection Lost</h2>
-        <p className="text-on-surface-variant text-sm mb-6">Axiom Neural Net is currently disconnected. Please check your network connection.</p>
+        <p className="text-on-surface-variant text-sm mb-6">Edxiom Neural Net is currently disconnected. Please check your network connection.</p>
         <button 
           onClick={() => window.location.reload()}
           className="w-full py-3 bg-primary text-black font-bold uppercase tracking-wider text-xs rounded-xl hover:bg-primary/90 transition-colors"

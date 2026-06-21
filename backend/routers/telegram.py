@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, HTTPException
 from telegram import Update
 
 router = APIRouter(prefix="/telegram", tags=["Telegram Webhook"])
-logger = logging.getLogger("axiom.telegram")
+logger = logging.getLogger("edxiom.telegram")
 
 _bot_app = None
 WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")

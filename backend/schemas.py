@@ -9,8 +9,16 @@ from pydantic import BaseModel, EmailStr, field_validator
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
+    account_type: str = "student"
     timezone: str = "Asia/Kolkata"
     study_schedule: list[str] = ["12:00", "18:00"]
+
+    @field_validator("account_type")
+    @classmethod
+    def validate_account_type(cls, v: str) -> str:
+        if v not in {"student", "creator"}:
+            raise ValueError("Account type must be either student or creator")
+        return v
 
     @field_validator("password")
     @classmethod
@@ -29,6 +37,14 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    account_type: str = "student"
+
+    @field_validator("account_type")
+    @classmethod
+    def validate_account_type(cls, v: str) -> str:
+        if v not in {"student", "creator"}:
+            raise ValueError("Account type must be either student or creator")
+        return v
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -55,6 +71,14 @@ class ResetPasswordRequest(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     credential: str
+    account_type: str = "student"
+
+    @field_validator("account_type")
+    @classmethod
+    def validate_account_type(cls, v: str) -> str:
+        if v not in {"student", "creator"}:
+            raise ValueError("Account type must be either student or creator")
+        return v
 
 
 class TokenResponse(BaseModel):
@@ -70,6 +94,7 @@ class LinkTelegramRequest(BaseModel):
 class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
+    account_type: str = "student"
     full_name: Optional[str] = None
     profile_image_url: Optional[str] = None
     telegram_chat_id: Optional[int] = None
@@ -240,6 +265,5 @@ class YoutubeRoadmapRequest(BaseModel):
 class YoutubeRoadmapResponse(BaseModel):
     draft_roadmap: list[dict]
     goal_title: str
-
 
 

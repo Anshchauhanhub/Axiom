@@ -16,7 +16,7 @@ from models import User
 
 load_dotenv()
 
-logger = logging.getLogger("axiom.auth")
+logger = logging.getLogger("edxiom.auth")
 
 # ─── JWT Configuration ───────────────────────────────────────────────
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -24,7 +24,7 @@ JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_MINUTES = int(os.getenv("JWT_EXPIRATION_MINUTES", "1440"))
 
 # Fail loudly if the secret is missing or still the placeholder
-_WEAK_SECRETS = {None, "", "axiom-ai-secret", "axiom-ai-super-secret-change-me-in-production"}
+_WEAK_SECRETS = {None, "", "edxiom-ai-secret", "edxiom-ai-super-secret-change-me-in-production"}
 if JWT_SECRET in _WEAK_SECRETS:
     if os.getenv("APP_ENV") != "development":
         raise RuntimeError(

@@ -11,7 +11,7 @@ export const DataProvider = ({ children }) => {
   const [goals, setGoals] = useState([]);
   const [roadmap, setRoadmap] = useState(null);
   const roadmapCacheRef = useRef({});
-  const [selectedGoalId, setSelectedGoalId] = useState(() => localStorage.getItem('axiom_selected_goal') || null);
+  const [selectedGoalId, setSelectedGoalId] = useState(() => localStorage.getItem('edxiom_selected_goal') || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -70,7 +70,7 @@ export const DataProvider = ({ children }) => {
           if (activeGoal) {
               activeGoalId = activeGoal.id;
               setSelectedGoalId(activeGoalId);
-              localStorage.setItem('axiom_selected_goal', activeGoalId);
+              localStorage.setItem('edxiom_selected_goal', activeGoalId);
           }
       }
       
@@ -98,7 +98,7 @@ export const DataProvider = ({ children }) => {
   }, [fetchGoals, selectedGoalId, loadRoadmap]);
 
   const handleSetSelectedGoal = (id) => {
-      localStorage.setItem('axiom_selected_goal', id);
+      localStorage.setItem('edxiom_selected_goal', id);
       setSelectedGoalId(id);
   };
 

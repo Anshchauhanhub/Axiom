@@ -93,7 +93,7 @@ const Layout = ({ children }) => {
       {/* Global AI Agent Floating Button */}
       {!hideAIAgent && !isChatOpen && (
         <button 
-          title="Ask Axiom AI"
+          title="Ask Edxiom AI"
           onClick={() => setIsChatOpen(true)}
           style={{ borderRadius: '50%' }}
           className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[55] w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br ${getMoodGradient(mood)} shadow-[0_10px_40px_rgba(234,179,8,0.4)] overflow-hidden hover:scale-110 active:scale-95 transition-all group border-2 border-white/20 flex items-center justify-center mb-safe`}
@@ -118,4 +118,3 @@ const Layout = ({ children }) => {
 };
 
 export default Layout;
-

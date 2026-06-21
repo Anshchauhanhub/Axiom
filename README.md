@@ -1,8 +1,8 @@
-# 🧠 Axiom — AI-Driven Growth Partner
+# 🧠 Edxiom — AI-Driven Growth Partner
 
 > _"Not a tracker — a proof-of-learning engine."_
 
-Axiom is an agentic learning platform that turns passive learning into an active, accountable dialogue. It **interrogates** your goals, builds a custom roadmap using SOTA LLMs, sends daily interactive nudges via Telegram, and uses AI-generated MCQ gates to **verify** mastery before you advance.
+Edxiom is an agentic learning platform that turns passive learning into an active, accountable dialogue. It **interrogates** your goals, builds a custom roadmap using SOTA LLMs, sends daily interactive nudges via Telegram, and uses AI-generated MCQ gates to **verify** mastery before you advance.
 
 ---
 
@@ -44,7 +44,7 @@ npm run dev
 ## 📁 Project Architecture
 
 ```
-Axiom/
+Edxiom/
 ├── backend/
 │   ├── routers/      # FastAPI API Endpoints (Auth, Users, Goals, Quiz)
 │   ├── services/     # Core Logic (Groq integration, Scheduler)

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   Axiom AI — Design System (Tailwind v4 CSS-first)
+   Edxiom AI — Design System (Tailwind v4 CSS-first)
    ═══════════════════════════════════════════════════════════════════════ */
 
 @import "tailwindcss";
@@ -173,13 +173,13 @@ body.notebook-open #top-nav {
 /* ─── Design System Utilities ────────────────────────────────────────── */
 
 @layer utilities {
-  .axiom-glow {
+  .edxiom-glow {
     box-shadow: 0 0 30px -5px rgba(253, 184, 19, 0.4);
   }
-  .axiom-glow-secondary {
+  .edxiom-glow-secondary {
     box-shadow: 0 0 30px -5px rgba(0, 179, 89, 0.4);
   }
-  .axiom-grid {
+  .edxiom-grid {
     background-image: radial-gradient(rgba(253, 184, 19, 0.1) 1px, transparent 1px);
     background-size: 30px 30px;
   }
@@ -245,19 +245,19 @@ body.notebook-open #top-nav {
   animation: scan 3s linear infinite;
 }
 
-@keyframes axiom-pulse {
+@keyframes edxiom-pulse {
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.05); opacity: 0.8; }
   100% { transform: scale(1); opacity: 1; }
 }
-.animate-axiom-pulse {
-  animation: axiom-pulse 2s ease-in-out infinite;
+.animate-edxiom-pulse {
+  animation: edxiom-pulse 2s ease-in-out infinite;
 }
 
 
 /* ─── Smart Notebook Editor Styling ──────────────────────────────────── */
 
-.axiom-editor h1 {
+.edxiom-editor h1 {
   font-size: 20px;
   font-weight: 900;
   color: #0f172a;
@@ -269,7 +269,7 @@ body.notebook-open #top-nav {
   padding-left: 1rem;
 }
 
-.axiom-editor h2 {
+.edxiom-editor h2 {
   font-size: 16px;
   font-weight: 900;
   color: #1e293b;
@@ -279,7 +279,7 @@ body.notebook-open #top-nav {
   letter-spacing: -0.025em;
 }
 
-.axiom-editor h3 {
+.edxiom-editor h3 {
   font-size: 14px;
   font-weight: 700;
   color: #334155;
@@ -288,7 +288,7 @@ body.notebook-open #top-nav {
   text-transform: uppercase;
 }
 
-.axiom-editor h4 {
+.edxiom-editor h4 {
   font-size: 14px;
   font-weight: 700;
   color: #1e293b;
@@ -296,44 +296,44 @@ body.notebook-open #top-nav {
   margin-top: 0.75rem;
 }
 
-.axiom-editor p {
+.edxiom-editor p {
   margin-bottom: 1rem;
   line-height: 1.625;
 }
 
-.axiom-editor font[size="1"] { font-size: 10px; line-height: 1.2; }
-.axiom-editor font[size="2"] { font-size: 12px; line-height: 1.3; }
-.axiom-editor font[size="3"] { font-size: 14px; line-height: 1.5; }
-.axiom-editor font[size="4"] { font-size: 16px; line-height: 1.5; }
-.axiom-editor font[size="5"] { font-size: 18px; line-height: 1.5; }
-.axiom-editor font[size="6"] { font-size: 24px; line-height: 1.4; }
-.axiom-editor font[size="7"] { font-size: 32px; line-height: 1.3; }
+.edxiom-editor font[size="1"] { font-size: 10px; line-height: 1.2; }
+.edxiom-editor font[size="2"] { font-size: 12px; line-height: 1.3; }
+.edxiom-editor font[size="3"] { font-size: 14px; line-height: 1.5; }
+.edxiom-editor font[size="4"] { font-size: 16px; line-height: 1.5; }
+.edxiom-editor font[size="5"] { font-size: 18px; line-height: 1.5; }
+.edxiom-editor font[size="6"] { font-size: 24px; line-height: 1.4; }
+.edxiom-editor font[size="7"] { font-size: 32px; line-height: 1.3; }
 
-.axiom-editor b, .axiom-editor strong {
+.edxiom-editor b, .edxiom-editor strong {
   font-weight: 900;
   color: #0f172a;
 }
 
-.axiom-editor i, .axiom-editor em {
+.edxiom-editor i, .edxiom-editor em {
   font-style: italic;
   color: #334155;
 }
 
-.axiom-editor ul {
+.edxiom-editor ul {
   list-style-type: disc;
   list-style-position: inside;
   margin-bottom: 1rem;
   padding-left: 1rem;
 }
 
-.axiom-editor ol {
+.edxiom-editor ol {
   list-style-type: decimal;
   list-style-position: inside;
   margin-bottom: 1rem;
   padding-left: 1rem;
 }
 
-.axiom-editor blockquote {
+.edxiom-editor blockquote {
   border-left: 4px solid #e2e8f0;
   padding-left: 1rem;
   font-style: italic;

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import async_session
 from models import User
 
-logger = logging.getLogger("axiom.scheduler")
+logger = logging.getLogger("edxiom.scheduler")
 
 scheduler = AsyncIOScheduler()
 _bot_instance = None
@@ -46,7 +46,7 @@ async def check_and_send_nudges():
                     await _bot_instance.send_message(
                         chat_id=user.telegram_chat_id,
                         text=(
-                            f"⚡ *Axiom AI — Precision Nudge*\n\n"
+                            f"⚡ *Edxiom AI — Precision Nudge*\n\n"
                             f"It's `{current_time_str}` in your timezone.\n"
                             f"Your study session is ready.\n\n"
                             f"Type /quiz to begin.\n\n"

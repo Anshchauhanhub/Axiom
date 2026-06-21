@@ -35,7 +35,7 @@ const TopNav = () => {
           notifs.push({
             id: 'overdue',
             type: 'urgent',
-            title: 'Axiom AI (Teacher)',
+            title: 'Edxiom AI (Teacher)',
             message: `You have ${overdueCount} overdue task(s)! No more excuses, get back to studying right now!`,
             time: 'Just now',
             icon: <AlertCircle className="text-red-500" size={18} />
@@ -46,7 +46,7 @@ const TopNav = () => {
           notifs.push({
             id: `upcoming-${t.id}`,
             type: 'warning',
-            title: 'Axiom AI (Teacher)',
+            title: 'Edxiom AI (Teacher)',
             message: `Don't forget! Your task "${t.title}" is scheduled for today. Make sure you complete it on time.`,
             time: 'Upcoming',
             icon: <Clock className="text-orange-400" size={18} />
@@ -57,7 +57,7 @@ const TopNav = () => {
           notifs.push({
             id: 'all-good',
             type: 'success',
-            title: 'Axiom AI (Teacher)',
+            title: 'Edxiom AI (Teacher)',
             message: `Great job staying on track! No pending tasks right now. Take a well-deserved break!`,
             time: 'Just now',
             icon: <CheckCircle2 className="text-green-500" size={18} />

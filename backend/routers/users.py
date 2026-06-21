@@ -43,6 +43,7 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
     user = User(
         email=email,
+        account_type=req.account_type,
         password_hash=hash_password(req.password),
         timezone=req.timezone,
         study_schedule=req.study_schedule,
@@ -71,6 +72,13 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     if not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user.account_type != req.account_type:
+        expected = "creator" if user.account_type == "creator" else "student"
+        selected = "creator" if req.account_type == "creator" else "student"
+        raise HTTPException(
+            status_code=403,
+            detail=f"This email is registered as a {expected} account. Switch to {expected} login instead of {selected} login."
+        )
 
     token = create_token(str(user.id))
     return TokenResponse(access_token=token)
@@ -84,15 +92,16 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     
     if user:
         token = create_password_reset_token(email)
-        reset_url = f"http://localhost:5173/login?reset_token={token}"
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        reset_url = f"{frontend_url}/login?reset_token={token}"
         
         # Prepare email
         msg = EmailMessage()
         msg["From"] = os.getenv("SMTP_USERNAME")
         msg["To"] = email
-        msg["Subject"] = "Reset your Axiom password"
+        msg["Subject"] = "Reset your Edxiom password"
         msg.set_content(
-            f"Hello,\n\nYou requested to reset your Axiom password.\n"
+            f"Hello,\n\nYou requested to reset your Edxiom password.\n"
             f"Click the link below to set a new password:\n{reset_url}\n\n"
             f"If you did not request this, please ignore this email.\n"
         )
@@ -100,9 +109,9 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
             f"""
             <html>
                 <body style="font-family: 'Inter', sans-serif; background-color: #0e0e10; color: #ffffff; padding: 20px;">
-                    <h2 style="color: #fdb813;">Axiom AI</h2>
+                    <h2 style="color: #fdb813;">Edxiom AI</h2>
                     <p>Hello,</p>
-                    <p>You requested to reset your Axiom password.</p>
+                    <p>You requested to reset your Edxiom password.</p>
                     <a href="{reset_url}" style="display: inline-block; padding: 12px 24px; background-color: #fdb813; color: #000000; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">Reset Password</a>
                     <p style="color: #8c909f; font-size: 12px; margin-top: 25px;">If you didn't request this, you can safely ignore this email.</p>
                 </body>
@@ -127,7 +136,7 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
                     password=smtp_password
                 )
             except Exception as e:
-                logging.getLogger("axiom.auth").error(f"Failed to send reset email to {email}: {e}")
+                logging.getLogger("edxiom.auth").error(f"Failed to send reset email to {email}: {e}")
                 print(f"--- FAILED TO SEND REAL EMAIL, FALLBACK TO MOCK ---")
                 print(f"To: {email}\nLink: {reset_url}\n------------------")
         else:
@@ -182,6 +191,7 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
         random_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32))
         user = User(
             email=email,
+            account_type=req.account_type,
             password_hash=hash_password(random_password),
             full_name=name,
             profile_image_url=picture,
@@ -191,6 +201,13 @@ async def google_login(req: GoogleLoginRequest, db: AsyncSession = Depends(get_d
         await db.refresh(user)
         logger.info(f"✅ New Google user created: {email}, id: {user.id}")
     else:
+        if user.account_type != req.account_type:
+            expected = "creator" if user.account_type == "creator" else "student"
+            selected = "creator" if req.account_type == "creator" else "student"
+            raise HTTPException(
+                status_code=403,
+                detail=f"This Google email is registered as a {expected} account. Switch to {expected} login instead of {selected} login."
+            )
         logger.info(f"✅ Existing Google user found: {email}, id: {user.id}")
         
     token = create_token(str(user.id))
@@ -218,7 +235,7 @@ async def link_telegram(
                 chat_id=req.telegram_chat_id,
                 text=(
                     f"✅ *Your Telegram is successfully connected!*\n\n"
-                    f"Hey there, and welcome to Axiom AI's Neural Bridge.\n"
+                    f"Hey there, and welcome to Edxiom AI's Neural Bridge.\n"
                     f"You'll now receive your scheduled study nudges and can start "
                     f"Sudden Death quizzes right from here.\n\n"
                     f"Type /info to get more information."
@@ -226,7 +243,7 @@ async def link_telegram(
                 parse_mode="Markdown",
             )
         except Exception as e:
-            logging.getLogger("axiom.users").error(f"Failed to send Telegram connection message: {e}")
+            logging.getLogger("edxiom.users").error(f"Failed to send Telegram connection message: {e}")
 
     return {"message": "Telegram linked successfully", "chat_id": req.telegram_chat_id}
 
@@ -275,7 +292,7 @@ async def upload_profile_image(
         # Upload to Cloudinary with on-the-fly optimization
         upload_result = cloudinary.uploader.upload(
             file.file,
-            folder="axiom/profiles/",
+            folder="edxiom/profiles/",
             public_id=str(user.id),
             overwrite=True,
             transformation=[

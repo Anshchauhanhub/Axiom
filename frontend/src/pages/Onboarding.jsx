@@ -435,11 +435,11 @@ const Onboarding = () => {
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : onboardingMode === 'youtube' ? 'bg-secondary' : 'bg-purple-500'}`}></span>
                   <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : onboardingMode === 'youtube' ? 'text-secondary' : 'text-purple-400'}`}>
-                    {onboardingMode === 'chat' ? 'Axiom Link Active' : onboardingMode === 'youtube' ? 'Import Engine Active' : 'Curriculum Engine Active'}
+                    {onboardingMode === 'chat' ? 'Edxiom Link Active' : onboardingMode === 'youtube' ? 'Import Engine Active' : 'Curriculum Engine Active'}
                   </span>
                 </div>
                 <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
-                  {onboardingMode === 'chat' ? 'Axiom Assistant' : onboardingMode === 'youtube' ? 'Playlist Architect' : 'Path Selector'}
+                  {onboardingMode === 'chat' ? 'Edxiom Assistant' : onboardingMode === 'youtube' ? 'Playlist Architect' : 'Path Selector'}
                 </h2>
               </div>
             </div>
@@ -709,7 +709,7 @@ const Onboarding = () => {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isTyping}
-                    placeholder="Respond to Axiom..."
+                    placeholder="Respond to Edxiom..."
                     className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl px-4 py-3.5 sm:px-8 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
                   />
                   <button type="submit" disabled={!inputText.trim() || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">

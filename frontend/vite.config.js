@@ -14,9 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo.png'],
       manifest: {
-        name: 'Axiom AI',
-        short_name: 'Axiom',
-        description: 'Axiom AI - Your Personal Social Study Assistant',
+        name: 'Edxiom AI',
+        short_name: 'Edxiom',
+        description: 'Edxiom AI - Your Personal Social Study Assistant',
         theme_color: '#0e0e10',
         background_color: '#0e0e10',
         display: 'standalone',

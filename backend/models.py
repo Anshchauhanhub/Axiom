@@ -13,6 +13,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     full_name = Column(String, nullable=True)
     profile_image_url = Column(String, nullable=True)
+    account_type = Column(String, nullable=False, default="student")  # student, creator
     password_hash = Column(String, nullable=False)
     telegram_chat_id = Column(BigInteger, unique=True, nullable=True)
     timezone = Column(String, default="Asia/Kolkata")
