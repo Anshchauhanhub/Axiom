@@ -20,7 +20,9 @@ def test_backend_test_suite_loads():
 @pytest.mark.asyncio
 @pytest.mark.skipif(not HAS_BACKEND_DEPS, reason="Backend dependencies are not installed")
 async def test_health_check():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    import httpx
+    transport = httpx.ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         response = await ac.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -28,7 +30,9 @@ async def test_health_check():
 @pytest.mark.asyncio
 @pytest.mark.skipif(not HAS_BACKEND_DEPS, reason="Backend dependencies are not installed")
 async def test_root_fallback():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    import httpx
+    transport = httpx.ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         response = await ac.get("/")
     # Should either return the SPA index.html or the API info dict
     assert response.status_code == 200
