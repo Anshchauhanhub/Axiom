@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getAllTasks, getPersonalTasks, createPersonalTask, deletePersonalTask } from '../services/api';
 import { CheckCircle, Circle, Lock, ChevronLeft, ChevronRight, Search, Filter, Calendar as CalendarIcon, Clock, X } from 'lucide-react';
 
+let globalCalendarCache = null;
+
 const Calendar = () => {
     const [tasks, setTasks] = useState([]);
     const [personalTasks, setPersonalTasks] = useState([]);
@@ -15,11 +17,17 @@ const Calendar = () => {
 
     useEffect(() => {
         const fetchAllData = async () => {
+            if (globalCalendarCache) {
+                setTasks(globalCalendarCache.tasks);
+                setPersonalTasks(globalCalendarCache.personalTasks);
+                setLoading(false);
+            }
             try {
                 const [tasksData, personalTasksData] = await Promise.all([
                     getAllTasks(),
                     getPersonalTasks()
                 ]);
+                globalCalendarCache = { tasks: tasksData, personalTasks: personalTasksData };
                 setTasks(tasksData);
                 setPersonalTasks(personalTasksData);
             } catch (err) {
@@ -165,7 +173,9 @@ const Calendar = () => {
                 description: newPersonalTask.description,
                 scheduled_at: new Date(datetimeStr).toISOString()
             });
-            setPersonalTasks([...personalTasks, task]);
+            const newTasksList = [...personalTasks, task];
+            setPersonalTasks(newTasksList);
+            if (globalCalendarCache) globalCalendarCache.personalTasks = newTasksList;
             setNewPersonalTask({ title: '', description: '', date: '', time: '' });
             setShowPersonalTaskModal(false);
         } catch (e) {
@@ -176,7 +186,9 @@ const Calendar = () => {
     const handleDeletePersonalTask = async (taskId) => {
         try {
             await deletePersonalTask(taskId);
-            setPersonalTasks(personalTasks.filter(t => t.id !== taskId));
+            const updatedTasks = personalTasks.filter(t => t.id !== taskId);
+            setPersonalTasks(updatedTasks);
+            if (globalCalendarCache) globalCalendarCache.personalTasks = updatedTasks;
         } catch (e) {
             console.error("Failed to delete personal task", e);
         }

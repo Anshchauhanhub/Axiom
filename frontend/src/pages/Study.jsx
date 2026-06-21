@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { startQuiz, submitQuiz, getPartContent, updateGoalNotes } from '../services/api';
+import { startQuiz, submitQuiz, getPartContent, updateGoalNotes, completeDirect } from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MultimediaEditor from '../components/MultimediaEditor';
@@ -207,6 +207,21 @@ const Study = () => {
       setError(e.message);
     } finally {
       setLoadingQuiz(false);
+      setLoading(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await completeDirect(activePartId);
+      await refreshData();
+      refreshUser();
+      setPhase('select'); // Directly return to roadmap
+    } catch (e) {
+      setError(e.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -671,18 +686,38 @@ const Study = () => {
                    Return to Hub
                 </span>
               </button>
-            ) : (
-              <button
-                onClick={handleStartQuiz}
-                className="group relative px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105"
-              >
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
-                <span className="relative font-label font-black tracking-[0.6em] text-on-primary-container text-lg uppercase flex items-center gap-4">
-                   Initiate Assessment
-                   <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">bolt</span>
-                </span>
-              </button>
-            )}
+            ) : (() => {
+                const lowerTitle = partTitle.toLowerCase();
+                const isIntro = lowerTitle.includes('intro') || lowerTitle.includes('setup') || lowerTitle.includes('install') || lowerTitle.includes('overview') || lowerTitle.includes('getting started') || lowerTitle.includes('prerequisite') || lowerTitle.includes('environment');
+                
+                if (isIntro) {
+                  return (
+                    <button
+                      onClick={handleMarkComplete}
+                      className="group relative px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105"
+                    >
+                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+                      <span className="relative font-label font-black tracking-[0.4em] text-on-primary-container text-lg uppercase flex items-center gap-4">
+                         Complete & Continue
+                         <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">check_circle</span>
+                      </span>
+                    </button>
+                  );
+                }
+                
+                return (
+                  <button
+                    onClick={handleStartQuiz}
+                    className="group relative px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105"
+                  >
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
+                    <span className="relative font-label font-black tracking-[0.6em] text-on-primary-container text-lg uppercase flex items-center gap-4">
+                       Initiate Assessment
+                       <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">bolt</span>
+                    </span>
+                  </button>
+                );
+            })()}
             
             <p className="mt-8 text-[8px] font-label uppercase tracking-[0.5em] text-on-surface-variant/20 font-black">Authorized Session Only</p>
           </div>

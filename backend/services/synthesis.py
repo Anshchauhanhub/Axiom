@@ -44,9 +44,18 @@ async def synthesize_part_content(part_title: str) -> str:
     # 3. Search Logic
     research_summary = await search_internet(f"detailed study guide and syllabus for {clean_title}")
     
+    # 3.5. Fetch Transcript if video exists
+    transcript = None
+    if video_id:
+        try:
+            from services.youtube import get_video_transcript
+            transcript = await get_video_transcript(video_id)
+        except Exception as e:
+            logger.warning(f"Failed to fetch video transcript in synthesis: {e}")
+
     try:
         # 4. Generation via Groq
-        documentation = await generate_documentation(clean_title, research_summary)
+        documentation = await generate_documentation(clean_title, research_summary, transcript=transcript)
         
         # 5. Prepend video embed tag if a video was successfully found
         if video_id:

@@ -143,6 +143,7 @@ export const submitQuiz = (quizToken, answers) =>
   request('POST', '/quiz/submit', { quiz_token: quizToken, answers });
 
 export const getActiveQuiz = () => request('GET', '/quiz/active');
+export const completeDirect = (partId) => request('POST', `/quiz/complete-direct/${partId}`);
 
 // --- Conversational Onboarding ---
 export const onboardingChat = (messages, sessionId = null) =>

@@ -124,15 +124,43 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
 
 
 async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
-    """Generate MCQ questions for a topic."""
-    system_prompt = (
-        f"You are Edxiom AI's quiz engine. Generate exactly {count} multiple-choice questions. "
-        "Return ONLY a JSON array where each item has: "
-        '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3). '
-        "Questions should be challenging and test deep understanding. "
-        "No markdown, no explanation, ONLY valid JSON."
-    )
-    user_prompt = f"Generate {count} challenging MCQs about: {topic}"
+    """Generate MCQ questions for a topic, analyzing a YouTube video if present."""
+    video_id = None
+    if " || " in topic:
+        clean_title, video_id = topic.split(" || ", 1)
+        clean_title = clean_title.strip()
+        video_id = video_id.strip()
+    else:
+        clean_title = topic.strip()
+
+    transcript = None
+    if video_id:
+        try:
+            from services.youtube import get_video_transcript
+            transcript = await get_video_transcript(video_id)
+        except Exception as e:
+            logger.warning(f"Failed to fetch video transcript for MCQs: {e}")
+
+    if transcript:
+        system_prompt = (
+            f"You are Edxiom AI's quiz engine. Generate exactly {count} multiple-choice questions "
+            f"by analyzing the provided YouTube video transcript for the topic '{clean_title}'.\n"
+            "Each question MUST test specific concepts, explanations, or details mentioned in the video transcript.\n"
+            "Return ONLY a JSON array where each item has:\n"
+            '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3).\n'
+            "Questions should be challenging and test deep understanding of the video content.\n"
+            "No markdown, no explanation, ONLY valid JSON."
+        )
+        user_prompt = f"Video Transcript:\n{transcript[:15000]}\n\nGenerate {count} MCQs based on the transcript."
+    else:
+        system_prompt = (
+            f"You are Edxiom AI's quiz engine. Generate exactly {count} multiple-choice questions. "
+            "Return ONLY a JSON array where each item has: "
+            '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3). '
+            "Questions should be challenging and test deep understanding. "
+            "No markdown, no explanation, ONLY valid JSON."
+        )
+        user_prompt = f"Generate {count} challenging MCQs about: {clean_title}"
 
     raw = await call_groq(system_prompt, user_prompt)
     cleaned = _clean_json(raw)
@@ -142,6 +170,7 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
     except json.JSONDecodeError as e:
         logger.error(f"JSON parse error in MCQs: {e}\nRaw: {raw[:500]}")
         raise ValueError(f"Failed to parse AI response as JSON: {e}")
+
 
 
 def _normalize_draft_roadmap(roadmap):
@@ -316,12 +345,12 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
     raise ValueError("Failed to get valid response from AI after multiple attempts.")
 
 
-async def generate_documentation(topic: str, research_data: str) -> str:
-    """Generate a structured study guide for a topic using research data."""
+async def generate_documentation(topic: str, research_data: str, transcript: str = None) -> str:
+    """Generate a structured study guide for a topic using research data and optionally a YouTube transcript."""
     system_prompt = (
         "You are Edxiom AI, a high-fidelity learning assistant. "
         "Your goal is to create a comprehensive, engaging, and structured study guide "
-        "based on the provided raw research data. "
+        "based on the provided raw research data and any provided video transcripts/content. "
         "### GUIDELINES:\n"
         "1. **Structured Layout**: Use Markdown headers (##, ###).\n"
         "2. **Content Depth**: Explain core concepts, 'why it matters', and 'how it works' in detail.\n"
@@ -331,13 +360,16 @@ async def generate_documentation(topic: str, research_data: str) -> str:
         "\n"
         "Return ONLY the Markdown content, no conversational fillers."
     )
-    user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}"
+    if transcript:
+        user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}\n\nYouTube Video Transcript:\n{transcript[:15000]}"
+    else:
+        user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}"
 
     return await call_groq(system_prompt, user_prompt)
 
 
-async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]) -> list[dict]:
-    """Generate a structured chapter-based roadmap from a list of YouTube video titles and IDs."""
+async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]) -> dict:
+    """Generate a structured chapter-based roadmap and a specific goal title from a list of YouTube video titles and IDs."""
     # Extract titles for LLM processing
     video_titles = [v["title"] for v in videos]
     
@@ -347,30 +379,53 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
     system_prompt = (
         "You are Edxiom AI, a high-accountability learning coach.\n"
         "I will provide you with a list of video titles from a YouTube playlist.\n"
-        "Your goal is to organize EVERY SINGLE ONE of these videos in chronological order into logical 'Chapters'.\n"
-        "Each chapter should group roughly 7 to 12 consecutive videos (do not skip any videos, do not reuse videos).\n"
-        "Return ONLY a JSON array of objects where each object represents a chapter:\n"
-        '[{"title": "Chapter X: [Descriptive Chapter Title]", "video_indices": [0, 1, 2, ...]}]\n'
-        "The 'video_indices' list must contain the 0-indexed indices of the videos from the input list that belong to that chapter.\n"
-        "Every video index from 0 to the last video index must be assigned to exactly one chapter in ascending sequential order.\n"
+        "Your goal is to:\n"
+        "1. Synthesize a clean, professional, and specific Goal Title for the course (do not just copy the raw playlist title).\n"
+        "2. Organize EVERY SINGLE ONE of these videos in chronological order into logical Modules.\n"
+        "3. For each module, generate a clean, professional synthesized Module Name (do not just use 'Chapter X' - create an educational, descriptive name).\n"
+        "4. For each video in a module, generate a clean, professional synthesized Module Task (Part) Name that describes what is taught in that video (do not just copy raw video titles which often have filler like 'Striver', 'In One Shot', '| DSA Playlist', etc. Clean them up into proper learning subtopics).\n"
+        "\n"
+        "Return ONLY a JSON object with this exact structure:\n"
+        "{\n"
+        '  "goal_title": "Synthesized Specific Goal Title",\n'
+        '  "roadmap": [\n'
+        "    {\n"
+        '      "title": "Synthesized Module Name 1",\n'
+        '      "parts": [\n'
+        '        {"title": "Synthesized Module Task 1", "video_index": 0},\n'
+        '        {"title": "Synthesized Module Task 2", "video_index": 1}\n'
+        "      ]\n"
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "Ensure every input video index from 0 to the last video index is assigned to exactly one part in ascending sequential order.\n"
         "No markdown, no explanation, ONLY valid JSON."
     )
     user_prompt = f"Playlist Title: {playlist_title}\n\nVideos:\n{video_list_str}\n\nGenerate the structured JSON roadmap."
 
     structured_roadmap = []
+    goal_title = playlist_title
     
     try:
         raw = await call_groq(system_prompt, user_prompt)
         cleaned = _clean_json(raw)
-        parsed_chapters = json.loads(cleaned)
+        parsed = json.loads(cleaned)
+        
+        goal_title = parsed.get("goal_title", playlist_title)
+        parsed_chapters = parsed.get("roadmap", [])
         
         for chapter in parsed_chapters:
-            chapter_title = chapter.get("title", f"Chapter {len(structured_roadmap) + 1}")
+            chapter_title = chapter.get("title", f"Module {len(structured_roadmap) + 1}")
             parts = []
-            for idx in chapter.get("video_indices", []):
-                if 0 <= idx < len(videos):
-                    v = videos[idx]
-                    parts.append(f"{v['title']} || {v['video_id']}")
+            for part_item in chapter.get("parts", []):
+                if isinstance(part_item, dict):
+                    idx = part_item.get("video_index")
+                    p_title = part_item.get("title", "Untitled Part")
+                    if idx is not None and 0 <= idx < len(videos):
+                        v = videos[idx]
+                        parts.append(f"{p_title} || {v['video_id']}")
+                elif isinstance(part_item, str):
+                    parts.append(part_item)
             if parts:
                 structured_roadmap.append({
                     "title": chapter_title,
@@ -385,11 +440,16 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
         chunk_size = 10
         for i in range(0, len(videos), chunk_size):
             chunk = videos[i:i+chunk_size]
-            chapter_title = f"Chapter {i//chunk_size + 1}: {chunk[0]['title']}"
+            chapter_title = f"Module {i//chunk_size + 1}: {chunk[0]['title']}"
             parts = [f"{v['title']} || {v['video_id']}" for v in chunk]
             structured_roadmap.append({
                 "title": chapter_title,
                 "parts": parts
             })
 
-    return _normalize_draft_roadmap(structured_roadmap)
+    normalized_roadmap = _normalize_draft_roadmap(structured_roadmap)
+    return {
+        "goal_title": goal_title,
+        "roadmap": normalized_roadmap
+    }
+

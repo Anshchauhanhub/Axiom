@@ -10,6 +10,7 @@ export const DataProvider = ({ children }) => {
   const { user } = useAuth();
   const [goals, setGoals] = useState([]);
   const [roadmap, setRoadmap] = useState(null);
+  const [allRoadmaps, setAllRoadmaps] = useState({});  // goalId -> roadmap data
   const roadmapCacheRef = useRef({});
   const [selectedGoalId, setSelectedGoalId] = useState(() => localStorage.getItem('edxiom_selected_goal') || null);
   const [loading, setLoading] = useState(false);
@@ -45,6 +46,8 @@ export const DataProvider = ({ children }) => {
       const rm = await getRoadmap(goalId);
       setRoadmap(rm);
       roadmapCacheRef.current[goalId] = rm;
+      // Also update allRoadmaps
+      setAllRoadmaps(prev => ({ ...prev, [goalId]: rm }));
       setError(null);
     } catch (e) {
       setError(e.message);
@@ -53,6 +56,30 @@ export const DataProvider = ({ children }) => {
       setLoading(false);
     }
   }, []);
+
+  /** Load roadmaps for ALL goals (used by dashboard multi-goal view) */
+  const loadAllRoadmaps = useCallback(async (goalsList, forceRefresh = false) => {
+    const toLoad = goalsList || goals;
+    if (!toLoad.length) return;
+
+    const results = { ...allRoadmaps };
+    const promises = toLoad.map(async (goal) => {
+      if (!forceRefresh && roadmapCacheRef.current[goal.id]) {
+        results[goal.id] = roadmapCacheRef.current[goal.id];
+        return;
+      }
+      try {
+        const rm = await getRoadmap(goal.id);
+        roadmapCacheRef.current[goal.id] = rm;
+        results[goal.id] = rm;
+      } catch (e) {
+        console.error(`Error fetching roadmap for goal ${goal.id}:`, e);
+      }
+    });
+
+    await Promise.all(promises);
+    setAllRoadmaps(results);
+  }, [goals, allRoadmaps]);
 
   // Initial load
   useEffect(() => {
@@ -91,11 +118,15 @@ export const DataProvider = ({ children }) => {
   }, [selectedGoalId, user, loadRoadmap]);
 
   const refreshData = useCallback(async () => {
-    await fetchGoals();
+    const g = await fetchGoals();
     if (selectedGoalId) {
       await loadRoadmap(selectedGoalId, true);
     }
-  }, [fetchGoals, selectedGoalId, loadRoadmap]);
+    // Refresh all cached roadmaps
+    if (g.length > 0) {
+      await loadAllRoadmaps(g, true);
+    }
+  }, [fetchGoals, selectedGoalId, loadRoadmap, loadAllRoadmaps]);
 
   const handleSetSelectedGoal = (id) => {
       localStorage.setItem('edxiom_selected_goal', id);
@@ -106,9 +137,11 @@ export const DataProvider = ({ children }) => {
     <DataContext.Provider value={{
       goals,
       roadmap,
+      allRoadmaps,
       loading,
       error,
       refreshData,
+      loadAllRoadmaps,
       selectedGoalId,
       setSelectedGoalId: handleSetSelectedGoal
     }}>

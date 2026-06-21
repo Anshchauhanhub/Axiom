@@ -136,10 +136,28 @@ const Onboarding = () => {
     e.preventDefault();
     if (!inputText.trim() || isTyping) return;
 
-    const userMsg = { role: 'user', content: inputText };
+    const userInput = inputText.trim();
+    const isYoutubeLink = userInput.includes('youtube.com/') || userInput.includes('youtu.be/');
+
+    const userMsg = { role: 'user', content: userInput };
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
+
+    if (isYoutubeLink) {
+      try {
+        const res = await generateYoutubeRoadmap(userInput);
+        setDraftRoadmap(res.draft_roadmap);
+        setGoalTitle(res.goal_title);
+        setPhase('ready');
+        setMessages(prev => [...prev, { role: 'assistant', content: "I have successfully analyzed the YouTube content and generated a structured learning path. Review your curriculum and finalize the goal.", phase: 'ready' }]);
+      } catch (err) {
+        setMessages(prev => [...prev, { role: 'assistant', content: `Failed to synthesize YouTube content: ${err.message}`, phase: phase }]);
+      } finally {
+        setIsTyping(false);
+      }
+      return;
+    }
 
     try {
       const res = await onboardingChat([...messages, userMsg], currentSessionId);
@@ -297,7 +315,7 @@ const Onboarding = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto w-full px-4 sm:px-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto w-full px-4 sm:px-0">
           {/* Predefined Paths Card */}
           <button 
             onClick={() => setOnboardingMode('predefined')}
@@ -350,31 +368,6 @@ const Onboarding = () => {
             </div>
           </button>
 
-          {/* Playlist Synthesis Card */}
-          <button 
-            onClick={() => setOnboardingMode('youtube')}
-            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-secondary/50 hover:shadow-[0_0_80px_rgba(0,179,89,0.15)] overflow-hidden animate-in slide-in-from-right-12 duration-1000"
-          >
-            {/* Scanner Effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-secondary/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
-
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:-rotate-12 group-hover:scale-125">
-              <Video size={200} strokeWidth={1} />
-            </div>
-
-            <div className="relative z-20">
-              <div className="w-24 h-24 rounded-[2.5rem] bg-secondary/10 flex items-center justify-center mb-12 border border-secondary/20 group-hover:neural-glow-secondary group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:1s]">
-                <Video className="text-secondary" size={40} />
-              </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-secondary transition-colors duration-500">YouTube Synthesis</h3>
-              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
-                Import external knowledge by transforming YouTube playlists into structured learning modules.
-              </p>
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-secondary group-hover:text-black transition-all duration-500">
-                Paste URL <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
-              </div>
-            </div>
-          </button>
         </div>
       </div>
     );
@@ -672,12 +665,16 @@ const Onboarding = () => {
                               {task.title || task}
                             </h4>
                             <ul className="space-y-2">
-                              {(Array.isArray(task.parts) ? task.parts : []).slice(0, 3).map((p, pidx) => (
-                                <li key={pidx} className="flex items-center gap-3 text-xs text-on-surface-variant font-light">
-                                  <span className="w-1 h-1 bg-primary/40 rounded-full"></span>
-                                  {typeof p === 'string' ? p : p?.title || String(p)}
-                                </li>
-                              ))}
+                              {(Array.isArray(task.parts) ? task.parts : []).slice(0, 3).map((p, pidx) => {
+                                const fullStr = typeof p === 'string' ? p : p?.title || String(p);
+                                const cleanDisplay = fullStr.split(" || ")[0];
+                                return (
+                                  <li key={pidx} className="flex items-center gap-3 text-xs text-on-surface-variant font-light">
+                                    <span className="w-1 h-1 bg-primary/40 rounded-full"></span>
+                                    {cleanDisplay}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         ))}

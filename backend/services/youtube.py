@@ -124,3 +124,30 @@ async def get_playlist_data(url: str):
         except Exception as e:
             logger.error(f"YouTube scraper error: {e}")
             return None
+
+
+from youtube_transcript_api import YouTubeTranscriptApi
+import asyncio
+
+async def get_video_transcript(video_id: str) -> str:
+    """
+    Fetches the transcript text of a YouTube video.
+    Returns None if fetching fails.
+    """
+    if not video_id:
+        return None
+    try:
+        logger.info(f"🎥 Fetching transcript for video ID: {video_id}")
+        loop = asyncio.get_event_loop()
+        transcript_list = await loop.run_in_executor(
+            None,
+            lambda: YouTubeTranscriptApi().fetch(video_id)
+        )
+        if transcript_list:
+            text = " ".join([t['text'] for t in transcript_list])
+            logger.info(f"✅ Successfully fetched transcript ({len(text)} chars) for video ID: {video_id}")
+            return text
+    except Exception as e:
+        logger.warning(f"Could not retrieve transcript for video {video_id}: {e}")
+    return None
+

@@ -378,13 +378,13 @@ async def generate_youtube_roadmap(
 
     # 2. Generate Roadmap from videos
     try:
-        roadmap = await generate_roadmap_from_playlist(
+        synthesis_result = await generate_roadmap_from_playlist(
             playlist_data["title"], 
             playlist_data["videos"]
         )
         return YoutubeRoadmapResponse(
-            draft_roadmap=roadmap,
-            goal_title=playlist_data["title"]
+            draft_roadmap=synthesis_result["roadmap"],
+            goal_title=synthesis_result["goal_title"]
         )
     except Exception as e:
         import logging
