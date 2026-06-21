@@ -208,3 +208,81 @@ async def get_active_quiz(
 ):
     """For stateless quizzes, we don't have a DB record to resume."""
     return {"active": False}
+
+
+@router.post("/complete-direct/{part_id}")
+async def complete_direct(
+    part_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Directly mark a part as completed (for intros/setups) without a quiz."""
+    # Verify part belongs to user
+    part_result = await db.execute(
+        select(Part)
+        .join(Task, Part.task_id == Task.id)
+        .join(Goal, Task.goal_id == Goal.id)
+        .where(Part.id == part_id, Goal.user_id == user.id)
+    )
+    part = part_result.scalar_one_or_none()
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    if part.status == "locked":
+        raise HTTPException(status_code=403, detail="This part is locked.")
+
+    # Mark as passed
+    part.status = "passed"
+
+    # Save a generic result to update streak
+    quiz_result = QuizResult(
+        user_id=user.id,
+        part_id=part.id,
+        score_percent=100.0,
+        is_passed=True,
+    )
+    db.add(quiz_result)
+
+    # Unlock next part
+    siblings = await db.execute(
+        select(Part)
+        .where(Part.task_id == part.task_id)
+        .order_by(Part.order_index)
+    )
+    all_parts = siblings.scalars().all()
+
+    found_current = False
+    for p in all_parts:
+        if found_current and p.status == "locked":
+            p.status = "active"
+            break
+        if p.id == part.id:
+            found_current = True
+
+    # Check if task passed
+    all_passed = all(p.status == "passed" for p in all_parts)
+    if all_passed:
+        task_result = await db.execute(select(Task).where(Task.id == part.task_id))
+        task = task_result.scalar_one_or_none()
+        if task:
+            task.status = "passed"
+            next_task = await db.execute(
+                select(Task)
+                .where(Task.goal_id == task.goal_id, Task.order_index == task.order_index + 1)
+            )
+            nt = next_task.scalar_one_or_none()
+            if nt:
+                nt.status = "active"
+                first_part = await db.execute(
+                    select(Part).where(Part.task_id == nt.id).order_by(Part.order_index).limit(1)
+                )
+                fp = first_part.scalar_one_or_none()
+                if fp:
+                    fp.status = "active"
+            else:
+                goal_result = await db.execute(select(Goal).where(Goal.id == task.goal_id))
+                goal_obj = goal_result.scalar_one_or_none()
+                if goal_obj:
+                    goal_obj.status = "completed"
+
+    await db.commit()
+    return {"message": "Part marked as completed.", "is_passed": True}
