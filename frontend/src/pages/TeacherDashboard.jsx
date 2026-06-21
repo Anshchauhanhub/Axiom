@@ -30,7 +30,7 @@ const TeacherDashboard = () => {
   ];
 
   return (
-    <div className="animate-in fade-in duration-1000">
+    <div className="animate-in fade-in duration-1000 max-w-[1280px] mx-auto w-full">
       {/* Header section */}
       <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
