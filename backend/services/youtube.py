@@ -3,7 +3,7 @@ import json
 import re
 import logging
 
-logger = logging.getLogger("axiom.youtube")
+logger = logging.getLogger("edxiom.youtube")
 
 async def get_playlist_data(url: str):
     """

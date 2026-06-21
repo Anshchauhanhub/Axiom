@@ -1,5 +1,5 @@
 """
-Axiom Security Middleware
+Edxiom Security Middleware
 - Security response headers
 - Per-IP rate limiting (sliding window)
 - Request body size limiting
@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-logger = logging.getLogger("axiom.security")
+logger = logging.getLogger("edxiom.security")
 
 
 # ─── Security Headers ────────────────────────────────────────────────

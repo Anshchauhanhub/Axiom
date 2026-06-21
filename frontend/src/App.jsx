@@ -17,6 +17,7 @@ const Study = lazy(() => import('./pages/Study'));
 const Notebooks = lazy(() => import('./pages/Notebooks'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
 
 const PageLoader = () => (
   <div className="flex-1 flex items-center justify-center min-h-[60vh]">
@@ -32,6 +33,14 @@ const ProtectedRoute = ({ children }) => {
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
+};
+
+const DashboardRoute = () => {
+  const { user } = useAuth();
+  if (user?.account_type === 'creator') {
+    return <TeacherDashboard />;
+  }
+  return <Dashboard />;
 };
 
 function App() {
@@ -52,7 +61,7 @@ function App() {
                       <Route path="/" element={<Landing />} />
                       <Route path="/login" element={<Auth />} />
                       <Route path="/register" element={<Auth />} />
-                      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/dashboard" element={<ProtectedRoute><DashboardRoute /></ProtectedRoute>} />
                       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                       <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
                       <Route path="/notebooks" element={<ProtectedRoute><Notebooks /></ProtectedRoute>} />
@@ -71,4 +80,3 @@ function App() {
 }
 
 export default App;
-

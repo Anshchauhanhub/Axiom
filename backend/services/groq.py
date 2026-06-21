@@ -7,7 +7,7 @@ from services.search import search_internet
 
 load_dotenv()
 
-logger = logging.getLogger("axiom.groq")
+logger = logging.getLogger("edxiom.groq")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
@@ -104,7 +104,7 @@ def _clean_json(raw: str) -> str:
 async def generate_roadmap(goal_title: str) -> list[dict]:
     """Generate a structured roadmap from a goal title."""
     system_prompt = (
-        "You are Axiom AI, a high-accountability learning coach. "
+        "You are Edxiom AI, a high-accountability learning coach. "
         "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
         "The roadmap must be comprehensive, covering every nuance of the syllabus in detail. "
         "Each item has: title (task name), parts (array of subtopic strings). "
@@ -126,7 +126,7 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
 async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
     """Generate MCQ questions for a topic."""
     system_prompt = (
-        f"You are Axiom AI's quiz engine. Generate exactly {count} multiple-choice questions. "
+        f"You are Edxiom AI's quiz engine. Generate exactly {count} multiple-choice questions. "
         "Return ONLY a JSON array where each item has: "
         '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3). '
         "Questions should be challenging and test deep understanding. "
@@ -178,11 +178,11 @@ def _normalize_draft_roadmap(roadmap):
 
 
 async def generate_onboarding_response(messages: list[dict], goal_context: str = "No active goal.") -> dict:
-    """Handle versatile Axiom AI chat — general study Q&A + roadmap creation on demand."""
+    """Handle versatile Edxiom AI chat — general study Q&A + roadmap creation on demand."""
     import re
     
     system_prompt = (
-        "You are Axiom AI, a strict, high-accountability AI study coach and teacher substitute. "
+        "You are Edxiom AI, a strict, high-accountability AI study coach and teacher substitute. "
         "You answer questions clearly, thoroughly, and with excellent formatting.\n"
         "\n"
         f"### CURRENT CONTEXT:\n{goal_context}\n"
@@ -243,8 +243,8 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                 data = response.json()
                 raw_content = data["choices"][0]["message"]["content"]
                 
-                # 2. Check for manual search tag: <axiom_search>query</axiom_search>
-                search_match = re.search(r'<axiom_search>(.*?)</axiom_search>', raw_content, re.IGNORECASE | re.DOTALL)
+                # 2. Check for manual search tag: <edxiom_search>query</edxiom_search>
+                search_match = re.search(r'<edxiom_search>(.*?)</edxiom_search>', raw_content, re.IGNORECASE | re.DOTALL)
                 
                 if search_match:
                     query = search_match.group(1).strip()
@@ -319,7 +319,7 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
 async def generate_documentation(topic: str, research_data: str) -> str:
     """Generate a structured study guide for a topic using research data."""
     system_prompt = (
-        "You are Axiom AI, a high-fidelity learning assistant. "
+        "You are Edxiom AI, a high-fidelity learning assistant. "
         "Your goal is to create a comprehensive, engaging, and structured study guide "
         "based on the provided raw research data. "
         "### GUIDELINES:\n"
@@ -345,7 +345,7 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
     video_list_str = "\n".join([f"{idx}: {title}" for idx, title in enumerate(video_titles)])
     
     system_prompt = (
-        "You are Axiom AI, a high-accountability learning coach.\n"
+        "You are Edxiom AI, a high-accountability learning coach.\n"
         "I will provide you with a list of video titles from a YouTube playlist.\n"
         "Your goal is to organize EVERY SINGLE ONE of these videos in chronological order into logical 'Chapters'.\n"
         "Each chapter should group roughly 7 to 12 consecutive videos (do not skip any videos, do not reuse videos).\n"

@@ -5,7 +5,7 @@ import urllib.parse
 from services.groq import generate_documentation
 from services.search import search_internet
 
-logger = logging.getLogger("axiom.synthesis")
+logger = logging.getLogger("edxiom.synthesis")
 
 async def synthesize_part_content(part_title: str) -> str:
     """

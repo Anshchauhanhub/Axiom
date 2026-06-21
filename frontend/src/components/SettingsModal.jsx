@@ -346,7 +346,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
                           {saving ? 'Linking...' : 'Link Telegram'}
                         </button>
                         <p className="text-[11px] text-white/30 leading-relaxed">
-                          Open Telegram → message <a href="https://t.me/Axiomneurobot" target="_blank" rel="noopener noreferrer" className="text-[#0088cc] hover:underline font-semibold">@Axiomneurobot</a> → send <code className="bg-white/5 px-1.5 py-0.5 rounded text-white/60">/start</code> → copy your Chat ID
+                          Open Telegram → message <a href="https://t.me/Edxiomneurobot" target="_blank" rel="noopener noreferrer" className="text-[#0088cc] hover:underline font-semibold">@Edxiomneurobot</a> → send <code className="bg-white/5 px-1.5 py-0.5 rounded text-white/60">/start</code> → copy your Chat ID
                         </p>
                       </div>
                     )}
@@ -383,7 +383,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
                 <div>
                   <h3 className="text-[11px] font-bold text-white/40 uppercase tracking-[0.15em] mb-4">Data & Privacy</h3>
                   <div className="space-y-1">
-                    <SettingsToggleRow label="Analytics" description="Help improve Axiom with anonymous usage data" defaultChecked={false} />
+                    <SettingsToggleRow label="Analytics" description="Help improve Edxiom with anonymous usage data" defaultChecked={false} />
                   </div>
                 </div>
 

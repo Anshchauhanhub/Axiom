@@ -87,8 +87,8 @@ const RoadmapVisual = () => {
         {/* Status Bar */}
         <div className="flex items-center justify-between px-6 pt-4 pb-3">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Axiom" className="w-5 h-5 opacity-60" />
-            <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Axiom</span>
+            <img src="/logo.png" alt="Edxiom" className="w-5 h-5 opacity-60" />
+            <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Edxiom</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_6px_var(--secondary)]"></div>
@@ -239,7 +239,7 @@ const RoadmapVisual = () => {
                     {msg.role === 'ai' && (
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <BrainCircuit size={10} className="text-primary" />
-                        <span className="text-[8px] text-primary/60 font-bold uppercase tracking-widest">Axiom</span>
+                        <span className="text-[8px] text-primary/60 font-bold uppercase tracking-widest">Edxiom</span>
                       </div>
                     )}
                     {msg.text}
@@ -261,7 +261,7 @@ const RoadmapVisual = () => {
 
             {/* Chat input mockup */}
             <div className="mt-4 flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5">
-              <span className="text-[11px] text-white/20 flex-1">Respond to Axiom...</span>
+              <span className="text-[11px] text-white/20 flex-1">Respond to Edxiom...</span>
               <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
                 <Send size={12} className="text-primary" />
               </div>

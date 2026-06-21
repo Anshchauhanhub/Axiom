@@ -145,7 +145,7 @@ const Auth = () => {
         const res = mode === 'register'
           ? await fn(email, password, 'Asia/Kolkata', ['12:00', '18:00'], accountType)
           : await fn(email, password, accountType);
-        localStorage.setItem('axiom_account_type', accountType);
+        localStorage.setItem('edxiom_account_type', accountType);
         await loginUser(res.access_token);
         navigate('/onboarding');
       }
@@ -168,7 +168,7 @@ const Auth = () => {
         setError('');
         const currentAccountType = accountTypeRef.current;
         const res = await googleLogin(tokenResponse.access_token, currentAccountType);
-        localStorage.setItem('axiom_account_type', currentAccountType);
+        localStorage.setItem('edxiom_account_type', currentAccountType);
         await loginUser(res.access_token);
         navigate('/onboarding');
       } catch (err) {
@@ -205,7 +205,7 @@ const Auth = () => {
         <div className="text-center mb-10">
           <Link to="/" className="inline-flex items-center justify-center w-24 h-24 rounded-[2.5rem] bg-surface-container-low border border-white/5 mb-6 shadow-2xl relative group overflow-hidden transition-transform hover:scale-110">
             <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-            <img src="/logo.png" alt="Axiom" className="w-20 h-auto relative z-10 drop-shadow-glow" />
+            <img src="/logo.png" alt="Edxiom" className="w-20 h-auto relative z-10 drop-shadow-glow" />
           </Link>
           <div className="mb-4">
             <Link to="/" className="text-[9px] font-label font-bold text-on-surface-variant/40 hover:text-primary uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-2 group">
@@ -214,7 +214,7 @@ const Auth = () => {
             </Link>
           </div>
           <h1 className="text-4xl sm:text-5xl font-black font-headline uppercase tracking-tighter text-on-surface italic leading-none mb-2">
-            {mode === 'login' ? 'Welcome' : 'Join'} <span className="text-primary drop-shadow-glow">Axiom</span>
+            {mode === 'login' ? 'Welcome' : 'Join'} <span className="text-primary drop-shadow-glow">Edxiom</span>
           </h1>
           <p className="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.3em]">
             {mode === 'login' ? (accountType === 'creator' ? 'Creator login to manage your learners' : 'Sign in to continue your journey') : 

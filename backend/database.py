@@ -1,4 +1,5 @@
 import os
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from dotenv import load_dotenv
@@ -23,7 +24,6 @@ engine = create_async_engine(
     pool_pre_ping=True,
     connect_args={"ssl": True} if use_ssl else {}
 )
-
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
@@ -40,6 +40,11 @@ async def get_db():
 
 
 async def init_db():
-    # Database initialization is now handled via Alembic migrations.
-    # Run `alembic upgrade head` to apply schema changes.
-    pass
+    # Keep local/fresh deployments bootable until Alembic version files exist.
+    # Importing models registers their tables on Base.metadata.
+    import models  # noqa: F401
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR NOT NULL DEFAULT 'student'"))
+        await conn.execute(text("UPDATE users SET account_type = 'student' WHERE account_type IS NULL"))

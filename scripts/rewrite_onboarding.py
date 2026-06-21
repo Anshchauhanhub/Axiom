@@ -1,7 +1,7 @@
 import re
 
 def rewrite():
-    path = "/home/ansh/projects/Axiom/frontend/src/pages/Onboarding.jsx"
+    path = "/home/ansh/projects/Edxiom/frontend/src/pages/Onboarding.jsx"
     with open(path, "r") as f:
         content = f.read()
 
@@ -166,11 +166,11 @@ def rewrite():
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : 'bg-secondary'}`}></span>
                   <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : 'text-secondary'}`}>
-                    {onboardingMode === 'chat' ? 'Axiom Link Active' : 'Import Engine Active'}
+                    {onboardingMode === 'chat' ? 'Edxiom Link Active' : 'Import Engine Active'}
                   </span>
                 </div>
                 <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
-                  {onboardingMode === 'chat' ? 'Axiom Assistant' : 'Playlist Architect'}
+                  {onboardingMode === 'chat' ? 'Edxiom Assistant' : 'Playlist Architect'}
                 </h2>
               </div>
             </div>
@@ -326,7 +326,7 @@ def rewrite():
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isTyping}
-                    placeholder="Respond to Axiom..."
+                    placeholder="Respond to Edxiom..."
                     className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl px-4 py-3.5 sm:px-8 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
                   />
                   <button type="submit" disabled={!inputText.trim() || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">

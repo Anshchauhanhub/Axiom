@@ -46,8 +46,13 @@ async def start_quiz(
     db: AsyncSession = Depends(get_db),
 ):
     """Stateless quiz: doesn't save to DB, creates a 'Neural Seal' (JWT)."""
-    # Get part info
-    part_result = await db.execute(select(Part).where(Part.id == part_id))
+    # Get part info and verify it belongs to the current user.
+    part_result = await db.execute(
+        select(Part)
+        .join(Task, Part.task_id == Task.id)
+        .join(Goal, Task.goal_id == Goal.id)
+        .where(Part.id == part_id, Goal.user_id == user.id)
+    )
     part = part_result.scalar_one_or_none()
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")

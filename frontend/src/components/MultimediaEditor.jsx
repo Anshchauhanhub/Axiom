@@ -293,7 +293,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
             />
           </div>
         );
-      case 'callout':
+      case 'callout': {
         const calloutStyles = {
           info: "bg-blue-50 border-blue-200 text-blue-900",
           warning: "bg-amber-50 border-amber-200 text-amber-900",
@@ -331,6 +331,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
             </div>
           </div>
         );
+      }
       case 'code':
         return (
           <div className="my-6 rounded-xl overflow-hidden border border-slate-800 bg-[#0e0e10] shadow-xl">
@@ -641,7 +642,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
           </div>
 
           {/* BLOCK FEED */}
-          <div className="flex-grow flex flex-col axiom-editor">
+          <div className="flex-grow flex flex-col edxiom-editor">
             {blocks.map((block) => (
               <div key={block.id} className="relative group/wrapper min-h-[1.5rem]">
                 {/* Drag / Remove Controls */}

@@ -83,19 +83,19 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
             className="h-full bg-gradient-to-r from-primary via-secondary to-primary rounded-full"
             style={{
               width: '40%',
-              animation: 'axiomProgress 2s ease-in-out infinite',
+              animation: 'edxiomProgress 2s ease-in-out infinite',
             }}
           ></div>
         </div>
 
         {/* Subtle hint */}
         <p className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant/30 mt-4">
-          Axiom Engine Active
+          Edxiom Engine Active
         </p>
       </div>
 
       <style>{`
-        @keyframes axiomProgress {
+        @keyframes edxiomProgress {
           0% { transform: translateX(-100%); width: 40%; }
           50% { transform: translateX(80%); width: 60%; }
           100% { transform: translateX(-100%); width: 40%; }

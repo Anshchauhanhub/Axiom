@@ -270,7 +270,7 @@ async def onboarding_chat(
     db: AsyncSession = Depends(get_db),
 ):
     import logging
-    logger = logging.getLogger("axiom.chat")
+    logger = logging.getLogger("edxiom.chat")
     
     try:
         session_id = req.session_id
@@ -388,7 +388,7 @@ async def generate_youtube_roadmap(
         )
     except Exception as e:
         import logging
-        logging.getLogger("axiom.goals").error(f"Playlist roadmap generation failed: {e}", exc_info=True)
+        logging.getLogger("edxiom.goals").error(f"Playlist roadmap generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to synthesize roadmap from playlist.")
 
 
@@ -636,7 +636,7 @@ async def get_part_content(
         )
     except Exception as e:
         import logging
-        logging.getLogger("axiom.goals").error(f"Generation failed: {e}", exc_info=True)
+        logging.getLogger("edxiom.goals").error(f"Generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Content generation failed. Please try again later.")
 
 

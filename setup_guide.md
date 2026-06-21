@@ -1,6 +1,6 @@
-# 🚀 Axiom AI — Getting Started Guide
+# 🚀 Edxiom AI — Getting Started Guide
 
-This guide will help you set up the Axiom AI full-stack system on your local machine after cloning the repository.
+This guide will help you set up the Edxiom AI full-stack system on your local machine after cloning the repository.
 
 ---
 
@@ -17,8 +17,8 @@ Before you begin, ensure you have the following installed:
 ## 🛠️ Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/Anshchauhanhub/Axiom.git
-cd Axiom
+git clone https://github.com/Anshchauhanhub/Edxiom.git
+cd Edxiom
 ```
 
 ---
@@ -79,7 +79,7 @@ cd Axiom
 1.  **Message your bot** on Telegram and send `/start`.
 2.  **Get your Chat ID** (the bot will reply with it once linked).
 3.  **Link your account**:
-    - Go to the **Settings** page on the Axiom website.
+    - Go to the **Settings** page on the Edxiom website.
     - Enter your Chat ID in the **Neural Bridge** section.
     - Now you'll receive interactive nudges based on your study schedule!
 

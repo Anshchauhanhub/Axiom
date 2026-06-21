@@ -1,6 +1,6 @@
-# Axiom Project Documentation: Structure & Interactions
+# Edxiom Project Documentation: Structure & Interactions
 
-Axiom is an AI-driven growth partner that helps users master any subject by generating personalized roadmaps and enforcing learning through mastery quizzes.
+Edxiom is an AI-driven growth partner that helps users master any subject by generating personalized roadmaps and enforcing learning through mastery quizzes.
 
 ---
 

@@ -16,7 +16,7 @@ from services.groq import generate_mcqs
 
 load_dotenv()
 
-logger = logging.getLogger("axiom.bot")
+logger = logging.getLogger("edxiom.bot")
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
@@ -33,7 +33,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user:
         await update.message.reply_text(
-            f"⚡ *Welcome back to Axiom AI*\n\n"
+            f"⚡ *Welcome back to Edxiom AI*\n\n"
             f"Your streak: *{user.current_streak} days*\n\n"
             f"Commands:\n"
             f"/quiz — Start a Sudden Death quiz\n"
@@ -43,9 +43,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         await update.message.reply_text(
-            "🔗 *Axiom AI — Neural Bridge*\n\n"
+            "🔗 *Edxiom AI — Neural Bridge*\n\n"
             f"Your Chat ID: `{chat_id}`\n\n"
-            "To connect, go to your Axiom Dashboard → Settings → Link Telegram, "
+            "To connect, go to your Edxiom Dashboard → Settings → Link Telegram, "
             "and enter this Chat ID.\n\n"
             "Once linked, I'll send you precision nudges at your scheduled times.",
             parse_mode="Markdown",
@@ -324,7 +324,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        f"📊 *Axiom Status*\n\n"
+        f"📊 *Edxiom Status*\n\n"
         f"🔥 Streak: *{user.current_streak} days*\n"
         f"🕐 Schedule: {', '.join(user.study_schedule or [])}\n"
         f"🌐 Timezone: {user.timezone}",
@@ -368,7 +368,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /info command — list available commands."""
     commands_text = (
-        "ℹ️ *Axiom AI — Available Commands*\n\n"
+        "ℹ️ *Edxiom AI — Available Commands*\n\n"
         "⚡ /quiz — Start a Sudden Death quiz\n"
         "📊 /status — View your current streak and progress\n"
         "📅 /schedule — View your study and nudge schedule\n"
