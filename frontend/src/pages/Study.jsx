@@ -560,39 +560,33 @@ const Study = () => {
           <div className="flex flex-col items-center gap-6 relative z-10">
             {/* Neural Streak & Progress Indicator removed */}
 
-             <div className="relative">
+             <div className="relative inline-block w-full max-w-5xl px-4">
                 <button 
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-4 bg-surface-container-high text-on-surface border-2 border-outline-variant/10 hover:border-primary/50 hover:bg-surface-container-highest rounded-[2rem] px-10 py-5 transition-all group active:scale-95 shadow-2xl relative overflow-hidden"
+                  className="w-full flex items-center justify-center gap-3 sm:gap-5 text-center transition-all group"
                 >
-                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-sm">psychology</span>
-                  </div>
-                  <span className="text-xs sm:text-sm font-label tracking-[0.3em] uppercase font-black truncate max-w-[200px] sm:max-w-[400px]">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-headline tracking-tight uppercase text-primary transition-colors leading-tight">
                     {activeGoal?.title || 'Unknown Synthesis'}
-                  </span>
-                  <span className={`material-symbols-outlined text-lg transition-all duration-500 ${dropdownOpen ? 'rotate-180 text-primary' : 'opacity-40'}`}>
-                    expand_more
+                  </h1>
+                  <span className={`material-symbols-outlined text-3xl sm:text-4xl flex-shrink-0 transition-all duration-500 text-primary ${dropdownOpen ? 'rotate-180' : 'opacity-80 group-hover:opacity-100'}`}>
+                    unfold_more
                   </span>
                 </button>
 
                 {dropdownOpen && (
                   <>
                     <div 
-                      className="fixed inset-0 z-40" 
+                      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-all animate-in fade-in" 
                       onClick={() => setDropdownOpen(false)}
                     ></div>
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-72 bg-surface-container-highest/90 backdrop-blur-2xl border border-outline-variant/20 rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.6)] z-50 overflow-hidden animate-in zoom-in-95 fade-in duration-300">
-                      <div className="px-6 py-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                        <span className="text-[9px] font-label tracking-[0.4em] uppercase text-primary font-black">Neural Pathways</span>
-                        <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
-                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse delay-75"></div>
-                          <div className="w-1 h-1 bg-primary rounded-full animate-pulse delay-150"></div>
-                        </div>
+                    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl bg-surface-container-highest/95 backdrop-blur-2xl border border-outline-variant/20 rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] z-[101] overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+                      <div className="px-8 py-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                        <span className="text-xs font-label tracking-[0.4em] uppercase text-primary font-black">Select Neural Pathway</span>
+                        <button onClick={() => setDropdownOpen(false)} className="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-white/10 flex items-center justify-center">
+                           <span className="material-symbols-outlined">close</span>
+                        </button>
                       </div>
-                      <div className="max-h-80 overflow-y-auto custom-scrollbar p-2">
+                      <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-4 space-y-2">
                         {goals.filter(g => g.status === 'active').map(g => (
                           <button
                             key={g.id}
@@ -602,10 +596,12 @@ const Study = () => {
                               setPhase('loading');
                               activeTaskRef.current = false;
                             }}
-                            className={`w-full text-left px-6 py-5 rounded-2xl text-[10px] font-label tracking-[0.2em] uppercase font-bold transition-all flex items-center gap-4 mb-1 ${activeGoal?.id === g.id ? 'bg-primary text-on-primary-container shadow-lg' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
+                            className={`w-full text-left px-8 py-6 rounded-3xl text-sm sm:text-base font-label tracking-wider font-bold transition-all flex items-center gap-4 ${activeGoal?.id === g.id ? 'bg-primary text-on-primary-container shadow-xl scale-[1.02]' : 'text-on-surface hover:bg-white/10'}`}
                           >
-                            <span className={`material-symbols-outlined text-base ${activeGoal?.id === g.id ? 'text-on-primary-container' : 'opacity-30'}`}>{activeGoal?.id === g.id ? 'verified' : 'radio_button_unchecked'}</span>
-                            <span className="truncate">{g.title}</span>
+                            <span className={`material-symbols-outlined text-3xl shrink-0 ${activeGoal?.id === g.id ? 'text-on-primary-container' : 'text-on-surface-variant/40'}`}>
+                              {activeGoal?.id === g.id ? 'psychology' : 'psychology'}
+                            </span>
+                            <span className="leading-relaxed whitespace-normal">{g.title}</span>
                           </button>
                         ))}
                       </div>

@@ -2,20 +2,24 @@ from auth import logger
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func, text
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import User, Goal, Task, Part, ChatMessage, ChatSession
+from models import User, Goal, Task, Part, ChatMessage, ChatSession, RoadmapTemplate
 from schemas import (
     CreateGoalRequest, GoalResponse, RoadmapResponse, TaskResponse, PartResponse,
     PartContentResponse, OnboardingChatRequest, OnboardingChatResponse, FinalizeGoalRequest,
-    UpdateNotesRequest, YoutubeRoadmapRequest, YoutubeRoadmapResponse, CalendarTaskResponse
+    UpdateNotesRequest, YoutubeRoadmapRequest, YoutubeRoadmapResponse, CalendarTaskResponse,
+    CacheStatsResponse
 )
 from auth import get_current_user
 from services.groq import generate_roadmap, generate_roadmap_from_playlist
 from services.synthesis import synthesize_part_content
 from services.youtube import get_playlist_data
+from services.roadmap_cache import check_cache, save_to_cache, invalidate_template
+from services.timetable import personalize_pacing, generate_schedule_dates
+from services.goal_agent import run_goal_agent
 
 router = APIRouter(prefix="/goals", tags=["Goals & Roadmap"])
 
@@ -398,17 +402,33 @@ async def finalize_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 2. Create Goal
-    goal = Goal(user_id=user.id, title=req.title, status="active", settings=req.settings or {})
+    # ── Write this roadmap back into the cache for future users ───────
+    template_id = await save_to_cache(req.title, req.roadmap, db)
+
+    # ── Create Goal with cache linkage ────────────────────────────────
+    goal = Goal(
+        user_id=user.id,
+        title=req.title,
+        status="active",
+        settings=req.settings or {},
+        template_id=template_id,
+        cache_hit=False,  # This was a fresh generation that's now being cached
+    )
     db.add(goal)
     await db.flush()
 
-    # Generate schedule
+    # ── Schedule with arithmetic timetable engine ─────────────────────
+    settings = req.settings or {}
     total_parts = sum(len(task_data.get("parts", [])) for task_data in req.roadmap)
-    schedules = generate_schedule(req.settings or {}, user.timezone, total_parts)
+    schedules = generate_schedule_dates(
+        num_parts=total_parts,
+        study_days=settings.get("study_days"),
+        study_sessions=settings.get("study_sessions"),
+        user_timezone=user.timezone,
+    )
     schedule_idx = 0
 
-    # 3. Create Tasks & Parts from the approved draft
+    # ── Create Tasks & Parts from the approved draft ──────────────────
     tasks_out = []
     for idx, task_data in enumerate(req.roadmap):
         task = Task(
@@ -447,7 +467,10 @@ async def finalize_goal(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
+        goal=GoalResponse(
+            id=goal.id, title=goal.title, status=goal.status,
+            notes=goal.notes, cache_hit=goal.cache_hit, template_id=goal.template_id
+        ),
         tasks=tasks_out,
     )
 
@@ -457,7 +480,7 @@ async def quick_activate(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Check for existing goal with same title
+    # 1. Check for existing goal with same title (per-user dedup)
     existing_result = await db.execute(
         select(Goal).where(Goal.user_id == user.id, Goal.title == req.title)
     )
@@ -466,28 +489,80 @@ async def quick_activate(
     if existing_goal:
         existing_goal.status = "active"
         await db.commit()
-        # Return existing roadmap
         return await get_roadmap(str(existing_goal.id), user, db)
 
-    # 2. Create the Goal
-    goal = Goal(user_id=user.id, title=req.title, status="active")
+    # ── 2. AGENTIC CACHE CHECK — two-tier lookup before burning an LLM call ──
+    cache_result = await check_cache(req.title, db)
+    template_id = None
+    is_cache_hit = False
+
+    if cache_result["tier"] in ("exact", "semantic"):
+        # Cache hit — clone the template, personalize pacing
+        import json
+        cached_syllabus = cache_result["template"]["syllabus_json"]
+        if isinstance(cached_syllabus, str):
+            cached_syllabus = json.loads(cached_syllabus)
+
+        roadmap_data = personalize_pacing(
+            cached_syllabus,
+            user_timezone=user.timezone,
+        )
+        template_id = str(cache_result["template"]["id"])
+        is_cache_hit = True
+        logger.info(f"⚡ Cache {cache_result['tier']} hit (score={cache_result.get('score', 1.0):.3f}). Skipping LLM call.")
+    else:
+        # Cache miss — run the full agentic pipeline
+        try:
+            agent_state = await run_goal_agent(
+                user_id=str(user.id),
+                raw_goal=req.title,
+            )
+
+            if agent_state.get("needs_clarification"):
+                # For quick-activate, we skip clarification and just generate
+                agent_state = await run_goal_agent(
+                    user_id=str(user.id),
+                    raw_goal=req.title,
+                    clarification_reply="beginner, no specific deadline",
+                )
+
+            if agent_state.get("error") or not agent_state.get("verified_syllabus"):
+                raise ValueError(agent_state.get("error", "No syllabus generated"))
+
+            roadmap_data = agent_state["verified_syllabus"]
+
+            # Write back to cache for future users (with entity + verification metadata)
+            template_id = await save_to_cache(
+                req.title, roadmap_data, db,
+                detected_entity=agent_state.get("detected_entity"),
+                verification_passed=agent_state.get("verification_passed", True),
+            )
+
+        except Exception as e:
+            logger.error(f"Agentic roadmap generation failed: {e}", exc_info=True)
+            await db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to generate roadmap. Please try again later.")
+
+    # ── 3. Create Goal with cache tracking ────────────────────────────
+    goal = Goal(
+        user_id=user.id,
+        title=req.title,
+        status="active",
+        template_id=template_id,
+        cache_hit=is_cache_hit,
+    )
     db.add(goal)
     await db.flush()
 
-    # 2. Generate Roadmap using LLM
-    try:
-        roadmap_data = await generate_roadmap(goal.title)
-    except Exception as e:
-        logger.error(f"Roadmap generation failed: {e}", exc_info=True)
-        await db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to generate roadmap. Please try again later.")
-
-    # Generate schedule
+    # ── 4. Schedule with arithmetic timetable engine ──────────────────
     total_parts = sum(len(task_data.get("parts", [])) for task_data in roadmap_data)
-    schedules = generate_schedule({}, user.timezone, total_parts)
+    schedules = generate_schedule_dates(
+        num_parts=total_parts,
+        user_timezone=user.timezone,
+    )
     schedule_idx = 0
 
-    # 3. Create Tasks and Parts
+    # ── 5. Create Tasks and Parts ─────────────────────────────────────
     tasks_out = []
     for idx, task_data in enumerate(roadmap_data):
         task = Task(
@@ -526,7 +601,10 @@ async def quick_activate(
     await db.commit()
 
     return RoadmapResponse(
-        goal=GoalResponse(id=goal.id, title=goal.title, status=goal.status, notes=goal.notes),
+        goal=GoalResponse(
+            id=goal.id, title=goal.title, status=goal.status,
+            notes=goal.notes, cache_hit=goal.cache_hit, template_id=goal.template_id
+        ),
         tasks=tasks_out,
     )
 
@@ -658,3 +736,58 @@ async def update_goal_notes(
     await db.commit()
     await db.refresh(goal)
     return goal
+
+
+# ── Agentic System: Cache Analytics & Management ─────────────────────
+
+@router.get("/cache/stats", response_model=CacheStatsResponse)
+async def get_cache_stats(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Analytics: how much the roadmap cache is saving in LLM costs."""
+    # Total goals
+    total_result = await db.execute(select(func.count(Goal.id)))
+    total_goals = total_result.scalar() or 0
+
+    # Cache hits
+    hit_result = await db.execute(
+        select(func.count(Goal.id)).where(Goal.cache_hit == True)  # noqa: E712
+    )
+    cache_hits = hit_result.scalar() or 0
+    cache_misses = total_goals - cache_hits
+
+    hit_rate = (cache_hits / total_goals * 100) if total_goals > 0 else 0.0
+
+    # Top templates by hit count
+    top_result = await db.execute(
+        select(RoadmapTemplate.goal_text, RoadmapTemplate.hit_count)
+        .order_by(RoadmapTemplate.hit_count.desc())
+        .limit(10)
+    )
+    top_templates = [
+        {"goal_text": row[0], "hit_count": row[1]}
+        for row in top_result.all()
+    ]
+
+    return CacheStatsResponse(
+        total_goals=total_goals,
+        cache_hits=cache_hits,
+        cache_misses=cache_misses,
+        hit_rate_percent=round(hit_rate, 1),
+        top_templates=top_templates,
+    )
+
+
+@router.post("/cache/invalidate/{template_id}")
+async def invalidate_cached_template(
+    template_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Invalidate a bad roadmap template (cache poisoning protection).
+    Called when a user thumbs-down a roadmap.
+    """
+    await invalidate_template(template_id, db)
+    return {"message": "Template invalidated", "template_id": template_id}

@@ -48,3 +48,10 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR NOT NULL DEFAULT 'student'"))
         await conn.execute(text("UPDATE users SET account_type = 'student' WHERE account_type IS NULL"))
+        # Agentic system upgrade: roadmap template cache + goal tracking columns
+        await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES roadmap_templates(id)"))
+        await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS cache_hit BOOLEAN DEFAULT FALSE"))
+        # Entity-detection + verification pipeline columns
+        await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS detected_entity TEXT"))
+        await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS verification_passed BOOLEAN DEFAULT TRUE"))
+        await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ"))

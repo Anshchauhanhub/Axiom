@@ -125,9 +125,20 @@ class GoalResponse(BaseModel):
     title: str
     status: str
     notes: Optional[Union[list, dict, str]] = None
+    cache_hit: Optional[bool] = None
+    template_id: Optional[uuid.UUID] = None
 
     class Config:
         from_attributes = True
+
+
+class CacheStatsResponse(BaseModel):
+    """Analytics: how much the cache is saving."""
+    total_goals: int
+    cache_hits: int
+    cache_misses: int
+    hit_rate_percent: float
+    top_templates: list[dict] = []  # [{goal_text, hit_count}]
 
 
 class UpdateNotesRequest(BaseModel):

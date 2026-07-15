@@ -42,17 +42,38 @@ class PersonalTask(Base):
     user = relationship("User", back_populates="personal_tasks")
 
 
+class RoadmapTemplate(Base):
+    """Canonical, reusable roadmap templates — the expensive LLM output, cached."""
+    __tablename__ = "roadmap_templates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    goal_hash = Column(String, unique=True, nullable=False, index=True)  # SHA256 of normalized goal
+    goal_text = Column(Text, nullable=False)  # Original phrasing, for reference
+    pinecone_vector_id = Column(String, nullable=True)  # Pointer into Pinecone index
+    syllabus_json = Column(JSONB, nullable=False)  # The Task -> Part hierarchy
+    hit_count = Column(Integer, default=1)  # Track reuse for analytics
+    detected_entity = Column(String, nullable=True)  # e.g. "GATE DA", "CAT" — for entity-linked syllabi
+    verification_passed = Column(Boolean, default=True)  # False if draft failed Jaccard check
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # Entity syllabi expire faster (90d vs 365d)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    goals = relationship("Goal", back_populates="template")
+
+
 class Goal(Base):
     __tablename__ = "goals"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    template_id = Column(UUID(as_uuid=True), ForeignKey("roadmap_templates.id"), nullable=True)  # Link to cached template
     title = Column(String, nullable=False)
     status = Column(String, default="active")  # active, completed, paused
+    cache_hit = Column(Boolean, default=False)  # For cost tracking / analytics
     notes = Column(JSONB, nullable=True) # Block-based multimedia notes
     settings = Column(JSONB, default=dict) # Goal-specific configurations
 
     user = relationship("User", back_populates="goals")
+    template = relationship("RoadmapTemplate", back_populates="goals")
     tasks = relationship("Task", back_populates="goal", cascade="all, delete-orphan")
 
 

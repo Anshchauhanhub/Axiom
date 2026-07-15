@@ -17,9 +17,10 @@ async def test_groq():
         "Content-Type": "application/json"
     }
     
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     # Minimal version of the prompt/request
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": model,
         "messages": [
             {"role": "system", "content": "Generate 3 MCQs on 'Arrays' in JSON format: {questions: [{question, options:[], correct:index}]}"},
             {"role": "user", "content": "Arrays in DSA"}

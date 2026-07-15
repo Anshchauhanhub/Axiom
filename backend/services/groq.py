@@ -254,7 +254,7 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
             try:
                 # 1. Ask model (manual tools, no native tools parameter)
                 payload = {
-                    "model": "llama-3.3-70b-versatile",
+                    "model": GROQ_MODEL,
                     "messages": current_messages,
                     "temperature": 0.7,
                     "max_tokens": 4096,
