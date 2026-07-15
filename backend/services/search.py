@@ -45,9 +45,9 @@ async def search_entity_deep(entity: str) -> str:
     logger.info(f"🔬 Deep entity search for: '{entity}'")
     
     queries = [
-        f"{entity} official syllabus exam pattern 2025 2026 2027",
-        f"{entity} complete subject wise topics list weightage",
-        f"{entity} preparation strategy best resources",
+        f"{entity} paper official syllabus detailed topics 2025 2026 2027",
+        f"{entity} complete subject wise syllabus topics list with weightage",
+        f"{entity} exam pattern marks distribution sections preparation",
     ]
     
     try:

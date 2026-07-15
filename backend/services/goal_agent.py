@@ -39,17 +39,24 @@ class GoalState(TypedDict):
 # ── Entity detection prompt ───────────────────────────────────────────
 
 ENTITY_DETECT_PROMPT = """Does this learning goal reference a specific named exam, \
-certification, syllabus, or curriculum (e.g. "GATE DA", "CAT", "AWS SAA-C03", \
-"UPSC CSE", "JEE Advanced", "NEET", "GRE", "IELTS")?
+certification, syllabus, or curriculum?
+
+Examples of entities:
+- "GATE DA" → "GATE DA Data Science and Artificial Intelligence"
+- "GATE CS" → "GATE CS Computer Science and Information Technology"
+- "CAT" → "CAT Common Admission Test"
+- "JEE Advanced" → "JEE Advanced"
+- "UPSC CSE" → "UPSC Civil Services Examination"
+- "AWS SAA-C03" → "AWS Solutions Architect Associate SAA-C03"
 
 Rules:
-- If yes, return ONLY the exact name/acronym as the user or a domain expert would write it.
+- If yes, return the entity name WITH its full expanded form (as shown above) so web search finds the right syllabus.
 - If the goal is generic ("learn Python", "get better at DSA") with no named exam, return "NONE".
-- Do not expand acronyms or guess a fuller name than what's implied.
+- For multi-branch exams like GATE, ALWAYS include the specific branch/paper code AND its full name.
 
 Goal: "{goal}"
 
-Respond with only the entity name or NONE, nothing else."""
+Respond with only the entity name (expanded) or NONE, nothing else."""
 
 
 # ── Node Functions ────────────────────────────────────────────────────

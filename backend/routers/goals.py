@@ -349,6 +349,32 @@ async def onboarding_chat(
         response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
         response_data["session_id"] = session_id
 
+        # 5.5. AGENTIC ROADMAP OVERRIDE — if the chat produced a draft roadmap,
+        # re-generate it through the full agentic pipeline (entity detection →
+        # deep web search → grounded generation → verification → YouTube videos).
+        # This prevents the LLM from hallucinating exam syllabi (e.g. GATE DA ≠ Architecture).
+        if response_data.get("phase") in ("draft", "ready") and response_data.get("goal_title"):
+            try:
+                goal_title = response_data["goal_title"]
+                logger.info(f"🔄 Agentic override: regenerating roadmap for '{goal_title}' via pipeline")
+                
+                agent_state = await run_goal_agent(
+                    user_id=str(user.id),
+                    raw_goal=goal_title,
+                    clarification_reply="beginner, no specific deadline",
+                )
+                
+                if agent_state.get("verified_syllabus") and not agent_state.get("error"):
+                    response_data["draft_roadmap"] = agent_state["verified_syllabus"]
+                    logger.info(
+                        f"✅ Agentic override success: {len(agent_state['verified_syllabus'])} tasks, "
+                        f"entity={agent_state.get('detected_entity', 'none')}"
+                    )
+                else:
+                    logger.warning(f"Agentic override failed, keeping chat-generated roadmap: {agent_state.get('error')}")
+            except Exception as e:
+                logger.warning(f"Agentic roadmap override error (keeping chat draft): {e}")
+
         # 6. Save AI response to DB
         assistant_msg = ChatMessage(
             session_id=session_id,
