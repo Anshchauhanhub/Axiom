@@ -150,20 +150,19 @@ async def detect_entity_node(state: GoalState) -> GoalState:
 
 async def fetch_entity_context_node(state: GoalState) -> GoalState:
     """
-    If an entity was detected, ALWAYS search for its official syllabus.
-    No confidence threshold — the cost of one extra search is trivial
-    next to the cost of shipping the wrong syllabus to thousands of users.
+    If an entity was detected, run a DEEP multi-query search for its
+    official syllabus, topics, weightage, and preparation strategy.
+    
+    Fires 3 parallel searches for comprehensive real-time context.
     """
-    from services.search import search_internet
+    from services.search import search_entity_deep
 
     entity = state["detected_entity"]
-    query = f"{entity} official syllabus exam pattern latest"
+    logger.info(f"🌐 Deep-searching entity context for: '{entity}'")
+    results = await search_entity_deep(entity)
 
-    logger.info(f"🌐 Fetching entity context for: '{entity}'")
-    results = await search_internet(query, max_results=5)
-
-    # Truncate to keep the prompt reasonable
-    state["realtime_context"] = results[:3000] if results else ""
+    # Truncate to keep the prompt reasonable but generous
+    state["realtime_context"] = results[:6000] if results else ""
     return state
 
 
@@ -193,6 +192,75 @@ async def synthesize_draft_node(state: GoalState) -> GoalState:
     except Exception as e:
         state["error"] = str(e)
         logger.error(f"❌ Draft synthesis failed: {e}")
+
+    return state
+
+
+# ── YouTube Video Enrichment — attach best videos to each part ────────
+
+async def enrich_with_youtube_node(state: GoalState) -> GoalState:
+    """
+    After the roadmap is generated, search YouTube for the best tutorial
+    video for each task module. Appends video_id to part titles using
+    the ' || video_id' convention that synthesis.py already understands.
+    
+    Searches in parallel for speed. Uses the 8B model to pick the best
+    video per module (costs ~10 tokens each).
+    """
+    from services.search import search_youtube_videos
+    import asyncio
+
+    syllabus = state.get("verified_syllabus") or state.get("draft_syllabus")
+    if not syllabus:
+        return state
+
+    goal_text = state.get("clarified_goal") or state["raw_goal"]
+    entity = state.get("detected_entity", "")
+
+    # Search YouTube for each task module in parallel
+    async def find_videos_for_task(task: dict) -> dict:
+        title = task.get("title", "")
+        search_query = f"{title} {entity} tutorial" if entity else f"{title} tutorial"
+        
+        try:
+            videos = await search_youtube_videos(search_query, max_results=1)
+            if videos:
+                video_id = videos[0]["video_id"]
+                # Attach video to the first part of this task
+                parts = task.get("parts", [])
+                if parts and isinstance(parts[0], str) and " || " not in parts[0]:
+                    parts[0] = f"{parts[0]} || {video_id}"
+                    task["parts"] = parts
+        except Exception as e:
+            logger.warning(f"YouTube enrichment failed for '{title}': {e}")
+        
+        return task
+
+    try:
+        # Run all YouTube searches in parallel (one per task module)
+        enriched_tasks = await asyncio.gather(
+            *[find_videos_for_task(task) for task in syllabus],
+            return_exceptions=True,
+        )
+        
+        # Filter out exceptions, keep successfully enriched tasks
+        final_syllabus = []
+        for result in enriched_tasks:
+            if isinstance(result, Exception):
+                logger.warning(f"YouTube enrichment error: {result}")
+            elif isinstance(result, dict):
+                final_syllabus.append(result)
+        
+        if final_syllabus:
+            state["verified_syllabus"] = final_syllabus
+            video_count = sum(
+                1 for t in final_syllabus 
+                for p in t.get("parts", []) 
+                if isinstance(p, str) and " || " in p
+            )
+            logger.info(f"🎬 YouTube enrichment complete: {video_count} videos attached")
+    except Exception as e:
+        logger.warning(f"YouTube enrichment failed (non-fatal): {e}")
 
     return state
 
@@ -401,5 +469,8 @@ async def run_goal_agent(
 
     # ── Step 5: Verify syllabus against source (no LLM call) ──────────
     state = verify_syllabus_node(state)
+
+    # ── Step 6: Enrich with YouTube videos (parallel search) ──────────
+    state = await enrich_with_youtube_node(state)
 
     return state
