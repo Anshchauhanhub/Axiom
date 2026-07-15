@@ -1,9 +1,9 @@
 """
 LangGraph Goal-Setting Agent — entity-detection + verification pipeline.
 
-Model routing:
-    - detect_entity, synthesize_draft → Haiku 4.5 (better instruction-following, ~$0.005/call)
-    - casual chat, nudges → Groq Llama 3.3 (free tier, $0)
+Model routing (ALL Groq, $0 cost):
+    - detect_entity → llama-3.1-8b-instant (fast, ~20 tokens, classification)
+    - synthesize_draft → llama-3.3-70b-versatile (quality structured JSON)
     - intake, clarify, verify → rule-based (no LLM, $0)
 
 State machine:
@@ -50,10 +50,6 @@ Rules:
 Goal: "{goal}"
 
 Respond with only the entity name or NONE, nothing else."""
-
-
-# Note: Entity detection and grounded synthesis use Haiku 4.5 via services/anthropic.py.
-# Falls back to Groq automatically if ANTHROPIC_API_KEY is not configured.
 
 
 # ── Node Functions ────────────────────────────────────────────────────
@@ -121,29 +117,28 @@ def apply_clarification(state: GoalState, user_reply: str) -> GoalState:
     return state
 
 
-# ── Entity Detection (replaces keyword matching) ─────────────────────
+# ── Entity Detection (Groq 8B — fast, cheap, ~20 tokens) ─────────────
 
 async def detect_entity_node(state: GoalState) -> GoalState:
     """
-    Cheap Haiku call (~$0.0001) to detect if the goal references a specific
-    named exam, certification, or curriculum.  This catches "GATE DA"
-    without needing "latest" or "2026" in the text.
+    Cheap 8B model call (~20 output tokens) to detect if the goal references
+    a specific named exam, certification, or curriculum.
 
-    Uses Haiku for better instruction-following on this classification task.
-    Falls back to Groq if Haiku is not configured.
+    Uses llama-3.1-8b-instant for speed and minimal token usage.
     """
-    from services.anthropic import call_haiku
+    from services.groq import call_groq_fast
 
     goal = state.get("clarified_goal") or state["raw_goal"]
 
     try:
-        response = await call_haiku(
-            prompt=ENTITY_DETECT_PROMPT.format(goal=goal),
+        response = await call_groq_fast(
+            system_prompt="You are a classification assistant. Respond with ONLY the entity name or NONE.",
+            user_prompt=ENTITY_DETECT_PROMPT.format(goal=goal),
             max_tokens=20,
         )
         entity = response.strip().strip('"').strip("'")
         state["detected_entity"] = None if entity.upper() == "NONE" else entity
-        logger.info(f"🔍 Entity detection (Haiku): '{goal[:60]}...' → {state['detected_entity'] or 'NONE'}")
+        logger.info(f"🔍 Entity detection (Groq 8B): '{goal[:60]}...' → {state['detected_entity'] or 'NONE'}")
     except Exception as e:
         logger.warning(f"Entity detection failed (non-fatal, treating as no entity): {e}")
         state["detected_entity"] = None
@@ -172,31 +167,29 @@ async def fetch_entity_context_node(state: GoalState) -> GoalState:
     return state
 
 
-# ── Draft generation — Haiku for grounded, Groq for generic ───────────
+# ── Draft generation — Groq 70B for quality structured output ─────────
 
 async def synthesize_draft_node(state: GoalState) -> GoalState:
     """
-    Build the roadmap draft using Haiku 4.5.
+    Build the roadmap draft using the heavy Groq model (70B).
 
-    If we have entity context from a search, Haiku is instructed to ONLY
-    use verified source material — its instruction-following is significantly
-    better than Llama 3.3 for this constraint.
-
-    Falls back to Groq automatically if Haiku is not configured.
+    If we have entity context from a search, the model is instructed to ONLY
+    use verified source material — preventing hallucination.
+    All at $0 cost via Groq free tier.
     """
-    from services.anthropic import generate_roadmap_haiku
+    from services.groq import generate_roadmap_grounded
 
     goal_text = state.get("clarified_goal") or state["raw_goal"]
     context = state.get("realtime_context", "") or None
 
     try:
-        syllabus = await generate_roadmap_haiku(
+        syllabus = await generate_roadmap_grounded(
             goal_title=goal_text,
             entity_context=context,
         )
         state["draft_syllabus"] = syllabus
         state["error"] = None
-        logger.info(f"✅ Draft roadmap synthesized (Haiku): {len(syllabus)} tasks")
+        logger.info(f"✅ Draft roadmap synthesized (Groq 70B): {len(syllabus)} tasks")
     except Exception as e:
         state["error"] = str(e)
         logger.error(f"❌ Draft synthesis failed: {e}")
@@ -393,14 +386,14 @@ async def run_goal_agent(
             state = build_clarification_question(state)
             return state
 
-    # ── Step 2: Entity detection (cheap LLM call, ~20 tokens) ─────────
+    # ── Step 2: Entity detection (Groq 8B, ~20 tokens) ────────────────
     state = await detect_entity_node(state)
 
     # ── Step 3: Fetch entity context (mandatory if entity found) ──────
     if state["detected_entity"]:
         state = await fetch_entity_context_node(state)
 
-    # ── Step 4: Synthesize draft (Haiku for grounded, Groq fallback) ──
+    # ── Step 4: Synthesize draft (Groq 70B for quality) ───────────────
     state = await synthesize_draft_node(state)
 
     if state.get("error"):

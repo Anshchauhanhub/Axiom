@@ -13,10 +13,34 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 
 
+# ── Model routing: use the cheapest model that can handle each task ───
+# Heavy (roadmaps, docs, MCQs): 70B for quality structured JSON output
+# Light (entity detect, classification): 8B for speed + minimal tokens
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 
-async def call_groq(system_prompt: str, user_prompt: str) -> str:
-    """Call Groq API with a system and user prompt. Returns raw text."""
+
+async def call_groq(system_prompt: str, user_prompt: str, model: str = None,
+                     temperature: float = 0.7, max_tokens: int = None) -> str:
+    """Call Groq API with a system and user prompt. Returns raw text.
+
+    Args:
+        model: Override the default model. Use GROQ_MODEL_FAST for cheap tasks.
+        temperature: Lower = more deterministic (good for classification).
+        max_tokens: Cap output length to save tokens on simple tasks.
+    """
+    use_model = model or GROQ_MODEL
+    payload = {
+        "model": use_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": temperature,
+    }
+    if max_tokens:
+        payload["max_tokens"] = max_tokens
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
@@ -25,24 +49,84 @@ async def call_groq(system_prompt: str, user_prompt: str) -> str:
                     "Authorization": f"Bearer {GROQ_API_KEY}",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": GROQ_MODEL,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "temperature": 0.7,
-                },
+                json=payload,
             )
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"]
         except httpx.HTTPStatusError as e:
-            logger.error(f"API HTTP Error: {e.response.status_code} — {e.response.text}")
+            logger.error(f"API HTTP Error ({use_model}): {e.response.status_code} — {e.response.text}")
             raise
         except Exception as e:
-            logger.error(f"API Call Error: {e}")
+            logger.error(f"API Call Error ({use_model}): {e}")
             raise
+
+
+async def call_groq_fast(system_prompt: str, user_prompt: str,
+                          max_tokens: int = 30) -> str:
+    """Lightweight Groq call using the 8B model for simple classification tasks.
+
+    Saves tokens by using the smallest model with low temperature and capped output.
+    Ideal for entity detection, yes/no questions, short extractions.
+    """
+    return await call_groq(
+        system_prompt, user_prompt,
+        model=GROQ_MODEL_FAST,
+        temperature=0.1,
+        max_tokens=max_tokens,
+    )
+
+
+# ── Grounded roadmap generation (replaces Anthropic Haiku) ────────────
+
+GROUNDED_SYSTEM_PROMPT = (
+    "You are Edxiom AI, a high-accountability learning coach. "
+    "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
+    "Each item has: title (task name), parts (array of subtopic strings). "
+    "Return ONLY valid JSON, no markdown, no explanation. "
+    "Generate 10-15 granular tasks, each with 5-8 detailed sub-parts."
+)
+
+GROUNDED_ENTITY_SYSTEM_PROMPT = (
+    "You are Edxiom AI, a high-accountability learning coach. "
+    "You will be given VERIFIED SOURCE MATERIAL about a specific exam/certification. "
+    "Build the roadmap STRICTLY from the topics confirmed in the source material. "
+    "Do NOT add topics from your general knowledge that aren't in the source. "
+    "Generate an exhaustive learning roadmap as a JSON array. "
+    "Each item has: title (task name), parts (array of subtopic strings). "
+    "Return ONLY valid JSON, no markdown, no explanation. "
+    "Generate 10-15 granular tasks, each with 5-8 detailed sub-parts."
+)
+
+
+async def generate_roadmap_grounded(
+    goal_title: str,
+    entity_context: str = None,
+) -> list[dict]:
+    """Generate a structured roadmap using the heavy Groq model.
+
+    If entity_context is provided (from web search), the model is instructed
+    to ONLY use verified source material to prevent hallucination.
+    Uses the 70B model for best structured-output quality at $0 cost.
+    """
+    if entity_context:
+        system = GROUNDED_ENTITY_SYSTEM_PROMPT
+        user_prompt = (
+            f"Goal: {goal_title}\n\n"
+            f"Verified source material:\n{entity_context}"
+        )
+    else:
+        system = GROUNDED_SYSTEM_PROMPT
+        user_prompt = f"Create a detailed learning roadmap for: {goal_title}"
+
+    raw = await call_groq(system, user_prompt, model=GROQ_MODEL)
+    cleaned = _clean_json(raw)
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parse error in grounded roadmap: {e}\nRaw: {raw[:500]}")
+        raise ValueError(f"Failed to parse AI response as JSON: {e}")
 
 
 def _clean_json(raw: str) -> str:
