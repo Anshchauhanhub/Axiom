@@ -59,6 +59,19 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
     }
   };
 
+  const startAd = () => {
+    setIsWatchingAd(true);
+    setAdCountdown(5);
+
+    // Open Adsterra Direct Link in a new tab to bypass popup blockers
+    const directLink = import.meta.env.VITE_ADSTERRA_DIRECT_LINK;
+    if (directLink) {
+      window.open(directLink, '_blank');
+    } else {
+      console.warn("VITE_ADSTERRA_DIRECT_LINK not set. Falling back to background popunder.");
+    }
+  };
+
   if (!activeTask) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-surface-container-low/20 rounded-[3.5rem] border border-dashed border-outline-variant/30">
@@ -108,7 +121,7 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
                 Unlock with 1 Credit ({user?.credits || 0} left)
               </button>
               <button
-                onClick={() => setIsWatchingAd(true)}
+                onClick={startAd}
                 disabled={isUnlocking}
                 className="w-full sm:w-auto px-6 py-4 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-2xl active:scale-98 transition-all flex items-center justify-center gap-2"
               >

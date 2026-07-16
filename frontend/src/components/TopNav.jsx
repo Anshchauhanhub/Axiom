@@ -46,6 +46,15 @@ const TopNav = () => {
   const startAd = () => {
     setIsWatchingAd(true);
     setAdCountdown(5);
+    
+    // Open Adsterra Direct Link in a new tab to bypass popup blockers
+    const directLink = import.meta.env.VITE_ADSTERRA_DIRECT_LINK;
+    if (directLink) {
+      window.open(directLink, '_blank');
+    } else {
+      // Fallback: open a placeholder or let the popunder try to trigger
+      console.warn("VITE_ADSTERRA_DIRECT_LINK not set in .env. Falling back to background popunder.");
+    }
   };
 
   useEffect(() => {
