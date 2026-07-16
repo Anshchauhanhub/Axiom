@@ -519,6 +519,7 @@ const Study = () => {
           <StudyWorkbenchMain
             activeTask={activeTask}
             handleStartLearning={handleStartLearning}
+            refreshData={refreshData}
           />
         </div>
       </div>

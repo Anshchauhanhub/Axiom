@@ -101,6 +101,7 @@ class UserResponse(BaseModel):
     timezone: str
     study_schedule: list[str]
     current_streak: int
+    credits: int
 
     class Config:
         from_attributes = True

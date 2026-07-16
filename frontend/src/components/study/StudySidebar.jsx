@@ -21,11 +21,11 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
             return (
               <button
                 key={task.id}
-                onClick={() => !isLocked && handleSelectTask(task)}
+                onClick={() => handleSelectTask(task)}
                 className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 ${
                   isActive 
                     ? 'bg-primary/10 border border-primary/20 scale-[1.02] shadow-lg' 
-                    : isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'hover:bg-surface-container/50 border border-transparent'
+                    : isLocked ? 'opacity-60 hover:bg-surface-container/30 border border-transparent cursor-pointer' : 'hover:bg-surface-container/50 border border-transparent'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${

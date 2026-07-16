@@ -254,6 +254,17 @@ async def get_profile(user: User = Depends(get_current_user)):
     return user
 
 
+@profile_router.post("/earn-credit", response_model=UserResponse)
+async def earn_credit(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user.credits += 1
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 @profile_router.put("/schedule")
 async def update_schedule(
     req: UpdateScheduleRequest,

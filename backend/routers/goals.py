@@ -817,3 +817,55 @@ async def invalidate_cached_template(
     """
     await invalidate_template(template_id, db)
     return {"message": "Template invalidated", "template_id": template_id}
+
+
+@router.post("/tasks/{task_id}/unlock", response_model=RoadmapResponse)
+async def unlock_task(
+    task_id: str,
+    use_credit: bool = True,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Fetch task with parts
+    task_result = await db.execute(
+        select(Task).where(Task.id == task_id).options(selectinload(Task.parts))
+    )
+    task = task_result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Fetch goal and verify ownership
+    goal_result = await db.execute(
+        select(Goal).where(Goal.id == task.goal_id, Goal.user_id == user.id)
+    )
+    goal = goal_result.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=403, detail="Not authorized to unlock this module")
+
+    if task.status != "locked":
+        # Already unlocked
+        return await get_roadmap(str(goal.id), user, db)
+
+    # Get user from DB to update credits
+    user_db_result = await db.execute(
+        select(User).where(User.id == user.id)
+    )
+    user_db = user_db_result.scalar_one()
+
+    if use_credit:
+        if user_db.credits < 1:
+            raise HTTPException(status_code=400, detail="Insufficient credits. Watch an ad to earn credits or unlock directly.")
+        user_db.credits -= 1
+
+    # Unlock task
+    task.status = "active"
+    
+    # Unlock all parts of this task
+    for p in task.parts:
+        p.status = "active"
+
+    await db.commit()
+
+    # Return updated roadmap
+    return await get_roadmap(str(goal.id), user_db, db)
+

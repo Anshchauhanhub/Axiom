@@ -1,11 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
-import { getAllTasks, isLoggedIn } from '../services/api';
+import { Bell, AlertCircle, Clock, CheckCircle2, Coins, Play, X, Loader2 } from 'lucide-react';
+import { getAllTasks, isLoggedIn, earnCredit } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const TopNav = () => {
+  const { user, refreshUser } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [adModalOpen, setAdModalOpen] = useState(false);
+  const [isWatchingAd, setIsWatchingAd] = useState(false);
+  const [adCountdown, setAdCountdown] = useState(5);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    let interval;
+    if (isWatchingAd) {
+      interval = setInterval(() => {
+        setAdCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleAdComplete();
+            return 5;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isWatchingAd]);
+
+  const handleAdComplete = async () => {
+    try {
+      await earnCredit();
+      await refreshUser();
+      setIsWatchingAd(false);
+      setAdModalOpen(false);
+      alert("🎉 1 Credit Earned! Thank you for supporting Edxiom AI.");
+    } catch (error) {
+      console.error("Failed to earn credit:", error);
+      setIsWatchingAd(false);
+      alert("Error: " + error.message);
+    }
+  };
+
+  const startAd = () => {
+    setIsWatchingAd(true);
+    setAdCountdown(5);
+  };
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -88,7 +129,20 @@ const TopNav = () => {
   const hasUrgent = notifications.some(n => n.type === 'urgent');
 
   return (
-    <div id="top-nav" className="fixed top-4 right-4 lg:top-6 lg:right-6 z-[99] pointer-events-auto">
+    <div id="top-nav" className="fixed top-4 right-4 lg:top-6 lg:right-6 z-[99] pointer-events-auto flex items-center gap-3">
+      {/* Credits Display */}
+      {isLoggedIn() && user && (
+        <button
+          onClick={() => setAdModalOpen(true)}
+          className="h-11 flex items-center gap-2 px-4 bg-[#131315]/90 hover:bg-[#1c1b1d] border border-white/10 hover:border-yellow-500/30 rounded-xl shadow-lg backdrop-blur-lg transition-all duration-300 group active:scale-95"
+        >
+          <Coins size={18} className="text-yellow-400 animate-pulse group-hover:scale-110 transition-transform" />
+          <span className="text-yellow-400/90 font-bold text-sm select-none">{user.credits} Credits</span>
+          <span className="text-[10px] bg-yellow-500/10 text-yellow-400 font-extrabold px-1.5 py-0.5 rounded border border-yellow-500/20 ml-1 group-hover:bg-yellow-500/20 transition-all">+ EARN</span>
+        </button>
+      )}
+
+      {/* Notifications Button */}
       <div className="relative" ref={dropdownRef}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
@@ -102,7 +156,7 @@ const TopNav = () => {
           )}
         </button>
 
-        {/* Dropdown */}
+        {/* Notification Dropdown */}
         {isOpen && (
           <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-surface-container-lowest border border-white/10 rounded-2xl shadow-2xl overflow-hidden origin-top-right animate-in fade-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-white/5 bg-surface-container/50">
@@ -135,6 +189,62 @@ const TopNav = () => {
           </div>
         )}
       </div>
+
+      {/* Adsterra Rewards / Earn Credits Modal */}
+      {adModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md bg-[#131315] border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative">
+            <button
+              onClick={() => !isWatchingAd && setAdModalOpen(false)}
+              disabled={isWatchingAd}
+              className="absolute top-4 right-4 text-white/60 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="p-6 text-center">
+              {!isWatchingAd ? (
+                <>
+                  <div className="w-16 h-16 bg-yellow-500/10 border border-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Coins size={32} className="text-yellow-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Need More Credits?</h3>
+                  <p className="text-sm text-white/60 mb-6">
+                    Axiom is 100% free to use. Watch a short sponsor ad to support us and earn 1 Credit!
+                  </p>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={startAd}
+                      className="w-full py-3 bg-yellow-500 text-black font-extrabold rounded-xl hover:bg-yellow-400 active:scale-98 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Play size={16} fill="black" />
+                      Watch Sponsor Ad
+                    </button>
+                    <button
+                      onClick={() => setAdModalOpen(false)}
+                      className="w-full py-3 bg-white/5 text-white/80 font-bold rounded-xl hover:bg-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="py-8">
+                  <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <Loader2 size={48} className="text-yellow-400 animate-spin absolute" />
+                    <span className="text-xl font-extrabold text-yellow-400">{adCountdown}s</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Streaming Sponsor Content...</h3>
+                  <p className="text-xs text-white/40 max-w-xs mx-auto">
+                    Please do not close this window. Your popunder ad should have opened. Click anywhere on the screen if it didn't trigger.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

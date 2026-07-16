@@ -19,6 +19,7 @@ class User(Base):
     timezone = Column(String, default="Asia/Kolkata")
     study_schedule = Column(JSONB, default=lambda: ["12:00", "18:00"])
     current_streak = Column(Integer, default=0)
+    credits = Column(Integer, default=5, nullable=False) # Ad-supported monetization
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")

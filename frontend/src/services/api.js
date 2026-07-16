@@ -90,6 +90,11 @@ export const linkTelegram = (chatId) =>
 // --- User ---
 export const getProfile = () => request('GET', '/users/me');
 
+export const earnCredit = () => request('POST', '/users/earn-credit');
+
+export const unlockTask = (taskId, useCredit = true) => 
+  request('POST', `/goals/tasks/${taskId}/unlock?use_credit=${useCredit}`);
+
 export const updateProfile = (data) => request('PATCH', '/users/profile', data);
 
 export const uploadProfileImage = async (file) => {
