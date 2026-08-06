@@ -102,6 +102,7 @@ class UserResponse(BaseModel):
     study_schedule: list[str]
     current_streak: int
     credits: int
+    study_profile: dict = {}
 
     class Config:
         from_attributes = True

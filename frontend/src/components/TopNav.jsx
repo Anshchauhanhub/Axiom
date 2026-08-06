@@ -143,25 +143,25 @@ const TopNav = () => {
       {isLoggedIn() && user && (
         <button
           onClick={() => setAdModalOpen(true)}
-          className="h-11 flex items-center gap-2 px-4 bg-[#131315]/90 hover:bg-[#1c1b1d] border border-white/10 hover:border-yellow-500/30 rounded-xl shadow-lg backdrop-blur-lg transition-all duration-300 group active:scale-95"
+          className="h-11 flex items-center gap-2 px-3.5 bg-surface hover:bg-surface-bright border border-outline/20 hover:border-primary/50 rounded-xl shadow-md backdrop-blur-lg transition-all duration-300 group active:scale-95 shrink-0"
         >
-          <Coins size={18} className="text-yellow-400 animate-pulse group-hover:scale-110 transition-transform" />
-          <span className="text-yellow-400/90 font-bold text-sm select-none">{user.credits} Credits</span>
-          <span className="text-[10px] bg-yellow-500/10 text-yellow-400 font-extrabold px-1.5 py-0.5 rounded border border-yellow-500/20 ml-1 group-hover:bg-yellow-500/20 transition-all">+ EARN</span>
+          <span className="material-symbols-outlined text-[20px] text-primary group-hover:rotate-12 group-hover:scale-110 transition-transform">monetization_on</span>
+          <span className="text-primary/90 font-bold text-xs sm:text-sm select-none">{user.credits} Credits</span>
+          <span className="text-[10px] bg-primary/10 text-primary font-extrabold px-2 py-0.5 rounded-md border border-primary/20 ml-1 group-hover:bg-primary/20 transition-all">+ EARN</span>
         </button>
       )}
 
       {/* Notifications Button */}
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative shrink-0" ref={dropdownRef}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 ${isOpen ? 'bg-[#1c1b1d] text-primary' : 'bg-[#131315]/90 hover:bg-[#1c1b1d] text-white/80 hover:text-white'} border border-white/10 shadow-lg backdrop-blur-lg active:scale-95`}
+          className={`relative w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 ${isOpen ? 'bg-surface-bright text-primary' : 'bg-surface hover:bg-surface-bright text-on-surface/80 hover:text-on-surface'} border border-outline/20 shadow-md backdrop-blur-lg active:scale-95`}
         >
-          <Bell size={20} className={hasUrgent && !isOpen ? 'animate-pulse text-red-400' : ''} />
+          <Bell size={19} className={hasUrgent && !isOpen ? 'animate-pulse text-red-400' : ''} />
           
           {/* Notification Badge */}
           {notifications.length > 0 && notifications[0].type !== 'success' && (
-            <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background ${hasUrgent ? 'bg-red-500' : 'bg-orange-500'}`}></span>
+            <span className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full ${hasUrgent ? 'bg-red-500' : 'bg-orange-500'} ring-2 ring-surface`}></span>
           )}
         </button>
 
@@ -214,8 +214,8 @@ const TopNav = () => {
             <div className="p-6 text-center">
               {!isWatchingAd ? (
                 <>
-                  <div className="w-16 h-16 bg-yellow-500/10 border border-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Coins size={32} className="text-yellow-400" />
+                  <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="material-symbols-outlined text-[32px] text-primary">monetization_on</span>
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">Need More Credits?</h3>
                   <p className="text-sm text-white/60 mb-6">

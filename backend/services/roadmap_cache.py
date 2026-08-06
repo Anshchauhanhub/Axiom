@@ -184,14 +184,36 @@ async def save_to_cache(
     expires_at = datetime.now(timezone.utc) + timedelta(days=expiry_days)
 
     try:
-        # Save to Postgres
+        # Check if a template with this goal_hash already exists
+        result = await db.execute(
+            text("SELECT id FROM roadmap_templates WHERE goal_hash = :hash LIMIT 1"),
+            {"hash": goal_hash}
+        )
+        existing = result.mappings().first()
+        if existing:
+            existing_id = str(existing["id"])
+            await db.execute(
+                text(
+                    "UPDATE roadmap_templates SET syllabus_json = :syllabus, "
+                    "expires_at = :expires WHERE id = :id"
+                ),
+                {
+                    "id": existing_id,
+                    "syllabus": json.dumps(syllabus_json),
+                    "expires": expires_at,
+                }
+            )
+            await db.commit()
+            logger.info(f"💾 Updated existing cached template: {existing_id}")
+            return existing_id
+
+        # Save brand new template to Postgres
         await db.execute(
             text(
                 "INSERT INTO roadmap_templates "
                 "(id, goal_hash, goal_text, pinecone_vector_id, syllabus_json, "
                 "detected_entity, verification_passed, expires_at) "
-                "VALUES (:id, :hash, :text, :vec_id, :syllabus, :entity, :verified, :expires) "
-                "ON CONFLICT (goal_hash) DO NOTHING"
+                "VALUES (:id, :hash, :text, :vec_id, :syllabus, :entity, :verified, :expires)"
             ),
             {
                 "id": template_id,
@@ -221,6 +243,7 @@ async def save_to_cache(
 
     except Exception as e:
         logger.error(f"Failed to save to cache: {e}")
+        await db.rollback()
         return None
 
 

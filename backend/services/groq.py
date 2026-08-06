@@ -1,8 +1,10 @@
 import os
 import json
 import logging
-import httpx
+import asyncio
+from typing import Optional
 from dotenv import load_dotenv
+from groq import AsyncGroq, APIError, RateLimitError, APIConnectionError
 from services.search import search_internet
 
 load_dotenv()
@@ -10,8 +12,6 @@ load_dotenv()
 logger = logging.getLogger("edxiom.groq")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-
 
 # ── Model routing: use the cheapest model that can handle each task ───
 # Heavy (roadmaps, docs, MCQs): 70B for quality structured JSON output
@@ -19,46 +19,61 @@ GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 
+_groq_client: Optional[AsyncGroq] = None
+
+def get_groq_client() -> AsyncGroq:
+    """Singleton getter for the Native AsyncGroq client."""
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        _groq_client = AsyncGroq(api_key=api_key)
+    return _groq_client
+
 
 async def call_groq(system_prompt: str, user_prompt: str, model: str = None,
                      temperature: float = 0.7, max_tokens: int = None) -> str:
-    """Call Groq API with a system and user prompt. Returns raw text.
+    """Call Groq API via Native AsyncGroq SDK. Returns raw response string.
 
     Args:
-        model: Override the default model. Use GROQ_MODEL_FAST for cheap tasks.
+        model: Override default model. Use GROQ_MODEL_FAST for fast/cheap tasks.
         temperature: Lower = more deterministic (good for classification).
-        max_tokens: Cap output length to save tokens on simple tasks.
+        max_tokens: Cap output length to save tokens.
     """
     use_model = model or GROQ_MODEL
-    payload = {
+    client = get_groq_client()
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    kwargs = {
         "model": use_model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        "messages": messages,
         "temperature": temperature,
     }
     if max_tokens:
-        payload["max_tokens"] = max_tokens
+        kwargs["max_tokens"] = max_tokens
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    for attempt in range(3):
         try:
-            response = await client.post(
-                f"{GROQ_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["choices"][0]["message"]["content"]
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API HTTP Error ({use_model}): {e.response.status_code} — {e.response.text}")
+            response = await client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content
+        except RateLimitError as e:
+            if attempt == 2:
+                logger.error(f"Rate limit exceeded ({use_model}): {e}")
+                raise
+            await asyncio.sleep(1.5 * (attempt + 1))
+        except APIConnectionError as e:
+            if attempt == 2:
+                logger.error(f"Connection error ({use_model}): {e}")
+                raise
+            await asyncio.sleep(1.0 * (attempt + 1))
+        except APIError as e:
+            logger.error(f"Groq API error ({use_model}): {e}")
             raise
         except Exception as e:
-            logger.error(f"API Call Error ({use_model}): {e}")
+            logger.error(f"Unexpected error calling Groq ({use_model}): {e}")
             raise
 
 
@@ -297,149 +312,195 @@ def _normalize_draft_roadmap(roadmap):
 async def generate_onboarding_response(messages: list[dict], goal_context: str = "No active goal.") -> dict:
     """Handle versatile Edxiom AI chat — general study Q&A + roadmap creation on demand."""
     import re
-    
+    from services.exam_resolver import resolve_exam
+    from services.search import search_internet
+
+    # Extract last user message to resolve any referenced exam entity & trigger auto search if needed
+    exam_grounding_context = ""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            user_text = msg.get("content", "")
+            
+            # 1. Fuzzy Entity Resolver (Handles typos in exams & tech stacks e.g. "gate daa", "aws solutins")
+            res = resolve_exam(user_text)
+            if res.matched and res.entity:
+                topics_str = ", ".join(res.entity.key_topics)
+                exam_grounding_context = (
+                    f"\n\n### VERIFIED EXAM / TOPIC SYLLABUS GROUNDING:\n"
+                    f"Canonical Subject/Exam: {res.entity.canonical_name}\n"
+                    f"Official Core Topics: {topics_str}\n"
+                    f"CRITICAL: When discussing or generating the syllabus for {res.entity.canonical_name}, "
+                    f"strictly use ONLY these topics ({topics_str}). Do not confuse with un-related exams!\n"
+                )
+                logger.info(f"🎯 Grounded chat with resolved entity: {res.entity.canonical_name}")
+                break
+
+            # 2. Universal Auto Web Search for syllabus/course/exam queries
+            text_lower = user_text.lower()
+            if any(k in text_lower for k in ["syllabus", "topic", "exam", "course", "subject", "pattern", "prepare", "study"]):
+                logger.info(f"🌐 Triggering automatic live web search pre-fetch for user query: '{user_text}'")
+                search_query = f"{user_text} official syllabus latest topics"
+                search_data = await search_internet(search_query, max_results=3)
+                if search_data and "No relevant" not in search_data:
+                    exam_grounding_context = (
+                        f"\n\n### LIVE WEB SEARCH RESULTS (GROUND TRUTH):\n{search_data}\n"
+                    )
+                break
+
     system_prompt = (
-        "You are Edxiom AI, a strict, high-accountability AI study coach and teacher substitute. "
-        "You answer questions clearly, thoroughly, and with excellent formatting.\n"
+        "You are Edxiom AI, a strict, high-accountability AI study coach, human mentor, and teacher substitute. "
+        "You answer questions clearly, thoroughly, and act as a blunt, caring friend who wants the user to succeed.\n"
         "\n"
-        f"### CURRENT CONTEXT:\n{goal_context}\n"
+        f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
+        "\n"
+        "### NATURAL GREETING & MEMORY RULE (STRICT):\n"
+        "- DO NOT list, summarize, recite, or state the user's persistent profile facts (e.g. NEVER say 'I see you are a 4th-year student with 7 months left...', readiness score %, hours allocated, or previous goals) in your greeting or response!\n"
+        "- Persistent memory is SILENT background context for your calculations only. Never dump it to the user.\n"
+        "- Speak naturally, conversationally, and warmly like a real human mentor. When starting a chat or receiving greetings like 'hi' or 'hello', reply simply and naturally, e.g.: 'Hey! How are you doing today? What would you like to work on or learn next?'\n"
+        "\n"
+        "### INTERACTIVE 3-STEP DISCOVERY PROTOCOL:\n"
+        "1. **Step 1 (Goal & Syllabus Discussion)**: When user mentions a target goal/exam/skill, fetch/discuss the latest official syllabus over the internet. Discuss key topics warmly and naturally.\n"
+        "2. **Step 2 (User Preferences & Fact Extraction)**: Ask clarifying questions one or two at a time:\n"
+        "   - Total months / timeline available to achieve this goal.\n"
+        "   - Preferred video/teaching language (e.g. Hindi, Hinglish, English).\n"
+        "   - Favorite YouTubers, channels, or websites (or if they are starting from complete scratch).\n"
+        "   - Daily available study hours.\n"
+        "3. **Step 3 (Web-Derived & YouTube Playlist Synthesis)**: Synthesize real-world top-rated roadmaps and YouTube playlists matching their preferred language and creators into a master `draft_roadmap` (Array of modules with parts).\n"
+        "\n"
+        "### STRUCTURED UI DIALOGUE CARD FORMAT (STRICT):\n"
+        "NEVER dump your response as a wall of text or list text questions!\n"
+        "Always structure your messages into clear sections:\n"
+        "- Start with 1 brief encouraging intro sentence.\n"
+        "- Use `### Syllabus & Topic Breakdown` to list core syllabus subjects using bold bullet points (`* **Topic**: description`).\n"
+        "- DO NOT write or list text questions in your response message! The UI has an interactive form widget for user inputs. End your message with a brief friendly note: 'Please complete the Interactive Preference Form below to choose your timeline, preferred teaching language, playlist, and study materials!'\n"
+        "\n"
+        "### DYNAMIC DRAFT BOX FACTS EXTRACTION:\n"
+        "For EVERY response, listen carefully and extract any available user facts in the `study_profile_update` field:\n"
+        "{\n"
+        '  "target_exam": "GATE DA 2026/etc",\n'
+        '  "months_remaining": 6,\n'
+        '  "preferred_language": "Hindi/Hinglish/English",\n'
+        '  "preferred_youtubers": "Physics Wallah/Gate Smashers/CodeWithHarry/etc",\n'
+        '  "study_hours_per_day": 2.0,\n'
+        '  "learning_style": "From Scratch/Revision/etc"\n'
+        "}\n"
         "\n"
         "### HOW TO BEHAVE:\n"
-        "1. **Accountability & Tone**: Act as a strict teacher. If the user completes their tasks on time, give them positive reinforcement and praise. If they fall behind, skip tasks, or make excuses, be aggressive, strict, and use a 'tough love' approach to demand better performance.\n"
-        "2. **Give DETAILED answers**: When the user asks a question (phase=chat), provide a THOROUGH, "
-        "comprehensive explanation. Use markdown headings, bullet points, bold for key terms, code blocks, "
-        "and tables where helpful. Your chat answers should be long and educational, like a textbook explanation. "
-        "Do NOT give one-line answers. Aim for at least 200 words for concept explanations.\n"
-        "3. **ALWAYS SEARCH for exams/certifications**: If the user mentions ANY named exam, certification, "
-        "or competitive test (e.g. GATE, JEE, NEET, CAT, UPSC, GRE, AWS, etc.), you MUST use "
-        "<edxiom_search>exam_name official syllabus exam pattern latest</edxiom_search> to get the CURRENT "
-        "real-world syllabus BEFORE giving advice or generating a roadmap. Never rely on your training data "
-        "for exam syllabi — they change frequently.\n"
-        "4. **Suggest roadmaps**: If the user asks about a NEW topic/skill, after explaining it in detail, "
-        "ask: Would you like me to create a learning roadmap for this topic?\n"
-        "5. **Roadmap creation flow**:\n"
-        "   - discovery: Ask what they want to learn and their current level\n"
-        "   - draft: Generate the roadmap ONLY in the draft_roadmap JSON field. "
-        "Keep message to 1-2 sentences like 'Here is your roadmap for X. Review and activate when ready.' "
-        "Do NOT write the roadmap content inside the message field.\n"
-        "   - ready: Same as draft but user confirmed activation.\n"
+        "1. **Tough-Love Mentor & Realistic Estimator**: Be a real friend/mentor. If the user tells you they want to crack a major exam in 2 months with 1 hr/day, calculate total hours (60 hrs vs 300+ needed), estimate pass probability, and tell them bluntly to increase daily hours!\n"
+        "2. **Give DETAILED answers**: When user asks a question (phase=chat), provide a THOROUGH, comprehensive explanation with headings and bullet points.\n"
+        "3. **ALWAYS SEARCH for exams/certifications**: If user mentions any named exam, certification, or skill, use <edxiom_search>query</edxiom_search> to get current real-world syllabi before generating roadmaps.\n"
+        "4. **Roadmap creation flow**:\n"
+        "   - discovery: Discuss syllabus and gather preferences (language, months, YouTubers, hours).\n"
+        "   - draft/ready: When user provides preferences (or submits their timeline/language choices), IMMEDIATELY generate a master web-derived roadmap tailored to their timeline and language in the `draft_roadmap` JSON field, and set `phase: 'draft'`.\n"
         "\n"
         "### WEB SEARCH TOOL:\n"
         "To search the internet for current information, embed this tag in your response:\n"
         "<edxiom_search>your search query</edxiom_search>\n"
-        "The system will execute the search and return results for you to use.\n"
-        "USE THIS for: exam syllabi, current dates, latest patterns, preparation resources.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
         "Return ONLY a single-line JSON object. Escape all newlines as \\\\n.\n"
         "Fields:\n"
-        "- message: Your response. For chat phase, give DETAILED thorough answers. For draft/ready phase, keep it SHORT (1-2 sentences).\n"
+        "- message: Your response text. Keep it interactive, natural, and conversational.\n"
         "- phase: One of chat, discovery, draft, ready\n"
-        "- mood: Integer from 1 to 5 representing your current mood based on user progress (1=angry/strict, 3=neutral, 5=happy/praising).\n"
+        "- mood: Integer from 1 to 5 based on user progress/readiness (1=angry/strict, 3=neutral, 5=happy/praising).\n"
         "- draft_roadmap: Include ONLY when phase is draft or ready. Array of objects: "
-        '[{"title": "Task Name", "parts": ["sub1", "sub2"]}]. Generate 6-10 tasks with 4-6 parts each.\n'
-        "- goal_title: Include ONLY when phase is draft or ready. Short topic name like Django or Docker.\n"
+        '[{"title": "Task Name", "parts": ["sub1", "sub2"]}].\n'
+        "- goal_title: Include ONLY when phase is draft or ready.\n"
+        "- study_profile_update: JSON object of extracted user facts for the Learning Draft Box.\n"
         "\n"
-        "CRITICAL: When phase is draft or ready, put roadmap data ONLY in draft_roadmap, NOT in message.\n"
-        "CRITICAL: When phase is chat, give LONG DETAILED answers with examples and explanations.\n"
-        "IMPORTANT: For normal conversation, set phase to chat.\n"
+        "CRITICAL: NEVER recite background stats, degree, or previous goal details in greetings!\n"
+        "CRITICAL: Put roadmap data ONLY in draft_roadmap when phase is draft or ready.\n"
         "IMPORTANT: Do NOT start responses with 'I see you are studying X'."
     )
 
     current_messages = [{"role": "system", "content": system_prompt}] + messages
+    client = get_groq_client()
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        for attempt in range(3):  # Allow up to 2 search rounds
-            try:
-                # 1. Ask model (manual tools, no native tools parameter)
-                payload = {
-                    "model": GROQ_MODEL,
-                    "messages": current_messages,
-                    "temperature": 0.7,
-                    "max_tokens": 4096,
-                }
+    for attempt in range(3):  # Allow up to 2 search rounds
+        try:
+            # 1. Ask model via Native AsyncGroq SDK
+            response = await client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=current_messages,
+                temperature=0.7,
+                max_tokens=4096,
+            )
+            raw_content = response.choices[0].message.content
+            
+            # 2. Check for manual search tag: <edxiom_search>query</edxiom_search>
+            search_match = re.search(r'<edxiom_search>(.*?)</edxiom_search>', raw_content, re.IGNORECASE | re.DOTALL)
+            
+            if search_match:
+                query = search_match.group(1).strip()
+                logger.info(f"Manual Search Triggered: '{query}'")
                 
-                response = await client.post(
-                    f"{GROQ_BASE_URL}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {GROQ_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                )
-                response.raise_for_status()
-                data = response.json()
-                raw_content = data["choices"][0]["message"]["content"]
+                # Execute search
+                results = await search_internet(query)
                 
-                # 2. Check for manual search tag: <edxiom_search>query</edxiom_search>
-                search_match = re.search(r'<edxiom_search>(.*?)</edxiom_search>', raw_content, re.IGNORECASE | re.DOTALL)
+                # Add AI's "thought" and the results to history
+                current_messages.append({"role": "assistant", "content": raw_content})
+                current_messages.append({
+                    "role": "user", 
+                    "content": f"SEARCH_RESULTS for '{query}':\n\n{results}\n\nNow, please provide your response in the required JSON format."
+                })
                 
-                if search_match:
-                    query = search_match.group(1).strip()
-                    logger.info(f"Manual Search Triggered: '{query}'")
-                    
-                    # Execute search
-                    results = await search_internet(query)
-                    
-                    # Add AI's "thought" and the results to history
-                    current_messages.append({"role": "assistant", "content": raw_content})
-                    current_messages.append({
-                        "role": "user", 
-                        "content": f"SEARCH_RESULTS for '{query}':\n\n{results}\n\nNow, please provide your response in the required JSON format."
-                    })
-                    
-                    # Continue loop to give results back to LLM
-                    continue
-                else:
-                    # 3. No search? Clean and return JSON
-                    cleaned = _clean_json(raw_content)
-                    try:
-                        result = json.loads(cleaned)
-                    except json.JSONDecodeError as e:
-                        # If the AI ignored the JSON instruction and just answered in markdown, we can salvage it.
-                        if not raw_content.strip().startswith("{"):
-                            result = {
-                                "message": raw_content,
-                                "phase": "chat"
+                # Continue loop to give results back to LLM
+                continue
+            else:
+                # 3. No search? Clean and return JSON
+                cleaned = _clean_json(raw_content)
+                try:
+                    result = json.loads(cleaned)
+                except json.JSONDecodeError as e:
+                    # If the AI ignored the JSON instruction and just answered in markdown, we can salvage it.
+                    if not raw_content.strip().startswith("{"):
+                        result = {
+                            "message": raw_content,
+                            "phase": "chat"
+                        }
+                    else:
+                        logger.error(f"JSON Parse Error in onboarding chat (attempt {attempt+1}): {e}\nRaw Content: {raw_content[:500]}...")
+                        if attempt == 2:
+                            # Last attempt failed — return a safe fallback
+                            return {
+                                "message": "I've processed your request. Could you tell me more about what you'd like to focus on?",
+                                "phase": "discovery",
                             }
-                        else:
-                            logger.error(f"JSON Parse Error in onboarding chat (attempt {attempt+1}): {e}\nRaw Content: {raw_content[:500]}...")
-                            if attempt == 2:
-                                # Last attempt failed — return a safe fallback
-                                return {
-                                    "message": "I've processed your request. Could you tell me more about what you'd like to focus on?",
-                                    "phase": "discovery",
-                                }
-                            current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object with no literal newlines inside string values. Use \\n for line breaks."})
-                            continue
-                    
-                    # Normalize draft_roadmap if present
-                    if "draft_roadmap" in result and result["draft_roadmap"]:
-                        result["draft_roadmap"] = _normalize_draft_roadmap(result["draft_roadmap"])
-                    
-                    # Fix any double-escaped newlines that might have survived
-                    if "message" in result and isinstance(result["message"], str):
-                        result["message"] = result["message"].replace("\\n", "\n")
+                        current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object with no literal newlines inside string values. Use \\n for line breaks."})
+                        continue
+                
+                # Normalize draft_roadmap if present
+                if "draft_roadmap" in result and result["draft_roadmap"]:
+                    result["draft_roadmap"] = _normalize_draft_roadmap(result["draft_roadmap"])
+                
+                # Fix any double-escaped newlines that might have survived
+                if "message" in result and isinstance(result["message"], str):
+                    result["message"] = result["message"].replace("\\n", "\n")
 
-                    # Ensure required fields exist
-                    if "message" not in result:
-                        result["message"] = "Let me help you build your learning path."
-                    if "phase" not in result:
-                        result["phase"] = "discovery"
+                # Ensure required fields exist
+                if "message" not in result:
+                    result["message"] = "Let me help you build your learning path."
+                if "phase" not in result:
+                    result["phase"] = "discovery"
 
-                    # Programmatic guardrail: if phase is not "draft" or "ready", clear the draft_roadmap!
-                    if result.get("phase") not in ["draft", "ready"]:
-                        result["draft_roadmap"] = None
-                        result["goal_title"] = None
-                    
-                    return result
+                # Programmatic guardrail: if phase is not "draft" or "ready", clear the draft_roadmap!
+                if result.get("phase") not in ["draft", "ready"]:
+                    result["draft_roadmap"] = None
+                    result["goal_title"] = None
+                
+                return result
 
-            except httpx.HTTPStatusError as e:
-                logger.error(f"Groq API Error during onboarding: Status {e.response.status_code} - {e.response.text}")
+        except RateLimitError as e:
+            logger.error(f"Groq Rate Limit during onboarding (attempt {attempt+1}): {e}")
+            if attempt == 2:
                 raise
-            except Exception as e:
-                logger.error(f"Unexpected error in onboarding chat: {e}")
-                raise
+            await asyncio.sleep(2.0)
+        except APIError as e:
+            logger.error(f"Groq API Error during onboarding (attempt {attempt+1}): {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in onboarding chat: {e}")
+            raise
 
     raise ValueError("Failed to get valid response from AI after multiple attempts.")
 

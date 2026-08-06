@@ -218,20 +218,44 @@ const FEATURED_SLIDES = [
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { goals, allRoadmaps, loading: dataLoading, refreshData, loadAllRoadmaps } = useData();
+  const { goals, allRoadmaps, loading: dataLoading, refreshData, loadAllRoadmaps, setSelectedGoalId } = useData();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [nextSchedule, setNextSchedule] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
-  const slide = FEATURED_SLIDES[currentSlide];
+
+  const featuredSlides = useMemo(() => {
+    if (!goals || goals.length === 0) return FEATURED_SLIDES;
+    
+    return goals.map(g => {
+      const rm = allRoadmaps[g.id];
+      const parts = (rm?.tasks || []).flatMap(t => t.parts || []);
+      const done = parts.filter(p => p.status === 'passed').length;
+      const pct = parts.length ? Math.round((done / parts.length) * 100) : 0;
+      
+      return {
+        id: g.id,
+        goalId: g.id,
+        subtitle: g.status === 'active' ? "Active Pathway" : "Learning Pathway",
+        title: g.title,
+        progress: pct,
+        accent: "bg-[#fdb813]",
+        glow: "from-[#3a2000]/40",
+        light: "bg-[#fdb813]/[0.06]"
+      };
+    });
+  }, [goals, allRoadmaps]);
+
+  const slide = featuredSlides[currentSlide % featuredSlides.length] || featuredSlides[0];
 
   // Auto-rotate featured pathways every 6 seconds
   useEffect(() => {
+    if (!featuredSlides.length) return;
     const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % FEATURED_SLIDES.length);
+      setCurrentSlide(prev => (prev + 1) % featuredSlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [featuredSlides]);
 
   useEffect(() => { if (!user) navigate('/'); }, [user, navigate]);
 
@@ -314,15 +338,13 @@ const Dashboard = () => {
       <div className="mx-auto w-full max-w-[1280px] flex flex-col gap-5 px-1 sm:px-3 lg:px-6">
 
         {/* ── Hero Greeting ── */}
-        <header className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-3 pb-1 px-2 sm:px-4">
-          <div>
-            <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-black uppercase tracking-tight leading-none text-white drop-shadow-lg">
+        <header className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1 pb-3 px-2 sm:px-4">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-[3rem] font-black uppercase tracking-tight leading-none text-white drop-shadow-lg">
               {greeting.text}, <span className="text-primary">{name}</span>
             </h1>
-          </div>
-          <div className="flex gap-3 shrink-0">
             <button onClick={() => navigate('/onboarding')}
-              className="h-11 px-6 rounded-xl bg-primary text-black text-xs font-label font-black uppercase tracking-[0.15em] hover:brightness-110 active:translate-y-[2px] transition-all flex items-center gap-2 shadow-[0_4px_0_#b88200] active:shadow-none border-b border-primary/20">
+              className="h-10 px-5 rounded-xl bg-primary text-black text-xs font-label font-black uppercase tracking-[0.15em] hover:brightness-110 active:translate-y-[2px] transition-all flex items-center gap-2 shadow-[0_3px_0_#b88200] active:shadow-none border-b border-primary/20 shrink-0">
               <Plus size={15} /> New path
             </button>
           </div>
@@ -369,11 +391,14 @@ const Dashboard = () => {
 
                       {/* Right Content / CTA */}
                       <div className="shrink-0 flex items-center gap-4 mt-8 md:mt-0">
-                        <button onClick={() => navigate('/study')} className="h-14 px-8 rounded-xl bg-[#fdb813] text-black text-[11px] font-label font-black uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 transition-all flex items-center gap-3 shadow-[0_4px_15px_rgba(253,184,19,0.2)]">
+                        <button onClick={() => {
+                          if (slide?.goalId) setSelectedGoalId(slide.goalId);
+                          navigate('/study', { state: { goalId: slide?.goalId } });
+                        }} className="h-14 px-8 rounded-xl bg-[#fdb813] text-black text-[11px] font-label font-black uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 transition-all flex items-center gap-3 shadow-[0_4px_15px_rgba(253,184,19,0.2)]">
                           Study <ChevronRight size={16} strokeWidth={3} />
                         </button>
                         <button 
-                          onClick={() => setCurrentSlide(prev => (prev + 1) % FEATURED_SLIDES.length)}
+                          onClick={() => setCurrentSlide(prev => (prev + 1) % featuredSlides.length)}
                           className="h-14 w-14 rounded-xl border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white/30 transition-all bg-white/[0.02]"
                         >
                           <ChevronRight size={20} strokeWidth={2} />
@@ -383,12 +408,12 @@ const Dashboard = () => {
 
                     {/* Carousel Pagination Dots */}
                     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-2">
-                      {FEATURED_SLIDES.map((_, i) => (
+                      {featuredSlides.map((_, i) => (
                         <button
                           key={i}
                           onClick={() => setCurrentSlide(i)}
                           className={`h-1.5 rounded-full transition-all duration-300 ${
-                            i === currentSlide 
+                            i === (currentSlide % featuredSlides.length)
                               ? 'w-5 bg-[#fdb813] shadow-[0_0_8px_rgba(253,184,19,0.5)]' 
                               : 'w-1.5 bg-white/20 hover:bg-white/40'
                           }`}

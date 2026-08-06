@@ -42,7 +42,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
       try {
         const tasks = await getAllTasks();
         if (!tasks || tasks.length === 0) {
-          setMood(3);
+          setMood(4);
           return;
         }
         const now = new Date();
@@ -53,29 +53,20 @@ const AIAgentChat = ({ isOpen, onClose }) => {
         tasks.forEach(t => {
           if (t.completed_at) {
             completed++;
-          } else {
-            // Count as overdue if: has a past scheduled_at, OR status is still 'active'/'locked' with no completion
-            if (t.scheduled_at && new Date(t.scheduled_at) < now) {
-              overdue++;
-            }
+          } else if (t.scheduled_at && new Date(t.scheduled_at) < now) {
+            overdue++;
           }
         });
 
-        // Also count non-scheduled incomplete active parts as mildly overdue
-        const incomplete = total - completed;
         const completionRatio = completed / total;
         const overdueRatio = overdue / total;
-        const incompleteRatio = incomplete / total;
 
-        if (overdueRatio >= 0.3) setMood(1);            // 30%+ overdue → angry
-        else if (overdueRatio >= 0.15) setMood(2);       // 15%+ overdue → disappointed
-        else if (incompleteRatio >= 0.8 && total > 3) setMood(2); // 80%+ incomplete with many tasks → disappointed
-        else if (completionRatio >= 0.7) setMood(5);     // 70%+ done → very happy
-        else if (completionRatio >= 0.4) setMood(4);     // 40%+ done → content
-        else if (completionRatio >= 0.1) setMood(3);     // some progress → neutral
-        else setMood(2);                                  // barely started → disappointed
+        if (completionRatio >= 0.7) setMood(5);     // Very happy
+        else if (completionRatio >= 0.3) setMood(4); // Cheerful
+        else if (overdueRatio >= 0.5) setMood(3);    // Attentive / Supportive
+        else setMood(4);                             // Encouraging default
       } catch (e) {
-        console.error('Failed to calculate mood', e);
+        setMood(4);
       }
     };
     if (isOpen) calculateMood();
@@ -166,12 +157,12 @@ const AIAgentChat = ({ isOpen, onClose }) => {
 
   const getMoodStyles = (m) => {
     switch (m) {
-      case 5: return { bg: 'from-green-400 to-emerald-600', shadow: 'shadow-green-500/20', indicator: 'border-green-500' };
-      case 4: return { bg: 'from-yellow-300 to-green-400', shadow: 'shadow-green-500/20', indicator: 'border-green-400' };
-      case 3: return { bg: 'from-yellow-400 to-green-500', shadow: 'shadow-yellow-500/10', indicator: 'border-green-500' };
-      case 2: return { bg: 'from-orange-400 to-red-400', shadow: 'shadow-orange-500/20', indicator: 'border-orange-500' };
-      case 1: return { bg: 'from-red-500 to-red-800', shadow: 'shadow-red-500/30', indicator: 'border-red-500' };
-      default: return { bg: 'from-yellow-400 to-green-500', shadow: 'shadow-yellow-500/10', indicator: 'border-green-500' };
+      case 5: return { bg: 'from-emerald-400 to-teal-500', shadow: 'shadow-emerald-500/20', indicator: 'border-emerald-400' };
+      case 4: return { bg: 'from-primary to-amber-500', shadow: 'shadow-amber-500/20', indicator: 'border-primary' };
+      case 3: return { bg: 'from-amber-400 to-primary', shadow: 'shadow-amber-500/10', indicator: 'border-amber-400' };
+      case 2: return { bg: 'from-orange-400 to-amber-500', shadow: 'shadow-orange-500/20', indicator: 'border-orange-400' };
+      case 1: return { bg: 'from-primary to-amber-600', shadow: 'shadow-primary/30', indicator: 'border-primary' };
+      default: return { bg: 'from-primary to-amber-500', shadow: 'shadow-amber-500/10', indicator: 'border-primary' };
     }
   };
 

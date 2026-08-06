@@ -1,17 +1,18 @@
 """
-LangGraph Goal-Setting Agent — entity-detection + verification pipeline.
+Vanilla Async Goal-Setting Agent — real-time entity-detection + verification pipeline.
 
-Model routing (ALL Groq, $0 cost):
+Model routing (Native Groq SDK, $0 cost):
     - detect_entity → llama-3.1-8b-instant (fast, ~20 tokens, classification)
     - synthesize_draft → llama-3.3-70b-versatile (quality structured JSON)
     - intake, clarify, verify → rule-based (no LLM, $0)
 
-State machine:
+State machine engine (Vanilla Python Async):
     intake → clarify (if needed) → detect_entity → fetch_entity_context (if entity found)
-    → synthesize_draft → verify_syllabus → done
+    → synthesize_draft → verify_syllabus → enrich_with_youtube → done
 """
 
 import logging
+import time
 import re
 from typing import TypedDict, Optional
 
@@ -33,6 +34,7 @@ class GoalState(TypedDict):
     verified_syllabus: Optional[list[dict]]
     verification_passed: bool
     conversation_turns: int
+    execution_time_ms: float
     error: Optional[str]
 
 
@@ -125,18 +127,38 @@ def apply_clarification(state: GoalState, user_reply: str) -> GoalState:
 
 
 # ── Entity Detection (Groq 8B — fast, cheap, ~20 tokens) ─────────────
+# ── Entity Detection & Resolution ────────────────────────────────────
 
 async def detect_entity_node(state: GoalState) -> GoalState:
     """
-    Cheap 8B model call (~20 output tokens) to detect if the goal references
-    a specific named exam, certification, or curriculum.
-
-    Uses llama-3.1-8b-instant for speed and minimal token usage.
+    Deterministically resolve user input to a canonical exam if possible.
+    If ambiguous, trigger clarification. If generic, fall back to LLM.
     """
-    from services.groq import call_groq_fast
+    from services.exam_resolver import resolve_exam
 
     goal = state.get("clarified_goal") or state["raw_goal"]
 
+    # Try resolving deterministically first
+    res = resolve_exam(goal)
+    if res.matched and res.entity:
+        state["detected_entity"] = res.entity.canonical_name
+        logger.info(f"🎯 Deterministic exam match: {res.entity.canonical_name}")
+        return state
+
+    if not res.matched and res.candidates:
+        # Ask for clarification if a candidate has reasonably high score (> 50)
+        if res.confidence >= 50.0:
+            state["needs_clarification"] = True
+            state["clarification_question"] = (
+                f"Did you mean one of these exams?\n" + 
+                "\n".join(f"- {c[0]}" for c in res.candidates[:3])
+            )
+            state["missing_slots"] = ["exam_clarification"]
+            logger.info(f"❓ Ambiguous exam matched, requesting clarification: {res.candidates}")
+            return state
+
+    # Fall back to LLM to detect if there's any other named exam we don't have in the registry
+    from services.groq import call_groq_fast
     try:
         response = await call_groq_fast(
             system_prompt="You are a classification assistant. Respond with ONLY the entity name or NONE.",
@@ -145,9 +167,9 @@ async def detect_entity_node(state: GoalState) -> GoalState:
         )
         entity = response.strip().strip('"').strip("'")
         state["detected_entity"] = None if entity.upper() == "NONE" else entity
-        logger.info(f"🔍 Entity detection (Groq 8B): '{goal[:60]}...' → {state['detected_entity'] or 'NONE'}")
+        logger.info(f"🔍 Entity detection fallback (Groq 8B): '{goal[:60]}...' → {state['detected_entity'] or 'NONE'}")
     except Exception as e:
-        logger.warning(f"Entity detection failed (non-fatal, treating as no entity): {e}")
+        logger.warning(f"Entity detection fallback failed (non-fatal): {e}")
         state["detected_entity"] = None
 
     return state
@@ -160,13 +182,40 @@ async def fetch_entity_context_node(state: GoalState) -> GoalState:
     If an entity was detected, run a DEEP multi-query search for its
     official syllabus, topics, weightage, and preparation strategy.
     
-    Fires 3 parallel searches for comprehensive real-time context.
+    Verifies the grounding of search results and retries with a broader
+    query if the first search fails verification.
     """
     from services.search import search_entity_deep
+    from services.exam_resolver import EXAM_REGISTRY, verify_grounding
 
     entity = state["detected_entity"]
     logger.info(f"🌐 Deep-searching entity context for: '{entity}'")
+    
     results = await search_entity_deep(entity)
+    
+    # Verify grounding if matched in registry
+    matched_entity = next((e for e in EXAM_REGISTRY if e.canonical_name == entity), None)
+    if matched_entity and results:
+        passed = verify_grounding(matched_entity, results)
+        if not passed:
+            logger.warning("⚠️ First search grounding verification failed. Retrying with broad query...")
+            # Retry with a broader query (just the canonical name and syllabus)
+            broad_query = f"{matched_entity.canonical_name} official syllabus exam topics"
+            from services.search import search_internet
+            results = await search_internet(broad_query, max_results=6)
+            
+            # Re-verify
+            passed = verify_grounding(matched_entity, results)
+            if not passed:
+                logger.warning("⚠️ Broad query search also failed grounding verification.")
+                state["verification_passed"] = False
+            else:
+                logger.info("✅ Broad query search passed grounding verification.")
+                state["verification_passed"] = True
+        else:
+            state["verification_passed"] = True
+    else:
+        state["verification_passed"] = True
 
     # Truncate to keep the prompt reasonable but generous
     state["realtime_context"] = results[:6000] if results else ""
@@ -422,18 +471,19 @@ async def run_goal_agent(
     clarification_reply: Optional[str] = None,
 ) -> GoalState:
     """
-    Run the goal-setting agent pipeline.
+    Run the high-performance Vanilla Async Goal-Setting Agent Pipeline.
 
-    Pipeline: intake → clarify? → detect_entity → fetch_entity_context? → synthesize_draft → verify
+    Pipeline: intake → clarify? → detect_entity → fetch_entity_context? → synthesize_draft → verify → enrich_youtube
 
     If `clarification_reply` is None, this is the first invocation.
     If provided, this is a follow-up after the user answered a clarification question.
 
-    Returns the final GoalState.  Check:
+    Returns the final GoalState. Check:
       - state["needs_clarification"]: True → return clarification_question to user, wait for reply
       - state["verified_syllabus"]: not None → roadmap is ready
       - state["error"]: not None → something went wrong
     """
+    start_time = time.perf_counter()
     state: GoalState = {
         "user_id": user_id,
         "raw_goal": raw_goal,
@@ -447,6 +497,7 @@ async def run_goal_agent(
         "verified_syllabus": None,
         "verification_passed": False,
         "conversation_turns": 0,
+        "execution_time_ms": 0.0,
         "error": None,
     }
 
@@ -459,19 +510,21 @@ async def run_goal_agent(
 
         if state["needs_clarification"]:
             state = build_clarification_question(state)
+            state["execution_time_ms"] = round((time.perf_counter() - start_time) * 1000, 2)
             return state
 
-    # ── Step 2: Entity detection (Groq 8B, ~20 tokens) ────────────────
+    # ── Step 2: Entity detection (Groq 8B Native SDK) ────────────────
     state = await detect_entity_node(state)
 
     # ── Step 3: Fetch entity context (mandatory if entity found) ──────
     if state["detected_entity"]:
         state = await fetch_entity_context_node(state)
 
-    # ── Step 4: Synthesize draft (Groq 70B for quality) ───────────────
+    # ── Step 4: Synthesize draft (Groq 70B Native SDK) ───────────────
     state = await synthesize_draft_node(state)
 
     if state.get("error"):
+        state["execution_time_ms"] = round((time.perf_counter() - start_time) * 1000, 2)
         return state
 
     # ── Step 5: Verify syllabus against source (no LLM call) ──────────
@@ -479,5 +532,8 @@ async def run_goal_agent(
 
     # ── Step 6: Enrich with YouTube videos (parallel search) ──────────
     state = await enrich_with_youtube_node(state)
+
+    state["execution_time_ms"] = round((time.perf_counter() - start_time) * 1000, 2)
+    logger.info(f"⚡ Goal agent pipeline completed in {state['execution_time_ms']}ms")
 
     return state

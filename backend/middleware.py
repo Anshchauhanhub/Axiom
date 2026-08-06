@@ -40,7 +40,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     - General API:   60 req/min per IP
     """
 
-    AUTH_PATHS = {"/auth/login", "/auth/register"}
+    AUTH_PATHS = {
+        "/auth/login",
+        "/auth/register",
+        "/auth/forgot-password",
+        "/auth/reset-password",
+        "/auth/google",
+        "/api/v1/auth/login",
+        "/api/v1/auth/register",
+        "/api/v1/auth/forgot-password",
+        "/api/v1/auth/reset-password",
+        "/api/v1/auth/google",
+    }
     AUTH_LIMIT = 5
     AUTH_WINDOW = 60  # seconds
 

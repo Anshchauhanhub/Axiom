@@ -13,21 +13,17 @@ const MoodFace = ({ mood = 3, size = 64 }) => {
   const getMouth = () => {
     switch (mood) {
       case 5: // Big happy smile
-        return <path d="M30 62 Q50 80 70 62" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />;
-      case 4: // Gentle smile
-        return <path d="M33 62 Q50 72 67 62" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
-      case 3: // Neutral straight line
-        return <line x1="33" y1="64" x2="67" y2="64" stroke="#fff" strokeWidth="3" strokeLinecap="round" />;
-      case 2: // Slight frown
-        return <path d="M33 68 Q50 58 67 68" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
-      case 1: // Angry frown with teeth
-        return (
-          <g>
-            <path d="M30 70 Q50 56 70 70" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-          </g>
-        );
+        return <path d="M30 60 Q50 78 70 60" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />;
+      case 4: // Friendly smile
+        return <path d="M32 62 Q50 72 68 62" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
+      case 3: // Pleasant neutral
+        return <path d="M34 63 Q50 67 66 63" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
+      case 2: // Focused / thinking curve
+        return <path d="M35 64 Q50 61 65 64" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
+      case 1: // Attentive nudge expression
+        return <line x1="35" y1="64" x2="65" y2="64" stroke="#fff" strokeWidth="3" strokeLinecap="round" />;
       default:
-        return <line x1="33" y1="64" x2="67" y2="64" stroke="#fff" strokeWidth="3" strokeLinecap="round" />;
+        return <path d="M32 62 Q50 72 68 62" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
     }
   };
 
@@ -40,11 +36,11 @@ const MoodFace = ({ mood = 3, size = 64 }) => {
             <path d={`M${rightEyeX - 8} ${eyeY - 14} Q${rightEyeX} ${eyeY - 20} ${rightEyeX + 8} ${eyeY - 14}`} stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
           </g>
         );
-      case 4: // Slightly raised
+      case 4: // Cheerful raised
         return (
           <g>
-            <line x1={leftEyeX - 7} y1={eyeY - 13} x2={leftEyeX + 7} y2={eyeY - 15} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1={rightEyeX - 7} y1={eyeY - 15} x2={rightEyeX + 7} y2={eyeY - 13} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+            <path d={`M${leftEyeX - 7} ${eyeY - 13} Q${leftEyeX} ${eyeY - 17} ${leftEyeX + 7} ${eyeY - 13}`} stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+            <path d={`M${rightEyeX - 7} ${eyeY - 13} Q${rightEyeX} ${eyeY - 17} ${rightEyeX + 7} ${eyeY - 13}`} stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
           </g>
         );
       case 3: // Neutral flat
@@ -54,18 +50,18 @@ const MoodFace = ({ mood = 3, size = 64 }) => {
             <line x1={rightEyeX - 7} y1={eyeY - 14} x2={rightEyeX + 7} y2={eyeY - 14} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
           </g>
         );
-      case 2: // Slightly furrowed
+      case 2: // Curious eyebrow tilt
         return (
           <g>
-            <line x1={leftEyeX - 7} y1={eyeY - 16} x2={leftEyeX + 7} y2={eyeY - 12} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1={rightEyeX - 7} y1={eyeY - 12} x2={rightEyeX + 7} y2={eyeY - 16} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1={leftEyeX - 7} y1={eyeY - 13} x2={leftEyeX + 7} y2={eyeY - 15} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1={rightEyeX - 7} y1={eyeY - 16} x2={rightEyeX + 7} y2={eyeY - 13} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
           </g>
         );
-      case 1: // Angry V-shaped eyebrows
+      case 1: // Focused / determined look
         return (
           <g>
-            <line x1={leftEyeX - 8} y1={eyeY - 18} x2={leftEyeX + 8} y2={eyeY - 10} stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-            <line x1={rightEyeX - 8} y1={eyeY - 10} x2={rightEyeX + 8} y2={eyeY - 18} stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+            <line x1={leftEyeX - 7} y1={eyeY - 14} x2={leftEyeX + 7} y2={eyeY - 13} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1={rightEyeX - 7} y1={eyeY - 13} x2={rightEyeX + 7} y2={eyeY - 14} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
           </g>
         );
       default:

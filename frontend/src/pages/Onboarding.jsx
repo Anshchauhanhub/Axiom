@@ -9,6 +9,7 @@ import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MessageBubble from '../components/MessageBubble';
 import GoalSelectionGrid from '../components/GoalSelectionGrid';
+import InteractiveDiscoveryCard from '../components/InteractiveDiscoveryCard';
 import { 
   Send, Activity, ChevronRight, History, 
   BrainCircuit, Search, Video, MessageSquare, 
@@ -18,7 +19,7 @@ import {
 
 const Onboarding = () => {
   const { user, loginUser } = useAuth();
-  const { refreshData } = useData();
+  const { refreshData, setSelectedGoalId } = useData();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -43,6 +44,7 @@ const Onboarding = () => {
   const [phase, setPhase] = useState('discovery');
   const [draftRoadmap, setDraftRoadmap] = useState(null);
   const [goalTitle, setGoalTitle] = useState('');
+  const [extractedProfile, setExtractedProfile] = useState({});
   const [isTyping, setIsTyping] = useState(false);
 
   // Configuration state
@@ -169,6 +171,9 @@ const Onboarding = () => {
       let displayedMessage = "";
       
       if (res.phase) setPhase(res.phase);
+      if (res.study_profile_update && Object.keys(res.study_profile_update).length > 0) {
+        setExtractedProfile(prev => ({ ...prev, ...res.study_profile_update }));
+      }
       if (res.draft_roadmap) {
         setDraftRoadmap(res.draft_roadmap);
         setGoalTitle(res.goal_title || inputText || userMsg.content);
@@ -195,6 +200,43 @@ const Onboarding = () => {
       setIsTyping(false);
     }
   };
+
+  const handleDiscoverySubmit = async (prefs) => {
+    setExtractedProfile(prev => ({
+      ...prev,
+      months_remaining: prefs.months,
+      study_hours_per_day: prefs.dailyHours,
+      preferred_language: prefs.language,
+      preferred_youtubers: prefs.playlistUrl || 'Web Search / Top Playlists'
+    }));
+
+    const userMsg = { role: 'user', content: prefs.summaryText };
+    setMessages(prev => [...prev, userMsg]);
+    setIsTyping(true);
+
+    try {
+      const res = await onboardingChat([...messages, userMsg], currentSessionId);
+      if (res.session_id && !currentSessionId) {
+        setCurrentSessionId(res.session_id);
+        loadChatSessions();
+      }
+      if (res.phase) setPhase(res.phase);
+      if (res.study_profile_update) {
+        setExtractedProfile(prev => ({ ...prev, ...res.study_profile_update }));
+      }
+      if (res.draft_roadmap) {
+        setDraftRoadmap(res.draft_roadmap);
+        setGoalTitle(res.goal_title || extractedProfile.target_exam || "Master Learning Path");
+      }
+      setMessages(prev => [...prev, { role: 'assistant', content: res.message || "I have synthesized your master roadmap based on your choices!", phase: res.phase || phase }]);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to synthesize roadmap.");
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
 
   const handleYoutubeSynthesis = async (e) => {
     e.preventDefault();
@@ -275,7 +317,10 @@ const Onboarding = () => {
         quiz_level: quizLevel,
         quiz_questions: quizQuestions
       };
-      await finalizeGoal(title, draftRoadmap, settings);
+      const newGoal = await finalizeGoal(title, draftRoadmap, settings);
+      if (newGoal && newGoal.id) {
+        setSelectedGoalId(newGoal.id);
+      }
       await refreshData();
       navigate('/');
     } catch (e) {
@@ -486,9 +531,51 @@ const Onboarding = () => {
               </div>
             )}
 
-            {onboardingMode === 'chat' && messages.length > 0 && messages.map((m, i) => (
-              <MessageBubble key={i} message={m.content} role={m.role} phase={m.role === 'assistant' ? (m.phase || phase) : null} />
-            ))}
+            {onboardingMode === 'chat' && messages.length > 0 && (
+              <div className="mb-6 bg-surface-container-highest/40 border border-primary/20 rounded-2xl p-4 sm:p-5 backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-primary animate-pulse" />
+                    <span className="text-xs font-headline uppercase font-bold tracking-wider text-primary">Interactive Learning Draft Box</span>
+                  </div>
+                  <span className="text-[10px] font-label text-on-surface-variant/60 uppercase tracking-widest">Live Auto-Update</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Target Goal</span>
+                    <span className="font-bold text-white truncate block">{extractedProfile.target_exam || 'In Discovery...'}</span>
+                  </div>
+                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Timeline</span>
+                    <span className="font-bold text-white truncate block">{extractedProfile.months_remaining ? `${extractedProfile.months_remaining} Months` : 'Discussing...'}</span>
+                  </div>
+                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Teaching Language</span>
+                    <span className="font-bold text-primary truncate block">{extractedProfile.preferred_language || 'Hindi/Hinglish/Eng'}</span>
+                  </div>
+                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Preferred Channels</span>
+                    <span className="font-bold text-secondary truncate block">{extractedProfile.preferred_youtubers || 'Top Playlists'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {onboardingMode === 'chat' && messages.length > 0 && messages.map((m, i) => {
+              const lastAssistantIdx = messages.findLastIndex(msg => msg.role === 'assistant');
+              const isLastAssistant = i === lastAssistantIdx;
+              return (
+                <MessageBubble 
+                  key={i} 
+                  message={m.content} 
+                  role={m.role} 
+                  phase={m.role === 'assistant' ? (m.phase || phase) : null} 
+                  onDiscoverySubmit={!draftRoadmap ? handleDiscoverySubmit : null}
+                  targetExam={extractedProfile.target_exam}
+                  isLastAssistantMessage={isLastAssistant}
+                />
+              );
+            })}
 
             {onboardingMode === 'predefined' && !draftRoadmap && (
                <div className="h-full w-full py-8">

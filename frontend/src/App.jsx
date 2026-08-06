@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
 import { DataProvider } from './context/DataContext';
 import { ToastProvider } from './context/ToastContext';
@@ -8,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 import OfflineBanner from './components/OfflineBanner';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import ErrorBoundary from './components/ErrorBoundary';
+
 // Lazy-loaded pages for code splitting
 const Landing = lazy(() => import('./pages/Landing'));
 const Auth = lazy(() => import('./pages/Auth'));
@@ -48,33 +50,35 @@ function App() {
 
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <AuthProvider>
-        <DataProvider>
-          <Router>
-            <ToastProvider>
-              <ScrollToTop />
-              <OfflineBanner />
-              <Layout>
-                <ErrorBoundary>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Landing />} />
-                      <Route path="/login" element={<Auth />} />
-                      <Route path="/register" element={<Auth />} />
-                      <Route path="/dashboard" element={<ProtectedRoute><DashboardRoute /></ProtectedRoute>} />
-                      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                      <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
-                      <Route path="/notebooks" element={<ProtectedRoute><Notebooks /></ProtectedRoute>} />
-                      <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </ErrorBoundary>
-              </Layout>
-            </ToastProvider>
-          </Router>
-        </DataProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <DataProvider>
+            <Router>
+              <ToastProvider>
+                <ScrollToTop />
+                <OfflineBanner />
+                <Layout>
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/login" element={<Auth />} />
+                        <Route path="/register" element={<Auth />} />
+                        <Route path="/dashboard" element={<ProtectedRoute><DashboardRoute /></ProtectedRoute>} />
+                        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                        <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
+                        <Route path="/notebooks" element={<ProtectedRoute><Notebooks /></ProtectedRoute>} />
+                        <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  </ErrorBoundary>
+                </Layout>
+              </ToastProvider>
+            </Router>
+          </DataProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </GoogleOAuthProvider>
   );
 }

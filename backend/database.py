@@ -12,9 +12,9 @@ if not DATABASE_URL:
 if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Railway/Render usually require SSL, but local dev might not.
-# We'll use ssl=True if 'railway' or 'render' is in the URL, or if specified.
-use_ssl = "railway" in DATABASE_URL or "render" in DATABASE_URL if DATABASE_URL else False
+# Railway/Render/Neon/Supabase require SSL, but local dev might not.
+# We'll use ssl=True if a remote database host is detected in the URL.
+use_ssl = any(k in DATABASE_URL for k in ("railway", "render", "neon.tech", "supabase.co")) if DATABASE_URL else False
 
 engine = create_async_engine(
     DATABASE_URL,
@@ -50,6 +50,8 @@ async def init_db():
         await conn.execute(text("UPDATE users SET account_type = 'student' WHERE account_type IS NULL"))
         # Monetization: credit column
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 5"))
+        # Persistent memory: study_profile column
+        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS study_profile JSONB DEFAULT '{}'::jsonb"))
         # Agentic system upgrade: roadmap template cache + goal tracking columns
         await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES roadmap_templates(id)"))
         await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS cache_hit BOOLEAN DEFAULT FALSE"))

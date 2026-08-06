@@ -126,9 +126,15 @@ _allowed_origins = os.getenv(
     "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",")
 
+# ─── CORS — locked to explicit origins ────────────────────────────────
+_allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex="https?://.*",
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "*"],
@@ -144,6 +150,26 @@ api_router.include_router(telegram_router)
 api_router.include_router(personal_router, prefix="/personal", tags=["Personal Tasks"])
 
 app.include_router(api_router) 
+
+# Specific endpoints must be defined BEFORE the catch-all wildcard
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/")
+async def root():
+    # If static index.html exists, serve it, otherwise return API info
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {
+        "name": "Edxiom AI API",
+        "status": "operational",
+        "version": "1.0.0",
+    }
+
+
 # Serve Static Files (Frontend Build)
 # In production, Vite builds to /frontend/dist. We copy this to /backend/static in Docker.
 STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
@@ -182,24 +208,6 @@ if os.path.exists(STATIC_DIR):
         if not os.path.exists(index_path):
              logger.error(f"❌ index.html NOT FOUND at {index_path}")
         return FileResponse(index_path)
-
-
-@app.get("/")
-async def root():
-    # If static index.html exists, serve it, otherwise return API info
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {
-        "name": "Edxiom AI API",
-        "status": "operational",
-        "version": "1.0.0",
-    }
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
 
 
 if __name__ == "__main__":

@@ -328,6 +328,14 @@ async def onboarding_chat(
         
         goal_context = "\n".join(goal_context_lines)
 
+        # Append persistent study profile to context
+        user_study_profile = user.study_profile if user.study_profile else {}
+        profile_lines = []
+        for k, v in user_study_profile.items():
+            profile_lines.append(f"- {k.replace('_', ' ').title()}: {v}")
+        profile_summary = "\n".join(profile_lines) if profile_lines else "No persistent profile facts registered yet."
+        goal_context = f"{goal_context}\n\n### PERSISTENT USER MEMORY:\n{profile_summary}"
+
         # 3. Fetch last 15 messages for context
         history_result = await db.execute(
             select(ChatMessage)
@@ -348,6 +356,16 @@ async def onboarding_chat(
         from services.groq import generate_onboarding_response
         response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
         response_data["session_id"] = session_id
+
+        # Update user's study profile if model returned any updates
+        profile_update = response_data.get("study_profile_update")
+        if profile_update and isinstance(profile_update, dict):
+            updated_profile = {**user_study_profile, **profile_update}
+            updated_profile = {k: v for k, v in updated_profile.items() if v not in (None, "None")}
+            user.study_profile = updated_profile
+            db.add(user)
+            await db.commit()
+            logger.info(f"💾 Updated study profile persistent memory for user {user.id}: {updated_profile}")
 
         # 5.5. AGENTIC ROADMAP OVERRIDE — if the chat produced a draft roadmap,
         # re-generate it through the full agentic pipeline (entity detection →

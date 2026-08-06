@@ -5,18 +5,30 @@
 @import "tailwindcss";
 
 /* ─── Theme: Colors, Fonts, Border Radii ─────────────────────────────── */
+:root {
+  --bg: #0F1115;
+  --surface: #171A21;
+  --surface-2: #1D2129;
+  --surface-hover: #252A33;
+  --text: #F5F7FA;
+  --text-muted: #A7AFBC;
+  --border: #2A303A;
+  --accent: #F5B51B;
+  --accent-text: #111111;
+}
+
 @theme {
   /* Primary (Gold) */
-  --color-primary: #fdb813;
-  --color-primary-container: #fdb813;
+  --color-primary: #F5B51B;
+  --color-primary-container: #F5B51B;
   --color-primary-fixed: #ffdf99;
-  --color-primary-fixed-dim: #fdb813;
-  --color-on-primary: #251a00;
-  --color-on-primary-container: #251a00;
+  --color-primary-fixed-dim: #F5B51B;
+  --color-on-primary: #111111;
+  --color-on-primary-container: #111111;
   --color-on-primary-fixed: #001a42;
   --color-on-primary-fixed-variant: #004395;
   --color-inverse-primary: #005ac2;
-  --color-surface-tint: #fdb813;
+  --color-surface-tint: #F5B51B;
 
   /* Secondary (Green) */
   --color-secondary: #00b359;
@@ -45,25 +57,25 @@
   --color-on-error-container: #ffdad6;
 
   /* Surfaces */
-  --color-background: #0e0e10;
-  --color-on-background: #e5e1e4;
-  --color-surface: #0e0e10;
-  --color-surface-dim: #0e0e10;
-  --color-surface-bright: #39393b;
-  --color-surface-variant: #353437;
-  --color-surface-container: #201f22;
-  --color-surface-container-low: #1c1b1d;
-  --color-surface-container-high: #2a2a2c;
-  --color-surface-container-highest: #353437;
-  --color-surface-container-lowest: #0e0e10;
-  --color-on-surface: #e5e1e4;
-  --color-on-surface-variant: #c2c6d6;
-  --color-inverse-surface: #e5e1e4;
-  --color-inverse-on-surface: #313032;
+  --color-background: var(--bg);
+  --color-on-background: var(--text);
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--bg);
+  --color-surface-bright: var(--surface-2);
+  --color-surface-variant: var(--surface-2);
+  --color-surface-container: var(--surface);
+  --color-surface-container-low: var(--bg);
+  --color-surface-container-high: var(--surface-2);
+  --color-surface-container-highest: var(--surface-hover);
+  --color-surface-container-lowest: var(--bg);
+  --color-on-surface: var(--text);
+  --color-on-surface-variant: var(--text-muted);
+  --color-inverse-surface: var(--text);
+  --color-inverse-on-surface: var(--bg);
 
   /* Outline */
-  --color-outline: #8c909f;
-  --color-outline-variant: #424754;
+  --color-outline: var(--border);
+  --color-outline-variant: var(--border);
 
   /* Fonts */
   --font-headline: "Inter";
@@ -75,6 +87,89 @@
   --radius-lg: 0.25rem;
   --radius-xl: 0.5rem;
   --radius-full: 0.75rem;
+}
+
+/* Default Dark Body Background */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* ─── Light Mode Theme Overrides ───────────────────────────────────── */
+html.light {
+  --bg: #F6F8FA;
+  --surface: #FFFFFF;
+  --surface-2: #F0F2F5;
+  --surface-hover: #EAECEF;
+  --text: #111827;
+  --text-muted: #667085;
+  --border: #E4E7EC;
+  --accent: #F5B51B;
+  --accent-text: #111111;
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+html.light .bg-\[\#0e0e10\],
+html.light .bg-\[\#0e0e10\]\/95,
+html.light .bg-\[\#0e0e10\]\/50 {
+  background-color: var(--bg) !important;
+}
+
+html.light .bg-\[\#131315\],
+html.light .bg-\[\#111111\],
+html.light .bg-\[\#111111\]\/80,
+html.light .bg-\[\#1c1b1d\] {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+}
+
+html.light .bg-white\/3,
+html.light .bg-white\/5,
+html.light .bg-white\/8,
+html.light .bg-white\/10,
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.01\],
+html.light .bg-white\/\[0\.05\] {
+  background-color: var(--surface-2) !important;
+}
+
+html.light .border-white\/5,
+html.light .border-white\/8,
+html.light .border-white\/10,
+html.light .border-white\/20,
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/\[0\.05\] {
+  border-color: var(--border) !important;
+}
+
+html.light .text-white,
+html.light .text-white\/90,
+html.light .text-white\/95 {
+  color: var(--text) !important;
+}
+
+html.light .text-white\/40,
+html.light .text-white\/50,
+html.light .text-white\/60 {
+  color: var(--text-muted) !important;
+}
+
+html.light .text-white\/30,
+html.light .text-white\/20 {
+  color: #94a3b8 !important;
+}
+
+html.light .glass-morphism,
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--border) !important;
 }
 
 

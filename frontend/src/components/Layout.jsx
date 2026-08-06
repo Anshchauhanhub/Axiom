@@ -13,7 +13,7 @@ const Layout = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const hideAIAgent = hideNavigation || ['/onboarding'].includes(path);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [mood, setMood] = useState(3);
+  const [mood, setMood] = useState(4);
 
   // Auto-calculate mood from task progress
   useEffect(() => {
@@ -21,7 +21,7 @@ const Layout = ({ children }) => {
     const calculateMood = async () => {
       try {
         const tasks = await getAllTasks();
-        if (!tasks || tasks.length === 0) { setMood(3); return; }
+        if (!tasks || tasks.length === 0) { setMood(4); return; }
         const now = new Date();
         const total = tasks.length;
         let completed = 0, overdue = 0;
@@ -32,42 +32,37 @@ const Layout = ({ children }) => {
             overdue++;
           }
         });
-        const incomplete = total - completed;
         const completionRatio = completed / total;
         const overdueRatio = overdue / total;
-        const incompleteRatio = incomplete / total;
 
-        if (overdueRatio >= 0.3) setMood(1);
-        else if (overdueRatio >= 0.15) setMood(2);
-        else if (incompleteRatio >= 0.8 && total > 3) setMood(2);
-        else if (completionRatio >= 0.7) setMood(5);
-        else if (completionRatio >= 0.4) setMood(4);
-        else if (completionRatio >= 0.1) setMood(3);
-        else setMood(2);
-      } catch (e) { /* ignore */ }
+        if (completionRatio >= 0.7) setMood(5);
+        else if (completionRatio >= 0.3) setMood(4);
+        else if (overdueRatio >= 0.5) setMood(3);
+        else setMood(4);
+      } catch (e) { setMood(4); }
     };
     calculateMood();
   }, [hideAIAgent, path]);
 
   const getMoodGradient = (m) => {
     switch (m) {
-      case 5: return 'from-green-400 to-emerald-600';
-      case 4: return 'from-yellow-300 to-green-400';
-      case 3: return 'from-yellow-400 to-green-500';
-      case 2: return 'from-orange-400 to-red-400';
-      case 1: return 'from-red-500 to-red-800';
-      default: return 'from-yellow-400 to-green-500';
+      case 5: return 'from-emerald-400 to-teal-500';
+      case 4: return 'from-primary to-amber-500';
+      case 3: return 'from-amber-400 to-primary';
+      case 2: return 'from-orange-400 to-amber-500';
+      case 1: return 'from-primary to-amber-600';
+      default: return 'from-primary to-amber-500';
     }
   };
 
   const getMoodIndicator = (m) => {
     switch (m) {
-      case 5: return 'border-green-500';
-      case 4: return 'border-green-400';
-      case 3: return 'border-green-500';
-      case 2: return 'border-orange-500';
-      case 1: return 'border-red-500';
-      default: return 'border-green-500';
+      case 5: return 'border-emerald-400';
+      case 4: return 'border-primary';
+      case 3: return 'border-amber-400';
+      case 2: return 'border-orange-400';
+      case 1: return 'border-primary';
+      default: return 'border-primary';
     }
   };
 
@@ -85,7 +80,7 @@ const Layout = ({ children }) => {
       <main className={`flex-1 flex flex-col items-center justify-start w-full transition-all duration-300 relative ${
         hideNavigation 
           ? 'p-0 max-w-none' 
-          : `pt-24 pb-8 px-3 sm:px-4 lg:pt-16 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
+          : `pt-24 pb-8 px-3 sm:px-4 lg:pt-20 lg:pb-12 ${isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-64'}`
       }`}>
         {children}
       </main>

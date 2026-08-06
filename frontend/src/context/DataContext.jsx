@@ -119,12 +119,35 @@ export const DataProvider = ({ children }) => {
 
   const refreshData = useCallback(async () => {
     const g = await fetchGoals();
-    if (selectedGoalId) {
-      await loadRoadmap(selectedGoalId, true);
+    let currentSelected = selectedGoalId;
+    if (!currentSelected || !g.some(goal => goal.id === currentSelected)) {
+      const activeGoal = g.find(goal => goal.status === 'active') || g[0];
+      if (activeGoal) {
+        currentSelected = activeGoal.id;
+        setSelectedGoalId(currentSelected);
+        localStorage.setItem('edxiom_selected_goal', currentSelected);
+      } else {
+        currentSelected = null;
+        setSelectedGoalId(null);
+        localStorage.removeItem('edxiom_selected_goal');
+      }
     }
-    // Refresh all cached roadmaps
+    if (currentSelected) {
+      await loadRoadmap(currentSelected, true);
+    } else {
+      setRoadmap(null);
+    }
+
     if (g.length > 0) {
+      // Purge cache of any deleted goals
+      const validIds = new Set(g.map(item => item.id));
+      Object.keys(roadmapCacheRef.current).forEach(id => {
+        if (!validIds.has(id)) delete roadmapCacheRef.current[id];
+      });
       await loadAllRoadmaps(g, true);
+    } else {
+      roadmapCacheRef.current = {};
+      setAllRoadmaps({});
     }
   }, [fetchGoals, selectedGoalId, loadRoadmap, loadAllRoadmaps]);
 

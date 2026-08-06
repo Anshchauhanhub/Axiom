@@ -20,6 +20,7 @@ class User(Base):
     study_schedule = Column(JSONB, default=lambda: ["12:00", "18:00"])
     current_streak = Column(Integer, default=0)
     credits = Column(Integer, default=5, nullable=False) # Ad-supported monetization
+    study_profile = Column(JSONB, default=dict) # Persistent user memory / student profile
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")

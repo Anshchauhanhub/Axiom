@@ -72,21 +72,26 @@ async def search_entity_deep(entity: str) -> str:
         return await search_internet(f"{entity} official syllabus exam pattern latest")
 
 
-async def search_youtube_videos(query: str, max_results: int = 3) -> list[dict]:
+async def search_youtube_videos(query: str, max_results: int = 5, language: str = "", preferred_creator: str = "") -> list[dict]:
     """
     Search YouTube for relevant videos and return a list of {title, video_id} dicts.
-    Uses DuckDuckGo video search to avoid needing a YouTube API key.
+    Supports filtering by preferred language (Hindi, Hinglish, English) and creator/channel name.
     """
-    logger.info(f"🎬 YouTube search: '{query}'")
+    search_term = query
+    if preferred_creator:
+        search_term = f"{preferred_creator} {search_term}"
+    if language:
+        search_term = f"{search_term} in {language}"
+
+    logger.info(f"🎬 Tailored YouTube search: '{search_term}'")
     try:
         with DDGS() as ddgs:
             results = await asyncio.to_thread(
-                lambda: list(ddgs.videos(f"{query} site:youtube.com", max_results=max_results))
+                lambda: list(ddgs.videos(f"{search_term} site:youtube.com", max_results=max_results))
             )
             
             videos = []
             for r in results:
-                # Extract video ID from the embed or content URL
                 url = r.get("content", "") or r.get("embed_url", "")
                 title = r.get("title", "")
                 
@@ -101,9 +106,38 @@ async def search_youtube_videos(query: str, max_results: int = 3) -> list[dict]:
                 if video_id and title:
                     videos.append({"title": title, "video_id": video_id})
             
-            logger.info(f"✅ Found {len(videos)} YouTube videos for: '{query}'")
+            logger.info(f"✅ Found {len(videos)} YouTube videos for: '{search_term}'")
             return videos
             
     except Exception as e:
         logger.warning(f"YouTube search failed (non-fatal): {e}")
+        return []
+
+
+async def search_youtube_playlists(query: str, language: str = "", preferred_creator: str = "", max_results: int = 3) -> list[dict]:
+    """
+    Search DuckDuckGo for top YouTube playlists and course series matching query, language, and creator.
+    """
+    search_term = f"{query} full playlist course series"
+    if preferred_creator:
+        search_term = f"{preferred_creator} {search_term}"
+    if language:
+        search_term = f"{search_term} {language}"
+    
+    logger.info(f"📺 YouTube playlist search: '{search_term}'")
+    try:
+        with DDGS() as ddgs:
+            results = await asyncio.to_thread(
+                lambda: list(ddgs.text(f"{search_term} site:youtube.com/playlist", max_results=max_results))
+            )
+            playlists = []
+            for r in results:
+                playlists.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("href", ""),
+                    "snippet": r.get("body", "")
+                })
+            return playlists
+    except Exception as e:
+        logger.warning(f"Playlist search failed: {e}")
         return []
