@@ -126,7 +126,10 @@ async def get_playlist_data(url: str):
             return None
 
 
-from youtube_transcript_api import YouTubeTranscriptApi
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except ImportError:
+    YouTubeTranscriptApi = None
 import asyncio
 
 async def get_video_transcript(video_id: str) -> str:
@@ -134,7 +137,7 @@ async def get_video_transcript(video_id: str) -> str:
     Fetches the transcript text of a YouTube video.
     Returns None if fetching fails.
     """
-    if not video_id:
+    if not video_id or YouTubeTranscriptApi is None:
         return None
     try:
         logger.info(f"🎥 Fetching transcript for video ID: {video_id}")
@@ -150,4 +153,5 @@ async def get_video_transcript(video_id: str) -> str:
     except Exception as e:
         logger.warning(f"Could not retrieve transcript for video {video_id}: {e}")
     return None
+
 
