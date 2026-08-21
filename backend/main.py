@@ -121,16 +121,15 @@ app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
 
 # ─── CORS — locked to explicit origins ────────────────────────────────
-_allowed_origins = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"
-).split(",")
-
-# ─── CORS — locked to explicit origins ────────────────────────────────
-_allowed_origins = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173"
-).split(",")
+_allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if _allowed_origins_env:
+    _allowed_origins = [o.strip() for o in _allowed_origins_env.split(",") if o.strip()]
+else:
+    _allowed_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://axiom-t3z9.onrender.com",
+    ]
 
 app.add_middleware(
     CORSMiddleware,

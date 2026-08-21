@@ -46,7 +46,8 @@ const DashboardRoute = () => {
 };
 
 function App() {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id.apps.googleusercontent.com';
+  const rawClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id.apps.googleusercontent.com';
+  const clientId = rawClientId.replace(/["'\r\n]/g, '').trim();
 
   return (
     <GoogleOAuthProvider clientId={clientId}>
