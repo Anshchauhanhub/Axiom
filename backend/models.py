@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, BigInteger, Boolean, ForeignKey, Text, DateTime, Float
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -45,13 +46,13 @@ class PersonalTask(Base):
 
 
 class RoadmapTemplate(Base):
-    """Canonical, reusable roadmap templates — the expensive LLM output, cached."""
+    """Canonical, reusable roadmap templates — the expensive LLM output, cached via pgvector."""
     __tablename__ = "roadmap_templates"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     goal_hash = Column(String, unique=True, nullable=False, index=True)  # SHA256 of normalized goal
     goal_text = Column(Text, nullable=False)  # Original phrasing, for reference
-    pinecone_vector_id = Column(String, nullable=True)  # Pointer into Pinecone index
+    embedding = Column(Vector(384), nullable=True)  # pgvector embedding for semantic search
     syllabus_json = Column(JSONB, nullable=False)  # The Task -> Part hierarchy
     hit_count = Column(Integer, default=1)  # Track reuse for analytics
     detected_entity = Column(String, nullable=True)  # e.g. "GATE DA", "CAT" — for entity-linked syllabi

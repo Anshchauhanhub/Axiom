@@ -305,36 +305,46 @@ async def onboarding_chat(
         db.add(user_msg)
         await db.commit()
 
-        # 2. Fetch goal context and schedule
-        goal_result = await db.execute(
-            select(Goal).where(Goal.user_id == user.id)
-        )
-        all_goals = goal_result.scalars().all()
+        # ─────────────────────────────────────────────────────────────────
+        # LAYER 1 — Intent Guard Pre-Check (First Shield)
+        # Pure Python, $0 cost, <1ms. Short-circuits before any LLM call.
+        # ─────────────────────────────────────────────────────────────────
+        from services.intent_guard import check_intent, verify_output, get_off_topic_system_note, IntentResult
         
-        active_goals = [g.title for g in all_goals if g.status == "active"]
-        paused_goals = [g.title for g in all_goals if g.status == "paused"]
+        user_text = req.messages[-1].content
+        guard = check_intent(user_text)
         
-        goal_context_lines = []
-        if active_goals:
-            goal_context_lines.append(f"Active goals: {', '.join(active_goals)}")
-        if paused_goals:
-            goal_context_lines.append(f"Paused goals: {', '.join(paused_goals)}")
+        if guard.short_circuit_response:
+            # Crisis / Abuse / Exam-Emergency → return card immediately, skip LLM
+            response_data = dict(guard.short_circuit_response)
+            response_data["session_id"] = session_id
             
-        if not active_goals and not paused_goals:
-            goal_context_lines.append("No active or paused goals yet.")
+            logger.info(f"🛡️ Intent Guard short-circuited: intent={guard.intent.value}")
             
-        schedule = user.study_schedule if user.study_schedule else ["None set"]
-        goal_context_lines.append(f"User's study schedule (times): {', '.join(schedule)}")
-        
-        goal_context = "\n".join(goal_context_lines)
+            # Still save the AI "response" to DB so chat history is consistent
+            assistant_msg = ChatMessage(
+                session_id=session_id,
+                user_id=user.id,
+                role="assistant",
+                content=response_data.get("message", "")
+            )
+            db.add(assistant_msg)
+            await db.commit()
+            return response_data
 
-        # Append persistent study profile to context
-        user_study_profile = user.study_profile if user.study_profile else {}
-        profile_lines = []
-        for k, v in user_study_profile.items():
-            profile_lines.append(f"- {k.replace('_', ' ').title()}: {v}")
-        profile_summary = "\n".join(profile_lines) if profile_lines else "No persistent profile facts registered yet."
-        goal_context = f"{goal_context}\n\n### PERSISTENT USER MEMORY:\n{profile_summary}"
+        # ─────────────────────────────────────────────────────────────────
+        # LAYER 2 — Learning Context Engine (RAG + User Profile)
+        # Replaces the ad-hoc goal_context string with a rich structured object.
+        # ─────────────────────────────────────────────────────────────────
+        from services.learning_context import build_learning_context, build_goal_context_string
+        
+        learning_ctx = await build_learning_context(user, db)
+        goal_context = build_goal_context_string(learning_ctx)
+        
+        # Add off-topic soft redirect note to system prompt if detected
+        if guard.intent == IntentResult.OFF_TOPIC:
+            goal_context += get_off_topic_system_note()
+            logger.info(f"📵 Soft redirect note injected for off-topic query")
 
         # 3. Fetch last 15 messages for context
         history_result = await db.execute(
@@ -352,12 +362,29 @@ async def onboarding_chat(
             for m in history_msgs
         ]
 
-        # 5. Generate AI response
+        # ─────────────────────────────────────────────────────────────────
+        # LAYER 3 — LLM Call (via groq.py which internally uses provider_chain)
+        # ─────────────────────────────────────────────────────────────────
         from services.groq import generate_onboarding_response
-        response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
+        from groq import RateLimitError
+        
+        try:
+            response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
+        except RateLimitError as rle:
+            logger.warning(f"Groq Rate Limit Error caught gracefully: {rle}")
+            return {
+                "session_id": session_id,
+                "message": "⚠️ Groq AI daily token quota reached. The system tried falling back to fast model, but total daily quota is exhausted. Please wait a short while for the quota to reset, or upgrade your Groq API key!",
+                "phase": "chat",
+                "mood": 3,
+                "draft_roadmap": None,
+                "goal_title": None
+            }
+
         response_data["session_id"] = session_id
 
         # Update user's study profile if model returned any updates
+        user_study_profile = user.study_profile if user.study_profile else {}
         profile_update = response_data.get("study_profile_update")
         if profile_update and isinstance(profile_update, dict):
             updated_profile = {**user_study_profile, **profile_update}
@@ -367,7 +394,7 @@ async def onboarding_chat(
             await db.commit()
             logger.info(f"💾 Updated study profile persistent memory for user {user.id}: {updated_profile}")
 
-        # 5.5. AGENTIC ROADMAP OVERRIDE — if the chat produced a draft roadmap,
+        # AGENTIC ROADMAP OVERRIDE — if the chat produced a draft roadmap,
         # re-generate it through the full agentic pipeline (entity detection →
         # deep web search → grounded generation → verification → YouTube videos).
         # This prevents the LLM from hallucinating exam syllabi (e.g. GATE DA ≠ Architecture).
@@ -382,16 +409,27 @@ async def onboarding_chat(
                     clarification_reply="beginner, no specific deadline",
                 )
                 
-                if agent_state.get("verified_syllabus") and not agent_state.get("error"):
-                    response_data["draft_roadmap"] = agent_state["verified_syllabus"]
+                roadmap = agent_state.get("verified_syllabus") or agent_state.get("draft_syllabus")
+                if roadmap and not agent_state.get("error"):
+                    response_data["draft_roadmap"] = roadmap
                     logger.info(
-                        f"✅ Agentic override success: {len(agent_state['verified_syllabus'])} tasks, "
+                        f"✅ Agentic override success: {len(roadmap)} tasks, "
                         f"entity={agent_state.get('detected_entity', 'none')}"
                     )
                 else:
                     logger.warning(f"Agentic override failed, keeping chat-generated roadmap: {agent_state.get('error')}")
             except Exception as e:
                 logger.warning(f"Agentic roadmap override error (keeping chat draft): {e}")
+
+        # ─────────────────────────────────────────────────────────────────
+        # LAYER 4 — Output Verifier Post-Check (Second Shield)
+        # Syllabus boundary check, hallucinated URL stripping.
+        # ─────────────────────────────────────────────────────────────────
+        response_data = verify_output(
+            response=response_data,
+            active_entity=learning_ctx.exam_entity,
+            syllabus_task_titles=learning_ctx.syllabus_summary,
+        )
 
         # 6. Save AI response to DB
         assistant_msg = ChatMessage(
@@ -446,12 +484,15 @@ async def finalize_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    user_id = user.id
+    user_tz = getattr(user, "timezone", "UTC") or "UTC"
+
     # ── Write this roadmap back into the cache for future users ───────
     template_id = await save_to_cache(req.title, req.roadmap, db)
 
     # ── Create Goal with cache linkage ────────────────────────────────
     goal = Goal(
-        user_id=user.id,
+        user_id=user_id,
         title=req.title,
         status="active",
         settings=req.settings or {},
@@ -468,7 +509,7 @@ async def finalize_goal(
         num_parts=total_parts,
         study_days=settings.get("study_days"),
         study_sessions=settings.get("study_sessions"),
-        user_timezone=user.timezone,
+        user_timezone=user_tz,
     )
     schedule_idx = 0
 
@@ -731,6 +772,7 @@ async def get_part_content(
         select(Part)
         .join(Task, Part.task_id == Task.id)
         .join(Goal, Task.goal_id == Goal.id)
+        .options(selectinload(Part.task).selectinload(Task.goal))
         .where(Part.id == part_id, Goal.user_id == user.id)
     )
     part = result.scalar_one_or_none()
@@ -747,7 +789,8 @@ async def get_part_content(
 
     # Trigger Generation
     try:
-        content = await synthesize_part_content(part.title)
+        goal_title = part.task.goal.title if (part.task and part.task.goal) else None
+        content = await synthesize_part_content(part.title, goal_title=goal_title)
         part.content = content
         await db.commit()
         

@@ -45,6 +45,12 @@ async def init_db():
     import models  # noqa: F401
 
     async with engine.begin() as conn:
+        # Enable pgvector extension on database if available
+        try:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        except Exception as e:
+            print(f"pgvector extension creation warning: {e}")
+
         await conn.run_sync(Base.metadata.create_all)
         await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR NOT NULL DEFAULT 'student'"))
         await conn.execute(text("UPDATE users SET account_type = 'student' WHERE account_type IS NULL"))
@@ -59,3 +65,12 @@ async def init_db():
         await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS detected_entity TEXT"))
         await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS verification_passed BOOLEAN DEFAULT TRUE"))
         await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ"))
+        
+        # Vector RAG migration (pgvector embedding column)
+        try:
+            await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS embedding vector(384)"))
+        except Exception as e:
+            print(f"pgvector column migration warning (falling back to generic column): {e}")
+            await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS embedding TEXT"))
+        await conn.execute(text("ALTER TABLE roadmap_templates DROP COLUMN IF EXISTS pinecone_vector_id"))
+

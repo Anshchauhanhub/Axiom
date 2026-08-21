@@ -4,15 +4,18 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
   if (!roadmap || !roadmap.tasks) return null;
 
   return (
-    <div className={`w-full lg:w-80 flex-col gap-6 shrink-0 transition-all duration-500 ${showNotes ? 'hidden' : 'flex'}`}>
-      <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 rounded-[2.5rem] p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <span className="material-symbols-outlined text-primary text-xl">account_tree</span>
-          <span className="text-[10px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant">Neural Path</span>
+    <div className={`w-full lg:w-80 flex-col gap-6 shrink-0 transition-all duration-500 ${showNotes ? 'hidden' : 'hidden lg:flex'}`}>
+      <div className="bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 shadow-2xl">
+        <div className="flex items-center gap-3 mb-6 px-2">
+          <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+            hub
+          </span>
+          <span className="text-[10px] font-label font-black uppercase tracking-[0.3em] text-primary/80">
+            NEURAL PATH
+          </span>
         </div>
         
-        <div className="space-y-4 relative">
-          <div className="absolute left-4 top-2 bottom-2 w-[1px] bg-outline-variant/20"></div>
+        <div className="space-y-3 relative">
           {roadmap.tasks.map((task, idx) => {
             const isActive = activeTask?.id === task.id;
             const isLocked = task.status === 'locked';
@@ -22,22 +25,30 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
               <button
                 key={task.id}
                 onClick={() => handleSelectTask(task)}
-                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 ${
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 text-left ${
                   isActive 
-                    ? 'bg-primary/10 border border-primary/20 scale-[1.02] shadow-lg' 
-                    : isLocked ? 'opacity-60 hover:bg-surface-container/30 border border-transparent cursor-pointer' : 'hover:bg-surface-container/50 border border-transparent'
+                    ? 'bg-gradient-to-r from-primary/15 to-primary/5 border-2 border-primary/60 shadow-[0_0_20px_rgba(253,184,19,0.15)] scale-[1.02]' 
+                    : isPassed
+                    ? 'bg-white/5 border border-white/10 hover:border-secondary/40 text-on-surface'
+                    : 'bg-white/5 border border-white/5 opacity-50 hover:opacity-100 hover:border-white/20'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-                  isActive ? 'bg-primary border-primary text-on-primary-container' : isPassed ? 'bg-secondary border-secondary text-on-secondary-container' : 'bg-surface border-outline-variant text-on-surface-variant'
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all ${
+                  isActive 
+                    ? 'bg-primary text-black shadow-lg shadow-primary/30 font-black' 
+                    : isPassed 
+                    ? 'bg-secondary/20 text-secondary border border-secondary/30' 
+                    : 'bg-white/10 text-white/50'
                 }`}>
                   {isPassed ? (
                     <span className="material-symbols-outlined text-sm">check</span>
                   ) : (
-                    <span className="text-[10px] font-black">{idx + 1}</span>
+                    idx + 1
                   )}
                 </div>
-                <span className={`text-[11px] font-label font-black text-left uppercase tracking-tight flex-1 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
+                <span className={`text-xs font-headline font-bold uppercase tracking-tight flex-1 line-clamp-2 ${
+                  isActive ? 'text-primary' : isPassed ? 'text-on-surface' : 'text-on-surface-variant'
+                }`}>
                   {task.title}
                 </span>
               </button>
@@ -50,3 +61,4 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
 };
 
 export default StudySidebar;
+

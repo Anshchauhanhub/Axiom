@@ -9,7 +9,7 @@ import {
   Heading1, Heading2, Heading3, Heading4, Type,
   Save, AlertCircle, Info, AlertTriangle, CheckCircle,
   Code, Minus, CheckSquare, Table as TableIcon, Sigma,
-  Highlighter, Palette, Plus, Download, FileText, File
+  Highlighter, Palette, Plus, Download, FileText, File, X
 } from 'lucide-react';
 
 const EditableContent = ({ content, onUpdate, onSlashCommand, onKeyDown, onFocus, className, placeholder, editorRef }) => {
@@ -57,7 +57,7 @@ const EditableContent = ({ content, onUpdate, onSlashCommand, onKeyDown, onFocus
   );
 };
 
-const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, activeGoalTitle }) => {
+const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, activeGoalTitle, onClose }) => {
   const [blocks, setBlocks] = useState([]);
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [slashMenuContext, setSlashMenuContext] = useState(null); // { id, x, y }
@@ -511,10 +511,10 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
   const wordCount = blocks.reduce((acc, b) => acc + (b.type === 'text' && typeof b.content === 'string' ? b.content.replace(/<[^>]*>?/gm, '').trim().split(/\s+/).filter(Boolean).length : 0), 0);
 
   return (
-    <div className="w-full flex flex-col min-h-full bg-slate-50 relative">
+    <div className="w-full h-full flex flex-col bg-slate-50 relative overflow-hidden">
       
       {/* PROFESSIONAL RIBBON TOOLBAR */}
-      <div className="sticky top-0 z-[100] w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm pl-6 pr-16 py-2 mb-6">
+      <div className="shrink-0 z-[100] w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 py-2">
         <div className="max-w-[1000px] mx-auto flex items-center justify-between">
           
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
@@ -586,7 +586,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
             </div>
           </div>
 
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="hidden sm:flex items-center gap-2 text-slate-400">
               {isSaving ? (
                 <><Save size={14} className="animate-pulse text-primary" /><span className="text-[10px] font-label uppercase tracking-widest font-black">Syncing</span></>
@@ -600,7 +600,7 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
                 className="flex items-center justify-center p-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all active:scale-95"
                 title="Download Note"
               >
-                <Download size={20} />
+                <Download size={18} />
               </button>
               
               {showDownloadMenu && (
@@ -628,13 +628,23 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
                 </div>
               )}
             </div>
+
+            {onClose && (
+              <button 
+                onClick={onClose}
+                className="flex items-center justify-center p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-95 ml-1 border border-slate-200/60"
+                title="Close Notebook"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* DOCUMENT PAGE */}
-      <div className="flex-grow flex flex-col items-center pb-40 px-4">
-        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] relative px-6 sm:px-12 py-8 sm:py-12 flex flex-col">
+      <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col items-center pt-6 pb-32 px-4">
+        <div ref={documentRef} className="w-full max-w-[850px] bg-white shadow-xl border border-slate-200/60 rounded-lg min-h-[1100px] h-auto relative px-6 sm:px-12 py-8 sm:py-16 flex flex-col mb-16 shrink-0">
           
           {/* Subtle Document Header */}
           <div className="mb-4 border-b border-slate-100 pb-4 transition-opacity duration-500 opacity-60 hover:opacity-100">
@@ -713,8 +723,8 @@ const MultimediaEditor = ({ initialContent, onSave, onShare, isSaving, user, act
         </div>
       </div>
       
-      {/* Sticky Bottom Stats Bar */}
-      <div className="sticky bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-3 flex justify-between items-center z-[100] text-xs font-label uppercase tracking-widest text-slate-500">
+      {/* Bottom Stats Bar */}
+      <div className="shrink-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 px-6 py-2 flex justify-between items-center z-[100] text-xs font-label uppercase tracking-widest text-slate-500">
         <div className="flex gap-6">
           <span>{wordCount} Words</span>
           <span>{blocks.length} Blocks</span>

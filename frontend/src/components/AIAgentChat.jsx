@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { onboardingChat, getChatSessions, getSessionMessages, deleteChatSession, getAllTasks } from '../services/api';
 import MessageBubble from './MessageBubble';
 import MoodFace from './MoodFace';
-import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose, Trash2 } from 'lucide-react';
+import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose, Trash2, Paperclip, X } from 'lucide-react';
 
 const AIAgentChat = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mood, setMood] = useState(3);
+  const [selectedFile, setSelectedFile] = useState(null);
   
   // New State for Toolbar Functionality
   const [isExpanded, setIsExpanded] = useState(false);
@@ -18,6 +19,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
   const [currentSessionId, setCurrentSessionId] = useState(null);
   
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,39 +38,62 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     }
   }, [showHistory, isOpen]);
 
-  // Auto-calculate mood from task progress
+  // Calculate mood based on task discipline — mirrors TopNav overdue logic exactly
   useEffect(() => {
     const calculateMood = async () => {
       try {
         const tasks = await getAllTasks();
         if (!tasks || tasks.length === 0) {
-          setMood(4);
+          setMood(3);
           return;
         }
+
         const now = new Date();
-        const total = tasks.length;
-        let completed = 0;
-        let overdue = 0;
+        const todayStr = now.toDateString();
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+
+        let overdueCount = 0;       // same logic as TopNav
+        let todayHasTasks = false;
+        let todayTotalTasks = 0;
+        let todayDoneTasks = 0;
 
         tasks.forEach(t => {
-          if (t.completed_at) {
-            completed++;
-          } else if (t.scheduled_at && new Date(t.scheduled_at) < now) {
-            overdue++;
+          if (!t.scheduled_at) return;
+          const scheduled = new Date(t.scheduled_at);
+          const scheduledDateStr = scheduled.toDateString();
+          // A task is done if completed_at is set OR status is passed
+          const isDone = !!(t.completed_at || t.status === 'passed');
+
+          if (scheduledDateStr === todayStr) {
+            todayHasTasks = true;
+            todayTotalTasks++;
+            if (isDone) todayDoneTasks++;
+          } else if (scheduled < todayStart && !isDone) {
+            // Same as TopNav: !completed_at && scheduled < now
+            overdueCount++;
           }
         });
 
-        const completionRatio = completed / total;
-        const overdueRatio = overdue / total;
-
-        if (completionRatio >= 0.7) setMood(5);     // Very happy
-        else if (completionRatio >= 0.3) setMood(4); // Cheerful
-        else if (overdueRatio >= 0.5) setMood(3);    // Attentive / Supportive
-        else setMood(4);                             // Encouraging default
+        // Mood rules (overdue COUNT not days — mirrors what notifications show)
+        if (overdueCount >= 2) {
+          setMood(1); // Very angry — multiple overdue tasks
+        } else if (overdueCount === 1) {
+          setMood(2); // Angry — 1 overdue task
+        } else if (todayHasTasks && todayDoneTasks >= todayTotalTasks) {
+          setMood(5); // All today's tasks done!
+        } else if (todayHasTasks && todayDoneTasks > 0) {
+          setMood(4); // Some done today
+        } else if (todayHasTasks) {
+          setMood(3); // Tasks due today, still time
+        } else {
+          setMood(4); // No tasks today, nothing overdue
+        }
       } catch (e) {
-        setMood(4);
+        setMood(3);
       }
     };
+
     if (isOpen) calculateMood();
   }, [isOpen]);
 
@@ -105,13 +130,46 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSend = async (text = input) => {
-    if (!text.trim() || loading) return;
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    const userMessage = { role: 'user', content: text };
+    if (file.type.startsWith('image/')) {
+      setSelectedFile({
+        name: file.name,
+        type: 'image',
+        content: `[Attached Image: ${file.name}]`
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target.result || '';
+        setSelectedFile({
+          name: file.name,
+          type: 'text',
+          content: `[Attached File: ${file.name}]\n--- File Content ---\n${text.slice(0, 6000)}\n--- End File Content ---`
+        });
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleSend = async (text = input) => {
+    const textToSend = text.trim();
+    if ((!textToSend && !selectedFile) || loading) return;
+
+    let fullContent = textToSend;
+    if (selectedFile) {
+      fullContent = textToSend 
+        ? `${textToSend}\n\n${selectedFile.content}`
+        : `Please analyze this attached file "${selectedFile.name}":\n\n${selectedFile.content}`;
+    }
+
+    const userMessage = { role: 'user', content: fullContent };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     if (text === input) setInput('');
+    setSelectedFile(null);
     setLoading(true);
 
     try {
@@ -143,11 +201,12 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     setMessages([]);
     setCurrentSessionId(null);
     setShowHistory(false);
+    setSelectedFile(null);
   };
 
   const refreshCurrentChat = () => {
-    // If there's a session, we could re-fetch it. For now, just clear local state.
     setMessages([]);
+    setSelectedFile(null);
   };
 
   // Determine dynamic classes based on modes
@@ -227,7 +286,17 @@ const AIAgentChat = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-white/10 bg-surface-container-highest/50">
             <div className="flex items-center gap-3">
-              <Sparkles size={18} className="text-primary hidden sm:block" />
+              {/* Always-visible mood face in header */}
+              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${moodStyles.bg} flex items-center justify-center p-0.5 shadow-lg ${moodStyles.shadow} relative shrink-0 transition-all duration-500`}>
+                <MoodFace mood={mood} size={30} />
+                <div className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface-container-highest ${moodStyles.indicator} transition-colors duration-500`} />
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface/90 leading-none">Edxiom AI</p>
+                <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wider mt-0.5">
+                  {mood === 5 ? 'Tasks done today' : mood === 4 ? 'On track' : mood === 3 ? 'Tasks due today' : mood === 2 ? '1 day missed' : 'Multiple days missed'}
+                </p>
+              </div>
             </div>
             
             <div className="flex items-center gap-0.5 sm:gap-1 text-on-surface-variant">
@@ -294,18 +363,44 @@ const AIAgentChat = ({ isOpen, onClose }) => {
 
           {/* Input */}
           <div className="p-4 border-t border-white/10 bg-surface-container-highest/80 backdrop-blur-md">
+            {selectedFile && (
+              <div className="mb-2 flex items-center justify-between bg-surface-container border border-white/10 px-3 py-1.5 rounded-xl text-xs text-on-surface animate-in fade-in duration-200">
+                <div className="flex items-center gap-2 truncate">
+                  <FileText size={14} className="text-primary shrink-0" />
+                  <span className="truncate">{selectedFile.name}</span>
+                </div>
+                <button type="button" onClick={() => setSelectedFile(null)} className="text-on-surface-variant hover:text-white p-0.5 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="relative flex items-center w-full bg-surface-container border border-white/10 rounded-[2rem] p-1.5 focus-within:border-primary/50 transition-colors">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".txt,.md,.json,.csv,.pdf,.png,.jpg,.jpeg,.js,.py,.html,.css"
+              />
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Upload file"
+                className="w-8 h-8 rounded-full text-on-surface-variant hover:text-primary hover:bg-white/10 flex items-center justify-center transition-colors ml-1 shrink-0"
+              >
+                <Paperclip size={16} />
+              </button>
               <input 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Do anything with AI..."
-                className="flex-1 bg-transparent text-sm text-on-surface py-2 pl-4 outline-none border-none ring-0 focus:outline-none focus:ring-0 focus:border-transparent shadow-none font-light placeholder:text-on-surface-variant/50"
+                placeholder="Do anything with AI or attach a file..."
+                className="flex-1 bg-transparent text-sm text-on-surface py-2 pl-3 outline-none border-none ring-0 focus:outline-none focus:ring-0 focus:border-transparent shadow-none font-light placeholder:text-on-surface-variant/50"
               />
               <div className="flex items-center gap-2 pr-1">
                 <button 
                   type="submit"
-                  disabled={loading || !input.trim()}
+                  disabled={loading || (!input.trim() && !selectedFile)}
                   className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-primary hover:text-black transition-colors"
                 >
                   <Send size={14} className="ml-0.5" />

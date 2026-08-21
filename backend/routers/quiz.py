@@ -51,6 +51,7 @@ async def start_quiz(
         select(Part)
         .join(Task, Part.task_id == Task.id)
         .join(Goal, Task.goal_id == Goal.id)
+        .options(selectinload(Part.task).selectinload(Task.goal))
         .where(Part.id == part_id, Goal.user_id == user.id)
     )
     part = part_result.scalar_one_or_none()
@@ -59,8 +60,11 @@ async def start_quiz(
     if part.status == "locked":
         raise HTTPException(status_code=403, detail="This part is locked. Complete previous parts first.")
 
+    goal_title = part.task.goal.title if (part.task and part.task.goal) else None
+    task_title = part.task.title if part.task else None
+
     # Generate random MCQs via Groq
-    mcqs = await generate_mcqs(part.title, count=5)
+    mcqs = await generate_mcqs(part.title, count=5, goal_title=goal_title, task_title=task_title)
 
     # Extract correct answers for the secret token
     correct_indices = [q.get("correct_index") for q in mcqs]

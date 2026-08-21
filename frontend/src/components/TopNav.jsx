@@ -139,18 +139,6 @@ const TopNav = () => {
 
   return (
     <div id="top-nav" className="fixed top-4 right-4 lg:top-6 lg:right-6 z-[99] pointer-events-auto flex items-center gap-3">
-      {/* Credits Display */}
-      {isLoggedIn() && user && (
-        <button
-          onClick={() => setAdModalOpen(true)}
-          className="h-11 flex items-center gap-2 px-3.5 bg-surface hover:bg-surface-bright border border-outline/20 hover:border-primary/50 rounded-xl shadow-md backdrop-blur-lg transition-all duration-300 group active:scale-95 shrink-0"
-        >
-          <span className="material-symbols-outlined text-[20px] text-primary group-hover:rotate-12 group-hover:scale-110 transition-transform">monetization_on</span>
-          <span className="text-primary/90 font-bold text-xs sm:text-sm select-none">{user.credits} Credits</span>
-          <span className="text-[10px] bg-primary/10 text-primary font-extrabold px-2 py-0.5 rounded-md border border-primary/20 ml-1 group-hover:bg-primary/20 transition-all">+ EARN</span>
-        </button>
-      )}
-
       {/* Notifications Button */}
       <div className="relative shrink-0" ref={dropdownRef}>
         <button 

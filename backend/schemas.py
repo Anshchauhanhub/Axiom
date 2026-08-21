@@ -2,7 +2,7 @@ import re
 import uuid
 from datetime import datetime
 from typing import Optional, Union
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # --- Auth ---
@@ -278,5 +278,24 @@ class YoutubeRoadmapRequest(BaseModel):
 class YoutubeRoadmapResponse(BaseModel):
     draft_roadmap: list[dict]
     goal_title: str
+
+
+# --- Agentic Exam Roadmap Pydantic Models (Step 4) ---
+class VideoResource(BaseModel):
+    title: str
+    url: str
+    satisfaction_score: float = Field(default=9.0, description="Score from 0.0 to 10.0 based on view ratio and transcript clarity")
+
+
+class SyllabusModule(BaseModel):
+    module_title: str
+    core_topics: list[str]
+    recommended_videos: list[VideoResource] = []
+
+
+class ExamRoadmap(BaseModel):
+    target_entity: str
+    total_estimated_weeks: int
+    modules: list[SyllabusModule]
 
 

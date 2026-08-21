@@ -136,20 +136,17 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
   }
 
   return (
-    <div className="space-y-8 h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
-        <div>
-           <span className="text-[10px] font-label tracking-[0.4em] text-primary uppercase font-black">Active Context</span>
-           <h2 className="text-3xl font-black font-headline text-on-surface uppercase tracking-tight mt-1">{activeTask.title}</h2>
+    <div className="space-y-6 h-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
+        <div className="text-left">
+           <h2 className="text-xl sm:text-2xl font-black font-headline text-white uppercase tracking-tight">
+             {activeTask.title}
+           </h2>
         </div>
       </div>
 
-      <div className="bg-surface-container-low/30 backdrop-blur-xl border border-outline-variant/10 p-4 sm:p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5">
-           <span className="material-symbols-outlined text-9xl">molecular_autonomy</span>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-6 relative z-10">
+      <div className="bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/10 p-4 sm:p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+        <div className="grid grid-cols-1 gap-4 relative z-10">
           {activeTask.parts.map((part, pidx) => {
             const isActive = part.status === 'active';
             const isPassed = part.status === 'passed';
@@ -159,29 +156,47 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
               <div 
                 key={part.id} 
                 onClick={() => !isLocked && handleStartLearning(part.id, part.title)}
-                className={`group flex items-center justify-between p-6 sm:p-8 rounded-[2.5rem] border-2 transition-all duration-500 ${
-                  !isLocked 
-                    ? 'bg-surface-container-low/80 border-outline-variant/10 cursor-pointer hover:border-primary/40 hover:bg-surface-container-low hover:translate-x-2' 
-                    : 'opacity-40 border-transparent grayscale'
+                className={`group flex items-center justify-between p-5 sm:p-7 rounded-[2rem] border transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-[#141418] border-primary/40 cursor-pointer shadow-[0_0_30px_rgba(253,184,19,0.1)] hover:border-primary' 
+                    : isPassed
+                    ? 'bg-[#121215] border-white/10 cursor-pointer hover:border-secondary/40'
+                    : 'bg-[#0f0f12] border-white/5 opacity-50 cursor-not-allowed'
                 }`}
               >
-                <div className="flex items-center gap-6">
-                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                     isActive ? 'bg-primary text-on-primary-container shadow-2xl' : isPassed ? 'bg-secondary/20 text-secondary' : 'bg-surface-container-highest/50 text-on-surface-variant'
+                <div className="flex items-center gap-5 text-left">
+                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${
+                     isActive 
+                       ? 'bg-primary text-black shadow-lg shadow-primary/30 font-black' 
+                       : isPassed 
+                       ? 'bg-secondary/20 text-secondary border border-secondary/30' 
+                       : 'bg-white/5 text-white/30 border border-white/5'
                    }`}>
-                     <span className="material-symbols-outlined text-3xl">
-                       {isPassed ? 'check_circle' : isActive ? 'bolt' : 'lock_open'}
+                     <span className="material-symbols-outlined text-2xl font-bold">
+                       {isPassed ? 'check' : isActive ? 'bolt' : 'lock'}
                      </span>
                    </div>
-                   <div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[9px] font-label tracking-[0.2em] uppercase text-on-surface-variant/40 font-black">Segment {pidx + 1}</span>
-                        {isActive && <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>}
+                   <div className="text-left">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-label tracking-[0.25em] uppercase font-black ${
+                          isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-white/40'
+                        }`}>
+                          SEGMENT {pidx + 1}
+                        </span>
+                        {isActive && <span className="w-2 h-2 bg-primary rounded-full animate-ping"></span>}
                       </div>
-                      <h4 className="text-xl font-black text-on-surface group-hover:text-primary transition-colors">{part.title.split(' || ')[0]}</h4>
+                      <h4 className={`text-base sm:text-xl font-bold transition-colors ${
+                        isActive ? 'text-white group-hover:text-primary' : isPassed ? 'text-white/90' : 'text-white/50'
+                      }`}>
+                        {part.title.split(' || ')[0]}
+                      </h4>
                    </div>
                 </div>
-                <span className="material-symbols-outlined text-on-surface-variant/20 group-hover:text-primary transition-all group-hover:translate-x-1">arrow_forward</span>
+                <span className={`material-symbols-outlined text-xl transition-all group-hover:translate-x-1 ${
+                  isActive ? 'text-primary' : isPassed ? 'text-secondary' : 'text-white/20'
+                }`}>
+                  arrow_forward
+                </span>
               </div>
             );
           })}

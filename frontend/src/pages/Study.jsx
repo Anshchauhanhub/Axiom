@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuth } from '../context/AuthContext';
 import { startQuiz, submitQuiz, getPartContent, updateGoalNotes, completeDirect } from '../services/api';
 import { useData } from '../context/DataContext';
@@ -7,6 +9,7 @@ import NeuralLoader from '../components/NeuralLoader';
 import MultimediaEditor from '../components/MultimediaEditor';
 import StudySidebar from '../components/study/StudySidebar';
 import StudyWorkbenchMain from '../components/study/StudyWorkbenchMain';
+import { getCategoryForGoal } from '../utils/categoryUtils';
 const Study = () => {
   const { user, refreshUser } = useAuth();
   const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId, setSelectedGoalId } = useData();
@@ -77,10 +80,19 @@ const Study = () => {
 
       const prevGoalId = activeGoal?.id;
       
-      // Default to the natural progress task if nothing is manually selected
-      if (!activeTaskRef.current) {
-         setActiveTask(foundTask);
-         activeTaskRef.current = true;
+      // Keep activeTask in sync with the latest roadmap data or select the natural progress task
+      if (roadmap.tasks && roadmap.tasks.length > 0) {
+        if (!activeTaskRef.current) {
+          setActiveTask(foundTask);
+          activeTaskRef.current = true;
+        } else if (activeTask) {
+          const freshTask = roadmap.tasks.find(t => t.id === activeTask.id);
+          if (freshTask) {
+            setActiveTask(freshTask);
+          } else {
+            setActiveTask(foundTask);
+          }
+        }
       }
       setActiveGoal(foundGoal);
       
@@ -259,6 +271,14 @@ const Study = () => {
     }
   };
 
+  const handleContinuePath = async () => {
+    if (result?.is_passed) {
+      activeTaskRef.current = false; // Reset lock ref so the newly active task/segment is chosen
+    }
+    setPhase('select');
+    await refreshData();
+  };
+
 
 
 
@@ -355,39 +375,22 @@ const Study = () => {
   );
 
   const renderParsedContent = (text) => {
-    const lines = text.split('\n');
-    const elements = [];
-    let currentBlock = [];
-    let inCodeBlock = false;
-    let codeLanguage = '';
+    if (!text) return null;
 
-    const parseInline = (line) => {
-      // Handle **bold**
-      const parts = line.split(/(\*\*.*?\*\*)/g);
-      return parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="font-black text-on-surface bg-primary/10 px-1 rounded">{part.slice(2, -2)}</strong>;
-        }
-        // Handle `code`
-        const codeParts = part.split(/(`.*?`)/g);
-        return codeParts.map((cp, j) => {
-          if (cp.startsWith('`') && cp.endsWith('`')) {
-            return <code key={j} className="bg-surface-container-highest px-1.5 py-0.5 rounded font-mono text-primary text-sm font-bold uppercase tracking-tighter">{cp.slice(1, -1)}</code>;
-          }
-          return cp;
-        });
-      });
-    };
+    // Extract any embedded youtube tags [youtube:VIDEO_ID]
+    const youtubeMatches = [...text.matchAll(/\[youtube:([a-zA-Z0-9_-]{11})\]/g)];
+    const youtubeIds = youtubeMatches.map((m) => m[1]);
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+    // Clean out youtube tag strings from the text so ReactMarkdown renders the rest
+    const cleanText = text.replace(/\[youtube:[a-zA-Z0-9_-]{11}\]/g, '').trim();
 
-      if (line.startsWith('[youtube:')) {
-        const videoId = line.replace('[youtube:', '').replace(']', '').trim();
-        elements.push(
-          <div key={`yt-${i}`} className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl aspect-video relative group transition-all duration-500 hover:border-primary/30">
+    return (
+      <div className="space-y-6 text-on-surface-variant">
+        {/* Render YouTube Video if present */}
+        {youtubeIds.map((vId, idx) => (
+          <div key={`yt-${idx}`} className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl aspect-video relative group transition-all duration-500 hover:border-primary/30">
             <iframe
-              src={`https://www.youtube.com/embed/${videoId}`}
+              src={`https://www.youtube.com/embed/${vId}`}
               title="YouTube video player"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -395,100 +398,158 @@ const Study = () => {
               className="absolute inset-0 w-full h-full"
             ></iframe>
           </div>
-        );
-        continue;
-      }
+        ))}
 
-      if (line.startsWith('```')) {
-        if (inCodeBlock) {
-          // Close block
-          elements.push(
-            <div key={`code-${i}`} className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl group transition-all duration-500 hover:border-primary/30">
-              <div className="bg-surface-container flex items-center justify-between px-6 py-3 border-b border-outline-variant/10">
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
-                </div>
-                <span className="text-[9px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant/40">{codeLanguage || 'CODE'}</span>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            // Headings
+            h1: ({ children }) => (
+              <h1 className="text-3xl sm:text-4xl font-black text-on-surface mt-10 mb-6 uppercase tracking-tight border-b border-primary/20 pb-4 flex items-center gap-3">
+                <span className="w-4 h-4 bg-primary rounded-sm rotate-45 shrink-0 inline-block"></span>
+                <span>{children}</span>
+              </h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="text-2xl sm:text-3xl font-black text-on-surface mt-10 mb-5 uppercase tracking-tight flex items-center gap-3">
+                <span className="w-3 h-3 bg-primary rounded-sm rotate-45 shrink-0 inline-block"></span>
+                <span>{children}</span>
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="text-xl font-bold text-primary mt-8 mb-4 tracking-wide uppercase flex items-center gap-2.5">
+                <span className="w-2 h-2 bg-primary rounded-full shrink-0 inline-block"></span>
+                <span>{children}</span>
+              </h3>
+            ),
+            h4: ({ children }) => (
+              <h4 className="text-lg font-bold text-primary/90 mt-6 mb-3 tracking-wide uppercase flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-primary/70 rounded-full shrink-0 inline-block"></span>
+                <span>{children}</span>
+              </h4>
+            ),
+            // Paragraphs & Text
+            p: ({ children }) => (
+              <p className="m-0 text-on-surface-variant/90 font-light leading-relaxed text-base sm:text-lg mb-4">
+                {children}
+              </p>
+            ),
+            // Bold & Strong
+            strong: ({ children }) => (
+              <strong className="font-bold text-primary">
+                {children}
+              </strong>
+            ),
+            // Italics
+            em: ({ children }) => (
+              <em className="italic text-on-surface/90 font-normal">
+                {children}
+              </em>
+            ),
+            // Lists
+            ul: ({ children }) => (
+              <ul className="space-y-2.5 my-4 pl-0 list-none">
+                {children}
+              </ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="space-y-2.5 my-4 pl-6 list-decimal text-primary font-bold">
+                {children}
+              </ol>
+            ),
+            li: ({ children }) => (
+              <li className="flex items-start gap-3 text-base font-light text-on-surface-variant/90 leading-relaxed bg-black/20 p-3.5 rounded-2xl border border-white/5 hover:border-primary/20 transition-all">
+                <span className="material-symbols-outlined text-primary text-base font-black shrink-0 mt-1">token</span>
+                <div className="flex-1 text-on-surface-variant">{children}</div>
+              </li>
+            ),
+            // Blockquotes
+            blockquote: ({ children }) => (
+              <blockquote className="my-6 p-5 rounded-2xl bg-primary/10 border-l-4 border-primary text-on-surface-variant backdrop-blur-md shadow-lg italic">
+                {children}
+              </blockquote>
+            ),
+            // Horizontal Rule
+            hr: () => <hr className="my-8 border-t border-outline-variant/20" />,
+            // Tables (GFM)
+            table: ({ children }) => (
+              <div className="my-8 overflow-x-auto rounded-2xl border border-white/10 shadow-2xl bg-[#0e0f14]">
+                <table className="w-full text-left border-collapse min-w-full divide-y divide-white/10">
+                  {children}
+                </table>
               </div>
-              <pre className="p-8 bg-[#0b0c10] overflow-x-auto custom-scrollbar">
-                <code className="text-sm font-mono text-slate-300 leading-relaxed block whitespace-pre">
-                  {currentBlock.join('\n')}
+            ),
+            thead: ({ children }) => (
+              <thead className="bg-surface-container-high/80 text-primary text-xs font-headline font-black uppercase tracking-widest">
+                {children}
+              </thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="divide-y divide-white/5 text-sm font-light text-on-surface/90">
+                {children}
+              </tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="hover:bg-white/5 transition-colors">
+                {children}
+              </tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-5 py-4 font-bold text-primary tracking-wider uppercase border-b border-white/10 text-xs">
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td className="px-5 py-4 text-xs sm:text-sm text-on-surface-variant/90 leading-relaxed">
+                {children}
+              </td>
+            ),
+            // Code Blocks & Inline Code
+            code: ({ inline, className, children, ...props }) => {
+              const match = /language-(\w+)/.exec(className || '');
+              return !inline && match ? (
+                <div className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl group transition-all duration-500 hover:border-primary/30">
+                  <div className="bg-surface-container flex items-center justify-between px-6 py-3 border-b border-outline-variant/10">
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
+                    </div>
+                    <span className="text-[9px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant/40">{match[1]}</span>
+                  </div>
+                  <pre className="p-6 sm:p-8 bg-[#0b0c10] overflow-x-auto custom-scrollbar">
+                    <code className="text-xs sm:text-sm font-mono text-slate-300 leading-relaxed block whitespace-pre" {...props}>
+                      {String(children).replace(/\n$/, '')}
+                    </code>
+                  </pre>
+                </div>
+              ) : (
+                <code className="bg-surface-container-highest px-2 py-0.5 rounded-md font-mono text-primary text-xs sm:text-sm font-semibold border border-primary/20" {...props}>
+                  {children}
                 </code>
-              </pre>
-            </div>
-          );
-          currentBlock = [];
-          inCodeBlock = false;
-        } else {
-          // Open block
-          inCodeBlock = true;
-          codeLanguage = line.slice(3).toUpperCase();
-        }
-        continue;
-      }
-
-      if (inCodeBlock) {
-        currentBlock.push(lines[i]);
-        continue;
-      }
-
-      if (line === '') {
-        elements.push(<div key={`space-${i}`} className="h-6" />);
-        continue;
-      }
-
-      if (line.startsWith('# ')) {
-        elements.push(<h1 key={i} className="text-4xl font-black text-on-surface mt-10 mb-6 uppercase tracking-tighter flex items-center gap-4 animate-in slide-in-from-left duration-500">{parseInline(line.replace('# ', ''))}</h1>);
-      } else if (line.startsWith('## ')) {
-        elements.push(<h2 key={i} className="text-2xl font-black text-on-surface mt-12 mb-6 uppercase tracking-tighter flex items-center gap-4"><div className="w-3 h-3 bg-primary rounded-sm rotate-45"></div>{parseInline(line.replace('## ', ''))}</h2>);
-      } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={i} className="text-lg font-bold text-on-surface-variant mt-10 mb-4 tracking-widest uppercase flex items-center gap-3"><div className="w-1.5 h-1.5 bg-secondary rounded-full"></div>{parseInline(line.replace('### ', ''))}</h3>);
-      } else if (line.startsWith('* ') || line.startsWith('- ')) {
-        elements.push(
-          <div key={i} className="flex gap-5 items-start ml-6 my-4 group transition-all duration-300">
-            <div className="mt-1.5 flex flex-col items-center gap-1 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-primary text-base font-black">token</span>
-            </div>
-            <p className="flex-1 m-0 text-on-surface-variant leading-relaxed text-lg font-light group-hover:text-on-surface transition-colors">
-              {parseInline(line.substring(2))}
-            </p>
-          </div>
-        );
-      } else {
-        elements.push(<p key={i} className="m-0 text-on-surface-variant/80 font-light leading-loose text-lg">{parseInline(line)}</p>);
-      }
-    }
-
-    return elements;
+              );
+            }
+          }}
+        >
+          {cleanText}
+        </ReactMarkdown>
+      </div>
+    );
   };  const renderNotebook = () => {
-    const wordCount = Array.isArray(notes) ? notes.reduce((acc, b) => acc + (b.type === 'text' ? b.content.replace(/<[^>]*>?/gm, '').trim().split(/\s+/).filter(Boolean).length : 0), 0) : 0;
-    const readTime = Math.ceil(wordCount / 200);
-
     return (
-      <div className={`flex flex-col bg-[#f8fafc] border-l border-slate-200 transition-all duration-700 lg:h-screen lg:sticky lg:top-0 ${showNotes ? 'fixed inset-0 z-[300] lg:relative lg:inset-auto opacity-100 flex-1 lg:min-w-[60%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
-        <div className="h-full flex flex-col relative">
-          {/* Close button - overlay since editor has its own header */}
-          <button 
-                className="absolute top-3 right-4 z-[200] w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                onClick={() => setShowNotes(false)}
-              >
-                <span className="material-symbols-outlined text-base">close</span>
-          </button>
-          <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col items-center w-full">
-              {activeGoal && (
-                <MultimediaEditor 
-                  key={activeGoal.id}
-                  initialContent={notes}
-                  onSave={(newNotes) => setNotes(newNotes)}
-
-                  isSaving={isSaving}
-                  user={user}
-                  activeGoalTitle={activeGoal.title}
-                />
-              )}
-          </div>
+      <div className={`flex flex-col bg-[#f8fafc] border-l border-slate-200 transition-all duration-700 h-full overflow-hidden ${showNotes ? 'fixed inset-0 z-[300] lg:relative lg:inset-auto opacity-100 flex-1 lg:min-w-[55%] xl:min-w-[60%]' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
+        <div className="h-full w-full flex flex-col overflow-hidden relative">
+          {activeGoal && (
+            <MultimediaEditor 
+              key={activeGoal.id}
+              initialContent={notes}
+              onSave={(newNotes) => setNotes(newNotes)}
+              onClose={() => setShowNotes(false)}
+              isSaving={isSaving}
+              user={user}
+              activeGoalTitle={activeGoal.title}
+            />
+          )}
         </div>
       </div>
     );
@@ -552,64 +613,114 @@ const Study = () => {
     const passedParts = roadmap?.tasks?.flatMap(t => t.parts).filter(p => p.status === 'passed').length || 0;
     const totalParts = roadmap?.tasks?.flatMap(t => t.parts).length || 0;
     const progressPercent = totalParts > 0 ? Math.round((passedParts / totalParts) * 100) : 0;
+    const activeCategory = getCategoryForGoal(activeGoal?.title, activeGoal?.settings?.category);
+    const activePart = activeTask?.parts?.find(p => p.status === 'active') || activeTask?.parts?.find(p => p.status !== 'locked') || activeTask?.parts?.[0];
+
+    const activeGoalsList = goals.filter(g => g.status === 'active');
+    
+    const handlePrevGoal = (e) => {
+      e?.stopPropagation();
+      if (activeGoalsList.length <= 1) return;
+      const currentIndex = activeGoalsList.findIndex(g => g.id === activeGoal?.id);
+      const prevIndex = (currentIndex - 1 + activeGoalsList.length) % activeGoalsList.length;
+      const prevGoal = activeGoalsList[prevIndex];
+      if (prevGoal) {
+        setSelectedGoalId(prevGoal.id);
+        setPhase('loading');
+        activeTaskRef.current = false;
+      }
+    };
+
+    const handleNextGoal = (e) => {
+      e?.stopPropagation();
+      if (activeGoalsList.length <= 1) return;
+      const currentIndex = activeGoalsList.findIndex(g => g.id === activeGoal?.id);
+      const nextIndex = (currentIndex + 1) % activeGoalsList.length;
+      const nextGoal = activeGoalsList[nextIndex];
+      if (nextGoal) {
+        setSelectedGoalId(nextGoal.id);
+        setPhase('loading');
+        activeTaskRef.current = false;
+      }
+    };
 
     phaseContent = (
-      <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full">
-        <header className="mb-12 text-center relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-12 w-64 h-64 bg-primary/5 blur-[100px] pointer-events-none rounded-full"></div>
-          
-          <div className="flex flex-col items-center gap-6 relative z-10">
-            {/* Neural Streak & Progress Indicator removed */}
+      <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full space-y-8">
+        {/* Goal Hero Banner Card */}
+        <header className="relative">
+          {/* Side Navigation Arrow Buttons */}
+          {activeGoalsList.length > 1 && (
+            <>
+              <button 
+                onClick={handlePrevGoal}
+                className="absolute left-2 sm:-left-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#121216]/90 backdrop-blur-md border border-white/20 text-white hover:bg-primary hover:text-black hover:border-primary transition-all duration-300 shadow-2xl flex items-center justify-center z-30 group/arrow active:scale-90"
+                title="Previous Goal"
+              >
+                <span className="material-symbols-outlined text-2xl group-hover/arrow:-translate-x-0.5 transition-transform">
+                  chevron_left
+                </span>
+              </button>
 
-             <div className="relative inline-block w-full max-w-5xl px-4">
-                <button 
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-full flex items-center justify-center gap-3 sm:gap-5 text-center transition-all group"
+              <button 
+                onClick={handleNextGoal}
+                className="absolute right-2 sm:-right-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#121216]/90 backdrop-blur-md border border-white/20 text-white hover:bg-primary hover:text-black hover:border-primary transition-all duration-300 shadow-2xl flex items-center justify-center z-30 group/arrow active:scale-90"
+                title="Next Goal"
+              >
+                <span className="material-symbols-outlined text-2xl group-hover/arrow:translate-x-0.5 transition-transform">
+                  chevron_right
+                </span>
+              </button>
+            </>
+          )}
+
+          <div className="relative bg-gradient-to-r from-[#0c0c0e] via-[#141419] to-[#0c0c0e] border border-white/10 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl overflow-hidden group">
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+              {/* Left Column: Text & Action */}
+              <div className="lg:col-span-7 space-y-5 text-left">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-label font-black uppercase tracking-[0.3em]">
+                  <span className="material-symbols-outlined text-sm">{activeCategory.icon}</span>
+                  {activeCategory.name}
+                </div>
+
+                <h2 
+                  className="text-3xl sm:text-5xl font-black font-headline text-white uppercase tracking-tight leading-none"
                 >
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-headline tracking-tight uppercase text-primary transition-colors leading-tight">
-                    {activeGoal?.title || 'Unknown Synthesis'}
-                  </h1>
-                  <span className={`material-symbols-outlined text-3xl sm:text-4xl flex-shrink-0 transition-all duration-500 text-primary ${dropdownOpen ? 'rotate-180' : 'opacity-80 group-hover:opacity-100'}`}>
-                    unfold_more
-                  </span>
-                </button>
+                  {activeGoal?.title}
+                </h2>
 
-                {dropdownOpen && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-all animate-in fade-in" 
-                      onClick={() => setDropdownOpen(false)}
-                    ></div>
-                    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-3xl bg-surface-container-highest/95 backdrop-blur-2xl border border-outline-variant/20 rounded-[2.5rem] shadow-[0_30px_100px_rgba(0,0,0,0.8)] z-[101] overflow-hidden animate-in zoom-in-95 fade-in duration-300">
-                      <div className="px-8 py-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                        <span className="text-xs font-label tracking-[0.4em] uppercase text-primary font-black">Select Neural Pathway</span>
-                        <button onClick={() => setDropdownOpen(false)} className="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-white/10 flex items-center justify-center">
-                           <span className="material-symbols-outlined">close</span>
-                        </button>
+                <p className="text-sm sm:text-base text-white/70 font-light leading-relaxed max-w-xl">
+                  {activeCategory.tagline}
+                </p>
+
+                {activePart && (
+                  <div className="pt-2">
+                    <button
+                      onClick={() => handleStartLearning(activePart.id, activePart.title)}
+                      className="group/btn inline-flex items-center gap-4 px-8 py-4 bg-primary text-black font-headline font-black text-sm uppercase tracking-wider rounded-full shadow-[0_0_40px_rgba(253,184,19,0.3)] hover:bg-yellow-400 active:scale-95 transition-all duration-300"
+                    >
+                      Start Learning
+                      <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center text-primary group-hover/btn:translate-x-1 transition-transform">
+                        <span className="material-symbols-outlined text-base">arrow_forward</span>
                       </div>
-                      <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-4 space-y-2">
-                        {goals.filter(g => g.status === 'active').map(g => (
-                          <button
-                            key={g.id}
-                            onClick={() => {
-                              setSelectedGoalId(g.id);
-                              setDropdownOpen(false);
-                              setPhase('loading');
-                              activeTaskRef.current = false;
-                            }}
-                            className={`w-full text-left px-8 py-6 rounded-3xl text-sm sm:text-base font-label tracking-wider font-bold transition-all flex items-center gap-4 ${activeGoal?.id === g.id ? 'bg-primary text-on-primary-container shadow-xl scale-[1.02]' : 'text-on-surface hover:bg-white/10'}`}
-                          >
-                            <span className={`material-symbols-outlined text-3xl shrink-0 ${activeGoal?.id === g.id ? 'text-on-primary-container' : 'text-on-surface-variant/40'}`}>
-                              {activeGoal?.id === g.id ? 'psychology' : 'psychology'}
-                            </span>
-                            <span className="leading-relaxed whitespace-normal">{g.title}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
+                    </button>
+                  </div>
                 )}
-             </div>
+              </div>
+
+              {/* Right Column: Clean 3D Category Visual Artwork */}
+              <div className="lg:col-span-5 flex justify-center lg:justify-end">
+                <div className="relative w-full max-w-xs sm:max-w-sm flex items-center justify-center p-2">
+                  <img 
+                    src={activeCategory.image} 
+                    alt={activeCategory.name}
+                    className="w-full h-auto max-h-72 object-contain rounded-2xl drop-shadow-[0_20px_35px_rgba(0,0,0,0.8)] transition-transform duration-700 hover:scale-105" 
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -669,7 +780,11 @@ const Study = () => {
              
              <div className="flex items-center gap-4 mb-10 opacity-40">
                 <div className="w-10 h-[1px] bg-outline-variant"></div>
-                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-[0.4em] font-black italic">Neural integrity verification required</span>
+                <span className="text-[9px] font-label text-on-surface-variant uppercase tracking-[0.4em] font-black italic">
+                  {activeGoal?.settings?.include_quizzes !== true
+                    ? "Module completion protocol" 
+                    : "Neural integrity verification required"}
+                </span>
                 <div className="w-10 h-[1px] bg-outline-variant"></div>
              </div>
 
@@ -684,10 +799,11 @@ const Study = () => {
                 </span>
               </button>
             ) : (() => {
-                const lowerTitle = partTitle.toLowerCase();
-                const isIntro = lowerTitle.includes('intro') || lowerTitle.includes('setup') || lowerTitle.includes('install') || lowerTitle.includes('overview') || lowerTitle.includes('getting started') || lowerTitle.includes('prerequisite') || lowerTitle.includes('environment');
-                
-                if (isIntro) {
+                 const lowerTitle = partTitle.toLowerCase();
+                 const isIntro = lowerTitle.includes('intro') || lowerTitle.includes('setup') || lowerTitle.includes('install') || lowerTitle.includes('overview') || lowerTitle.includes('getting started') || lowerTitle.includes('prerequisite') || lowerTitle.includes('environment') || lowerTitle.includes('pattern') || lowerTitle.includes('examination') || lowerTitle.includes('tips') || lowerTitle.includes('resource') || lowerTitle.includes('syllabus') || lowerTitle.includes('guidelines') || lowerTitle.includes('strategy') || lowerTitle.includes('format');
+                 const quizzesDisabled = activeGoal?.settings?.include_quizzes !== true;
+                 
+                 if (isIntro || quizzesDisabled) {
                   return (
                     <button
                       onClick={handleMarkComplete}
@@ -775,7 +891,7 @@ const Study = () => {
                 <div className="h-[1px] w-12 bg-outline-variant/30"></div>
             </div>
         </div>
-        <button onClick={() => { setPhase('select'); refreshData(); }} className="px-14 py-6 rounded-full bg-primary text-on-primary-container font-label text-sm font-black uppercase tracking-[0.4em] shadow-xl hover:scale-105 active:scale-95 transition-all">
+        <button onClick={handleContinuePath} className="px-14 py-6 rounded-full bg-primary text-on-primary-container font-label text-sm font-black uppercase tracking-[0.4em] shadow-xl hover:scale-105 active:scale-95 transition-all">
           {result.is_passed ? 'Continue Path' : 'Retry Protocol'}
         </button>
       </div>
@@ -783,10 +899,10 @@ const Study = () => {
   }
 
   return (
-    <div className={`transition-all duration-700 ease-in-out w-full ${showNotes ? 'h-[85vh] sm:h-[90vh] bg-surface-container-lowest/80 backdrop-blur-2xl rounded-[2rem] border border-white/10 shadow-2xl flex flex-col overflow-hidden z-20 relative' : 'min-h-screen relative'}`}>
+    <div className={`transition-all duration-700 ease-in-out w-full ${showNotes ? 'h-screen bg-surface-container-lowest/80 backdrop-blur-2xl flex flex-col overflow-hidden z-20 relative' : 'min-h-screen relative'}`}>
       {renderLoaders()}
       
-      <div className={`flex w-full h-full relative ${showNotes ? 'flex-1 overflow-hidden' : ''}`}>
+      <div className={`flex w-full h-full relative overflow-hidden ${showNotes ? 'flex-1' : ''}`}>
         <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
           <div className={`w-full mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-6' : ''}`}>
              {phaseContent}

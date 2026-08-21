@@ -179,75 +179,82 @@ async def detect_entity_node(state: GoalState) -> GoalState:
 
 async def fetch_entity_context_node(state: GoalState) -> GoalState:
     """
-    If an entity was detected, run a DEEP multi-query search for its
-    official syllabus, topics, weightage, and preparation strategy.
-    
-    Verifies the grounding of search results and retries with a broader
-    query if the first search fails verification.
+    If an entity was detected, run a DEEP multi-query search for its official syllabus.
+    Uses Groq 8B (llama-3.1-8b-instant) strictly to filter raw HTML/web search data into a clean context.
     """
     from services.search import search_entity_deep
     from services.exam_resolver import EXAM_REGISTRY, verify_grounding
+    from services.groq import extract_clean_context_fast
 
     entity = state["detected_entity"]
-    logger.info(f"🌐 Deep-searching entity context for: '{entity}'")
+    logger.info(f"🌐 Deep-searching entity context via SearXNG for: '{entity}'")
     
-    results = await search_entity_deep(entity)
+    raw_results = await search_entity_deep(entity)
     
     # Verify grounding if matched in registry
-    matched_entity = next((e for e in EXAM_REGISTRY if e.canonical_name == entity), None)
-    if matched_entity and results:
-        passed = verify_grounding(matched_entity, results)
+    matched_entity = next((e for e in EXAM_REGISTRY if e.canonical_name == entity), None) if entity else None
+    if matched_entity and raw_results:
+        passed = verify_grounding(matched_entity, raw_results)
         if not passed:
             logger.warning("⚠️ First search grounding verification failed. Retrying with broad query...")
-            # Retry with a broader query (just the canonical name and syllabus)
             broad_query = f"{matched_entity.canonical_name} official syllabus exam topics"
             from services.search import search_internet
-            results = await search_internet(broad_query, max_results=6)
-            
-            # Re-verify
-            passed = verify_grounding(matched_entity, results)
-            if not passed:
-                logger.warning("⚠️ Broad query search also failed grounding verification.")
-                state["verification_passed"] = False
-            else:
-                logger.info("✅ Broad query search passed grounding verification.")
-                state["verification_passed"] = True
+            raw_results = await search_internet(broad_query, max_results=6)
+            passed = verify_grounding(matched_entity, raw_results)
+            state["verification_passed"] = passed
         else:
             state["verification_passed"] = True
     else:
         state["verification_passed"] = True
 
-    # Truncate to keep the prompt reasonable but generous
-    state["realtime_context"] = results[:6000] if results else ""
+    # STRICT STEP 3: Filter raw search data into clean text context using Groq 8B fast classifier ONLY
+    clean_context = await extract_clean_context_fast(raw_results, target_entity=entity or state["raw_goal"])
+    state["realtime_context"] = clean_context
     return state
 
 
-# ── Draft generation — Groq 70B for quality structured output ─────────
+# ── Draft generation — Instructor + Pydantic (Groq 70B) ─────────
 
 async def synthesize_draft_node(state: GoalState) -> GoalState:
     """
-    Build the roadmap draft using the heavy Groq model (70B).
-
-    If we have entity context from a search, the model is instructed to ONLY
-    use verified source material — preventing hallucination.
-    All at $0 cost via Groq free tier.
+    STRICT STEP 4: Build the structured ExamRoadmap using Groq 70B (llama-3.3-70b-versatile) wrapped in Instructor.
+    Passes clean context extracted by 8B model in Step 3.
     """
-    from services.groq import generate_roadmap_grounded
+    from services.groq import generate_exam_roadmap_structured, generate_roadmap_grounded
+    from schemas.pydantic_schemas import ExamRoadmap
 
     goal_text = state.get("clarified_goal") or state["raw_goal"]
-    context = state.get("realtime_context", "") or None
+    context = state.get("realtime_context", "") or ""
 
     try:
-        syllabus = await generate_roadmap_grounded(
+        exam_roadmap: ExamRoadmap = await generate_exam_roadmap_structured(
             goal_title=goal_text,
-            entity_context=context,
+            clean_context=context
         )
+        
+        # Convert ExamRoadmap Pydantic object into task/part dictionary array for full compatibility
+        syllabus = []
+        for mod in exam_roadmap.modules:
+            syllabus.append({
+                "title": mod.module_title,
+                "parts": mod.core_topics
+            })
+
         state["draft_syllabus"] = syllabus
         state["error"] = None
-        logger.info(f"✅ Draft roadmap synthesized (Groq 70B): {len(syllabus)} tasks")
+        logger.info(f"✅ Bulletproof ExamRoadmap synthesized (Instructor + Groq 70B): {len(syllabus)} modules")
     except Exception as e:
-        state["error"] = str(e)
-        logger.error(f"❌ Draft synthesis failed: {e}")
+        logger.warning(f"Instructor Pydantic roadmap generation failed ({e}), falling back to grounded JSON generator.")
+        try:
+            syllabus = await generate_roadmap_grounded(
+                goal_title=goal_text,
+                entity_context=context,
+            )
+            state["draft_syllabus"] = syllabus
+            state["error"] = None
+        except Exception as fallback_err:
+            state["error"] = str(fallback_err)
+            logger.error(f"❌ Draft synthesis failed: {fallback_err}")
 
     return state
 

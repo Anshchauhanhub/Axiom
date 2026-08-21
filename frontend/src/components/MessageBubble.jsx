@@ -3,9 +3,19 @@ import ReactMarkdown from 'react-markdown';
 import { Bot, User, Globe, BookOpen, HelpCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 import InteractiveDiscoveryCard from './InteractiveDiscoveryCard';
 
+const cleanDisplayMessage = (msg) => {
+  if (!msg || typeof msg !== 'string') return '';
+  return msg
+    .replace(/###?\s*(DRAFT ROADMAP|GOAL TITLE|STUDY PROFILE UPDATE)[\s\S]*?(?=(###|\Z))/gi, '')
+    .replace(/\[\s*\{\s*"title"[\s\S]*?\}\s*\]/gi, '')
+    .replace(/\{\s*"(target_exam|months_remaining|study_hours_per_day|learning_style|message|phase)"[\s\S]*?\}/gi, '')
+    .trim();
+};
+
 const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, isLastAssistantMessage }) => {
   const isAI = role === 'assistant';
-  const showDiscoveryCard = isAI && (phase === 'discovery' || phase === 'chat') && isLastAssistantMessage && onDiscoverySubmit;
+  const showDiscoveryCard = isAI && phase === 'syllabus_review' && isLastAssistantMessage && onDiscoverySubmit;
+  const displayMessage = isAI ? cleanDisplayMessage(message) : message;
 
   return (
     <div className={`flex w-full gap-4 ${isAI ? 'justify-start' : 'justify-end'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
@@ -69,7 +79,7 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
               }
             }}
           >
-            {message}
+            {displayMessage}
           </ReactMarkdown>
         </div>
 

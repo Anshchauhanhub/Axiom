@@ -239,38 +239,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                {/* Appearance / Theme */}
-                <div>
-                  <h3 className="text-[11px] font-bold text-white/40 uppercase tracking-[0.15em] mb-4">Appearance</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setTheme('dark')}
-                      className={`flex items-center justify-center gap-3 p-4 rounded-xl border transition-all text-sm font-medium ${
-                        theme === 'dark'
-                          ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(253,184,19,0.15)]'
-                          : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">dark_mode</span>
-                      <span>Dark Mode</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setTheme('light')}
-                      className={`flex items-center justify-center gap-3 p-4 rounded-xl border transition-all text-sm font-medium ${
-                        theme === 'light'
-                          ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(253,184,19,0.15)]'
-                          : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">light_mode</span>
-                      <span>Light Mode</span>
-                    </button>
-                  </div>
-                </div>
-
                 {/* Study Schedule */}
                 <div>
                   <h3 className="text-[11px] font-bold text-white/40 uppercase tracking-[0.15em] mb-4">Study Schedule</h3>

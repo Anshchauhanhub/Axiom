@@ -14,7 +14,8 @@ import {
   Send, Activity, ChevronRight, History, 
   BrainCircuit, Search, Video, MessageSquare, 
   ArrowRight, Sparkles, Globe, Zap,
-  Plus, Mic, Edit3, Compass, MessageCircle, Trash2
+  Plus, Edit3, Compass, MessageCircle, Trash2,
+  HelpCircle, CheckCircle2, Paperclip, X, FileText
 } from 'lucide-react';
 
 const Onboarding = () => {
@@ -41,7 +42,8 @@ const Onboarding = () => {
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [phase, setPhase] = useState('discovery');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [phase, setPhase] = useState('chat');
   const [draftRoadmap, setDraftRoadmap] = useState(null);
   const [goalTitle, setGoalTitle] = useState('');
   const [extractedProfile, setExtractedProfile] = useState({});
@@ -50,6 +52,7 @@ const Onboarding = () => {
   // Configuration state
   const [studyDays, setStudyDays] = useState([1, 2, 3, 4, 5]); // 0=Sun, 1=Mon...
   const [studySessions, setStudySessions] = useState(['18:00']);
+  const [includeQuizzes, setIncludeQuizzes] = useState(false);
   const [quizLevel, setQuizLevel] = useState('medium');
   const [quizQuestions, setQuizQuestions] = useState(10);
 
@@ -58,6 +61,31 @@ const Onboarding = () => {
 
   const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      setSelectedFile({
+        name: file.name,
+        type: 'image',
+        content: `[Attached Image: ${file.name}]`
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target.result || '';
+        setSelectedFile({
+          name: file.name,
+          type: 'text',
+          content: `[Attached File: ${file.name}]\n--- File Content ---\n${text.slice(0, 6000)}\n--- End File Content ---`
+        });
+      };
+      reader.readAsText(file);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -87,7 +115,7 @@ const Onboarding = () => {
   const startFreshSession = () => {
     setMessages([]);
     setCurrentSessionId(null);
-    setPhase('discovery');
+    setPhase('chat');
     setDraftRoadmap(null);
   };
 
@@ -97,7 +125,7 @@ const Onboarding = () => {
       const res = await getSessionMessages(sessionId);
       setMessages(res.messages || []);
       setCurrentSessionId(sessionId);
-      setPhase('discovery');
+      setPhase('chat');
       setDraftRoadmap(null);
       setOnboardingMode('chat');
     } catch(e) {
@@ -315,7 +343,8 @@ const Onboarding = () => {
         study_days: studyDays,
         study_sessions: studySessions,
         quiz_level: quizLevel,
-        quiz_questions: quizQuestions
+        quiz_questions: includeQuizzes ? quizQuestions : 0,
+        include_quizzes: includeQuizzes
       };
       const newGoal = await finalizeGoal(title, draftRoadmap, settings);
       if (newGoal && newGoal.id) {
@@ -361,33 +390,7 @@ const Onboarding = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto w-full px-4 sm:px-0">
-          {/* Predefined Paths Card */}
-          <button 
-            onClick={() => setOnboardingMode('predefined')}
-            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-purple-500/50 hover:shadow-[0_0_80px_rgba(168,85,247,0.15)] overflow-hidden animate-in slide-in-from-bottom-12 duration-1000"
-          >
-            {/* Scanner Effect */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
-            
-            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:-rotate-12 group-hover:scale-125">
-              <Compass size={200} strokeWidth={1} />
-            </div>
-
-            <div className="relative z-20">
-              <div className="w-24 h-24 rounded-[2.5rem] bg-purple-500/10 flex items-center justify-center mb-12 border border-purple-500/20 group-hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:0.5s]">
-                <Compass className="text-purple-400" size={40} />
-              </div>
-              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-purple-400 transition-colors duration-500">Expert Roadmaps</h3>
-              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
-                Choose from our expert-crafted, predefined master roadmaps.
-              </p>
-              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-purple-500 group-hover:text-white transition-all duration-500">
-                Browse <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
-              </div>
-            </div>
-          </button>
-
-          {/* Neural Chat Card */}
+          {/* AI Architect Card */}
           <button 
             onClick={() => setOnboardingMode('chat')}
             className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-primary/50 hover:shadow-[0_0_80px_rgba(253,184,19,0.15)] overflow-hidden animate-in slide-in-from-left-12 duration-1000"
@@ -413,6 +416,31 @@ const Onboarding = () => {
             </div>
           </button>
 
+          {/* YouTube Playlist Card */}
+          <button 
+            onClick={() => setOnboardingMode('youtube')}
+            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-emerald-500/50 hover:shadow-[0_0_80px_rgba(16,185,129,0.15)] overflow-hidden animate-in slide-in-from-right-12 duration-1000"
+          >
+            {/* Scanner Effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
+            
+            <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 group-hover:-rotate-12 group-hover:scale-125">
+              <Video size={200} strokeWidth={1} />
+            </div>
+
+            <div className="relative z-20">
+              <div className="w-24 h-24 rounded-[2.5rem] bg-emerald-500/10 flex items-center justify-center mb-12 border border-emerald-500/20 group-hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] group-hover:scale-110 transition-all duration-500 animate-float [animation-delay:0.5s]">
+                <Video className="text-emerald-400" size={40} />
+              </div>
+              <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-6 group-hover:text-emerald-400 transition-colors duration-500">YouTube Playlist</h3>
+              <p className="text-on-surface-variant/80 text-base font-light leading-relaxed mb-12 max-w-xs group-hover:text-on-surface transition-colors duration-500">
+                Provide a YouTube playlist URL to extract video modules and generate a custom roadmap.
+              </p>
+              <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-label font-black text-xs uppercase tracking-[0.2em] group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500">
+                Import Playlist <ArrowRight size={16} className="group-hover:translate-x-3 transition-transform duration-500" />
+              </div>
+            </div>
+          </button>
         </div>
       </div>
     );
@@ -470,12 +498,7 @@ const Onboarding = () => {
                 <ChevronRight className="rotate-180 text-on-surface-variant group-hover:text-primary" size={20} />
               </button>
               <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className={`h-2 w-2 rounded-full animate-pulse ${onboardingMode === 'chat' ? 'bg-primary' : onboardingMode === 'youtube' ? 'bg-secondary' : 'bg-purple-500'}`}></span>
-                  <span className={`font-label text-[10px] tracking-[0.3em] uppercase font-bold ${onboardingMode === 'chat' ? 'text-primary' : onboardingMode === 'youtube' ? 'text-secondary' : 'text-purple-400'}`}>
-                    {onboardingMode === 'chat' ? 'Edxiom Link Active' : onboardingMode === 'youtube' ? 'Import Engine Active' : 'Curriculum Engine Active'}
-                  </span>
-                </div>
+
                 <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
                   {onboardingMode === 'chat' ? 'Edxiom Assistant' : onboardingMode === 'youtube' ? 'Playlist Architect' : 'Path Selector'}
                 </h2>
@@ -497,24 +520,46 @@ const Onboarding = () => {
               <div className="h-full flex flex-col items-center justify-center pb-20 animate-in fade-in zoom-in duration-700">
                  <h2 className="text-2xl sm:text-3xl text-on-surface mb-8 font-light tracking-wide">What's on the agenda today?</h2>
                  <form onSubmit={handleSendMessage} className="w-full max-w-2xl relative group mb-6">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">
-                      <Plus size={24} />
-                    </div>
                     <input
-                      type="text"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      disabled={isTyping}
-                      placeholder="Ask anything"
-                      className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] pl-14 py-4 pr-16 text-on-surface text-base focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      accept=".txt,.md,.json,.csv,.pdf,.png,.jpg,.jpeg,.js,.py,.html,.css"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                      <button type="button" className="p-2 text-on-surface-variant hover:text-white transition-colors">
-                        <Mic size={20} />
+                    {selectedFile && (
+                      <div className="mb-3 flex items-center justify-between bg-surface-container-highest border border-outline-variant/20 px-4 py-2 rounded-xl text-xs text-on-surface">
+                        <div className="flex items-center gap-2 truncate">
+                          <FileText size={16} className="text-primary shrink-0" />
+                          <span className="truncate">{selectedFile.name}</span>
+                        </div>
+                        <button type="button" onClick={() => setSelectedFile(null)} className="text-on-surface-variant hover:text-white p-1">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                    <div className="relative flex items-center">
+                      <button 
+                        type="button" 
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Upload File"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1"
+                      >
+                        <Paperclip size={20} />
                       </button>
-                      <button type="submit" disabled={!inputText.trim() || isTyping} className="w-8 h-8 flex items-center justify-center bg-white text-black rounded-full hover:brightness-110 disabled:opacity-20 disabled:bg-surface-container-highest disabled:text-on-surface-variant transition-all">
-                        <Send size={14} />
-                      </button>
+                      <input
+                        type="text"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        disabled={isTyping}
+                        placeholder="Ask anything or upload a syllabus/doc..."
+                        className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] pl-14 py-4 pr-16 text-on-surface text-base focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <button type="submit" disabled={(!inputText.trim() && !selectedFile) || isTyping} className="w-8 h-8 flex items-center justify-center bg-white text-black rounded-full hover:brightness-110 disabled:opacity-20 disabled:bg-surface-container-highest disabled:text-on-surface-variant transition-all">
+                          <Send size={14} />
+                        </button>
+                      </div>
                     </div>
                  </form>
                  <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
@@ -531,35 +576,7 @@ const Onboarding = () => {
               </div>
             )}
 
-            {onboardingMode === 'chat' && messages.length > 0 && (
-              <div className="mb-6 bg-surface-container-highest/40 border border-primary/20 rounded-2xl p-4 sm:p-5 backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center justify-between mb-3 border-b border-white/5 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-primary animate-pulse" />
-                    <span className="text-xs font-headline uppercase font-bold tracking-wider text-primary">Interactive Learning Draft Box</span>
-                  </div>
-                  <span className="text-[10px] font-label text-on-surface-variant/60 uppercase tracking-widest">Live Auto-Update</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Target Goal</span>
-                    <span className="font-bold text-white truncate block">{extractedProfile.target_exam || 'In Discovery...'}</span>
-                  </div>
-                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Timeline</span>
-                    <span className="font-bold text-white truncate block">{extractedProfile.months_remaining ? `${extractedProfile.months_remaining} Months` : 'Discussing...'}</span>
-                  </div>
-                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Teaching Language</span>
-                    <span className="font-bold text-primary truncate block">{extractedProfile.preferred_language || 'Hindi/Hinglish/Eng'}</span>
-                  </div>
-                  <div className="bg-black/30 p-2.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] uppercase tracking-wider text-white/40 block mb-0.5">Preferred Channels</span>
-                    <span className="font-bold text-secondary truncate block">{extractedProfile.preferred_youtubers || 'Top Playlists'}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {onboardingMode === 'chat' && messages.length > 0 && messages.map((m, i) => {
               const lastAssistantIdx = messages.findLastIndex(msg => msg.role === 'assistant');
@@ -628,7 +645,7 @@ const Onboarding = () => {
             {draftRoadmap && (
               <div className="w-full mt-12 animate-in zoom-in duration-700">
                 <div className="bg-gradient-to-br from-[#0e0e10] to-[#1c1b1d] border border-primary/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 shadow-2xl relative overflow-hidden">
-                  <header className="mb-10 relative z-10">
+                  <header className="mb-8 relative z-10">
                     <span className="font-label text-[10px] tracking-[0.3em] text-primary uppercase font-bold bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
                       {onboardingMode === 'youtube' ? 'Extracted Learning Path' : 'Proposed Learning Path'}
                     </span>
@@ -640,8 +657,46 @@ const Onboarding = () => {
 
                   {phase === 'configuration' ? (
                     <div className="relative z-10 text-left animate-in fade-in zoom-in-95 duration-500">
-                      <h4 className="text-xl font-bold font-headline text-white mb-8">Goal Configuration</h4>
+                      <h4 className="text-xl font-bold font-headline text-white mb-6">Goal Configuration</h4>
                       
+                      {/* REVISION QUIZ QUESTION PROMPT */}
+                      <div className="mb-8 p-5 bg-surface-container-highest/60 border border-primary/20 rounded-2xl relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-md">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wide">
+                            <HelpCircle size={18} className="text-primary shrink-0" />
+                            <span>Include Revision Quizzes?</span>
+                          </div>
+                          <p className="text-on-surface-variant/70 text-xs font-light">
+                            Would you like to attach end-of-task test quizzes for better revision & retention, or proceed with just the roadmap?
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/10 shrink-0 w-full sm:w-auto">
+                          <button
+                            type="button"
+                            onClick={() => setIncludeQuizzes(true)}
+                            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                              includeQuizzes 
+                                ? 'bg-primary text-black shadow-[0_0_15px_rgba(253,184,19,0.3)]' 
+                                : 'text-white/40 hover:text-white/80'
+                            }`}
+                          >
+                            <CheckCircle2 size={14} /> Add Test Quizzes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIncludeQuizzes(false)}
+                            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                              !includeQuizzes 
+                                ? 'bg-white/20 text-white shadow-sm' 
+                                : 'text-white/40 hover:text-white/80'
+                            }`}
+                          >
+                            Just Roadmap
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="space-y-8">
                         {/* Days of week */}
                         <div>
@@ -697,13 +752,18 @@ const Onboarding = () => {
                         </div>
 
                         {/* Quiz Settings */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-white/5 transition-all duration-300 ${!includeQuizzes ? 'opacity-30 pointer-events-none grayscale' : 'opacity-100'}`}>
                           <div>
-                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-4">Quiz Level</label>
+                            <div className="flex items-center justify-between mb-4">
+                              <label className="text-xs font-bold text-white/40 uppercase tracking-widest block">Quiz Level</label>
+                              {!includeQuizzes && <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">(Disabled - Just Roadmap)</span>}
+                            </div>
                             <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
                               {['easy', 'medium', 'hard'].map(level => (
                                 <button
                                   key={level}
+                                  type="button"
+                                  disabled={!includeQuizzes}
                                   onClick={() => setQuizLevel(level)}
                                   className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                                     quizLevel === level ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/60'
@@ -716,11 +776,15 @@ const Onboarding = () => {
                           </div>
 
                           <div>
-                            <label className="text-xs font-bold text-white/40 uppercase tracking-widest block mb-4">Questions Per Quiz</label>
+                            <div className="flex items-center justify-between mb-4">
+                              <label className="text-xs font-bold text-white/40 uppercase tracking-widest block">Questions Per Quiz</label>
+                            </div>
                             <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
                               {[5, 10, 15].map(count => (
                                 <button
                                   key={count}
+                                  type="button"
+                                  disabled={!includeQuizzes}
                                   onClick={() => setQuizQuestions(count)}
                                   className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                                     quizQuestions === count ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/60'
@@ -787,16 +851,35 @@ const Onboarding = () => {
           {onboardingMode === 'chat' && messages.length > 0 && (
             <div className="p-3 sm:p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
               <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
+                {selectedFile && (
+                  <div className="mb-3 flex items-center justify-between bg-surface-container-highest border border-outline-variant/20 px-4 py-2 rounded-xl text-xs text-on-surface">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText size={16} className="text-primary shrink-0" />
+                      <span className="truncate">{selectedFile.name}</span>
+                    </div>
+                    <button type="button" onClick={() => setSelectedFile(null)} className="text-on-surface-variant hover:text-white p-1">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 <div className="relative flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Upload File"
+                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1 z-10"
+                  >
+                    <Paperclip size={20} />
+                  </button>
                   <input
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isTyping}
-                    placeholder="Respond to Edxiom..."
-                    className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl px-4 py-3.5 sm:px-8 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
+                    placeholder="Respond to Edxiom or attach a file..."
+                    className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl pl-12 sm:pl-14 py-3.5 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
                   />
-                  <button type="submit" disabled={!inputText.trim() || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">
+                  <button type="submit" disabled={(!inputText.trim() && !selectedFile) || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">
                     {isTyping ? <Activity size={20} className="animate-pulse" /> : <Send size={20} />}
                   </button>
                 </div>

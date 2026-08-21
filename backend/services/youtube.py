@@ -1,17 +1,154 @@
+import os
 import httpx
 import json
 import re
+import asyncio
 import logging
+from typing import Optional, List, Dict
 
 logger = logging.getLogger("edxiom.youtube")
 
+TRANSCRIPT_API_URL = os.getenv("TRANSCRIPT_API_URL", "https://transcriptapi.com/api")
+TRANSCRIPT_API_KEY = os.getenv("TRANSCRIPT_API_KEY", "")
+
+
+async def search_transcript_playlists(query: str, limit: int = 5) -> List[Dict]:
+    """
+    Query TranscriptAPI `/search` endpoint using httpx to find highest-rated syllabus playlists/videos.
+    Returns a list of video objects with video_id, title, url, satisfaction_score, and view counts.
+    """
+    logger.info(f"🎥 Querying TranscriptAPI /search for: '{query}'")
+    headers = {
+        "User-Agent": "AxiomAI-Agent/1.0",
+        "Accept": "application/json",
+    }
+    if TRANSCRIPT_API_KEY:
+        headers["Authorization"] = f"Bearer {TRANSCRIPT_API_KEY}"
+
+    try:
+        async with httpx.AsyncClient(headers=headers, timeout=12.0) as client:
+            resp = await client.get(
+                f"{TRANSCRIPT_API_URL.rstrip('/')}/search",
+                params={"q": query, "limit": limit}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("results") or data.get("videos") or []
+                formatted = []
+                for item in results:
+                    vid = item.get("video_id") or item.get("id")
+                    title = item.get("title", "Syllabus Video")
+                    url = item.get("url") or f"https://www.youtube.com/watch?v={vid}"
+                    score = float(item.get("satisfaction_score") or item.get("score") or 9.0)
+                    if vid:
+                        formatted.append({
+                            "video_id": vid,
+                            "title": title,
+                            "url": url,
+                            "satisfaction_score": score
+                        })
+                logger.info(f"✅ Found {len(formatted)} videos via TranscriptAPI search.")
+                return formatted
+    except Exception as e:
+        logger.warning(f"TranscriptAPI search failed or unconfigured ({e}). Falling back to YouTube web search.")
+
+    # Fallback to direct YouTube search parsing via httpx
+    return await _fallback_youtube_search(query, limit=limit)
+
+
+async def _fallback_youtube_search(query: str, limit: int = 5) -> List[Dict]:
+    """Fallback youtube search using httpx html parsing."""
+    try:
+        q_quoted = httpx.URL(f"https://www.youtube.com/results?search_query={query}")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        }
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10.0) as client:
+            res = await client.get(str(q_quoted))
+            if res.status_code == 200:
+                video_ids = re.findall(r'/watch\?v=([a-zA-Z0-9_-]{11})', res.text)
+                titles = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]*)\"\}', res.text)
+                
+                unique = []
+                seen = set()
+                for idx, vid in enumerate(video_ids):
+                    if vid not in seen:
+                        seen.add(vid)
+                        title = titles[idx] if idx < len(titles) else f"Tutorial on {query}"
+                        unique.append({
+                            "video_id": vid,
+                            "title": title,
+                            "url": f"https://www.youtube.com/watch?v={vid}",
+                            "satisfaction_score": 8.5
+                        })
+                        if len(unique) >= limit:
+                            break
+                return unique
+    except Exception as e:
+        logger.warning(f"Fallback YouTube search error: {e}")
+    return []
+
+
+async def get_video_transcript(video_id: str) -> Optional[str]:
+    """
+    Fetches raw transcript text for a YouTube video via TranscriptAPI /transcript endpoint.
+    Uses native async httpx.
+    """
+    if not video_id:
+        return None
+
+    logger.info(f"🎥 Fetching TranscriptAPI transcript for video ID: {video_id}")
+    headers = {
+        "User-Agent": "AxiomAI-Agent/1.0",
+        "Accept": "application/json",
+    }
+    if TRANSCRIPT_API_KEY:
+        headers["Authorization"] = f"Bearer {TRANSCRIPT_API_KEY}"
+
+    try:
+        async with httpx.AsyncClient(headers=headers, timeout=12.0) as client:
+            resp = await client.get(
+                f"{TRANSCRIPT_API_URL.rstrip('/')}/transcript",
+                params={"video_id": video_id}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, str):
+                    return data
+                text_content = data.get("transcript") or data.get("text")
+                if isinstance(text_content, list):
+                    text_content = " ".join([t.get("text", "") if isinstance(t, dict) else str(t) for t in text_content])
+                if text_content:
+                    logger.info(f"✅ Successfully fetched transcript ({len(text_content)} chars) for video: {video_id}")
+                    return str(text_content)
+    except Exception as e:
+        logger.warning(f"TranscriptAPI transcript fetch failed for {video_id}: {e}")
+
+    return None
+
+
+async def fetch_concurrent_transcripts(video_ids: List[str]) -> Dict[str, Optional[str]]:
+    """
+    Concurrently fetches raw transcripts for multiple video_ids using asyncio.gather.
+    """
+    logger.info(f"🚀 Concurrently fetching transcripts for {len(video_ids)} videos...")
+    tasks = [get_video_transcript(vid) for vid in video_ids]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    transcript_map = {}
+    for vid, res in zip(video_ids, results):
+        if isinstance(res, Exception) or res is None:
+            transcript_map[vid] = None
+        else:
+            transcript_map[vid] = res
+    return transcript_map
+
+
 async def get_playlist_data(url: str):
     """
-    Scrapes a public YouTube playlist page to extract the playlist title and video titles.
-    Uses regex to find ytInitialData and parses the JSON.
+    Scrapes a public YouTube playlist page to extract playlist title and video titles using httpx.
     """
     logger.info(f"🎥 Extracting data from playlist: {url}")
-    
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
@@ -23,8 +160,6 @@ async def get_playlist_data(url: str):
             response.raise_for_status()
             html = response.text
             
-            # 1. Extract ytInitialData JSON
-            # This regex is more broad to catch variations in spacing or variable names
             json_match = re.search(r'ytInitialData\s*=\s*(\{.*?\});', html)
             data = {}
             if json_match:
@@ -33,26 +168,21 @@ async def get_playlist_data(url: str):
                 except Exception as e:
                     logger.warning(f"Failed to parse ytInitialData JSON: {e}")
 
-            # 2. Extract Playlist Title
             playlist_title = "YouTube Learning Path"
-            # Try to find title in JSON
             try:
                 if "metadata" in data and "playlistMetadataRenderer" in data["metadata"]:
                     playlist_title = data["metadata"]["playlistMetadataRenderer"]["title"]
             except Exception:
                 pass
             
-            # If not in JSON, try regex on HTML
             if playlist_title == "YouTube Learning Path":
                 title_match = re.search(r'<title>(.*?) - YouTube</title>', html)
                 if title_match:
                     playlist_title = title_match.group(1)
 
-            # 3. Extract Video Titles and IDs
             videos = []
             
             def find_titles_recursive(obj, current_depth=0, max_depth=30):
-                """Recursively search for video titles and IDs in the nested JSON structure."""
                 if current_depth > max_depth:
                     return
                 if isinstance(obj, dict):
@@ -88,32 +218,25 @@ async def get_playlist_data(url: str):
                 find_titles_recursive(data)
 
             if not videos:
-                # Try to find all video titles and videoIds using regex fallback if JSON is not available
                 video_matches = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]*)\"\}', html)
                 video_ids = re.findall(r'\"videoId\":\"([^\"]*)\"', html)
                 
-                # Zip them up if matching lengths, otherwise fallback to mock IDs
                 if video_matches:
                     for idx, title in enumerate(video_matches):
                         vid = video_ids[idx] if idx < len(video_ids) else "dQw4w9WgXcQ"
                         videos.append({"title": title, "video_id": vid})
 
-            # Remove duplicates and filter out nonsense
             seen = set()
             unique_videos = []
             for v in videos:
                 t = v["title"]
-                # Decode unicode escapes if present
                 t_clean = t.encode('utf-8').decode('unicode-escape', errors='ignore') if '\\u' in t else t
-                # Filter out obvious non-video strings
                 if t_clean not in seen and len(t_clean) > 3 and t_clean not in ["Play all", "Shuffle", "Mix"]:
                     unique_videos.append({"title": t_clean, "video_id": v["video_id"]})
                     seen.add(t_clean)
             
             videos = unique_videos
-
             if not videos:
-                logger.warning("No videos found in playlist data.")
                 return None
 
             return {
@@ -124,34 +247,3 @@ async def get_playlist_data(url: str):
         except Exception as e:
             logger.error(f"YouTube scraper error: {e}")
             return None
-
-
-try:
-    from youtube_transcript_api import YouTubeTranscriptApi
-except ImportError:
-    YouTubeTranscriptApi = None
-import asyncio
-
-async def get_video_transcript(video_id: str) -> str:
-    """
-    Fetches the transcript text of a YouTube video.
-    Returns None if fetching fails.
-    """
-    if not video_id or YouTubeTranscriptApi is None:
-        return None
-    try:
-        logger.info(f"🎥 Fetching transcript for video ID: {video_id}")
-        loop = asyncio.get_event_loop()
-        transcript_list = await loop.run_in_executor(
-            None,
-            lambda: YouTubeTranscriptApi().fetch(video_id)
-        )
-        if transcript_list:
-            text = " ".join([t['text'] for t in transcript_list])
-            logger.info(f"✅ Successfully fetched transcript ({len(text)} chars) for video ID: {video_id}")
-            return text
-    except Exception as e:
-        logger.warning(f"Could not retrieve transcript for video {video_id}: {e}")
-    return None
-
-

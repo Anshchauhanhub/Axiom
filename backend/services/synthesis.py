@@ -7,7 +7,7 @@ from services.search import search_internet
 
 logger = logging.getLogger("edxiom.synthesis")
 
-async def synthesize_part_content(part_title: str) -> str:
+async def synthesize_part_content(part_title: str, goal_title: str = None) -> str:
     """
     Perform web research and synthesize complex documentation for a given part title.
     Integrates an automatically matching YouTube tutorial video.
@@ -20,13 +20,14 @@ async def synthesize_part_content(part_title: str) -> str:
     else:
         clean_title, video_id = part_title.strip(), None
 
-    logger.info(f"🚀 Initializing Generation for: {clean_title}")
+    logger.info(f"🚀 Initializing Generation for: {clean_title} (Goal: {goal_title or 'N/A'})")
     
     # 2. If no video_id exists (e.g. chat-based roadmap), fetch one from YouTube search
     if not video_id:
         try:
-            logger.info(f"🔍 Searching YouTube for highly relevant video: '{clean_title}'")
-            q = urllib.parse.quote(clean_title + " tutorial")
+            search_query = f"{goal_title} {clean_title} tutorial" if goal_title else f"{clean_title} tutorial"
+            logger.info(f"🔍 Searching YouTube for highly relevant video: '{search_query}'")
+            q = urllib.parse.quote(search_query)
             url = f"https://www.youtube.com/results?search_query={q}"
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"

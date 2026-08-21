@@ -6,7 +6,7 @@ import { toggleGoalStatus, deleteGoal } from '../services/api';
 import NeuralLoader from '../components/NeuralLoader';
 import {
   Activity, ArrowRight, BookOpen, BookText, CalendarClock, CheckCircle2, ChevronDown,
-  ChevronRight, Clock3, Flame, GraduationCap, Layers, Pause, Play, Plus,
+  ChevronRight, Clock3, Flame, GraduationCap, Layers, Pause, Play,
   Send, ShieldCheck, Sparkles, Target, Trash2, Zap,
 } from 'lucide-react';
 
@@ -86,7 +86,10 @@ const GoalCard = ({ goal, roadmapData, onStudy, onNotes, onToggle, onDelete }) =
           <div className="relative w-12 h-12 sm:w-[52px] sm:h-[52px] shrink-0 flex items-center justify-center rounded-full bg-black/20 border border-white/[0.04] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]">
             <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
               <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-white/5" strokeWidth="2.5" />
-              <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-primary drop-shadow-[0_0_4px_rgba(253,184,19,0.4)]" strokeWidth="2.5" strokeDasharray="97.38" strokeDashoffset={97.38 - (pct / 100) * 97.38} strokeLinecap="round" />
+              <circle cx="18" cy="18" r="15.5" fill="none"
+                stroke={goal.status === 'active' ? '#fdb813' : goal.status === 'completed' ? '#34d399' : '#fb923c'}
+                style={{ filter: `drop-shadow(0 0 4px ${goal.status === 'active' ? 'rgba(253,184,19,0.5)' : goal.status === 'completed' ? 'rgba(52,211,153,0.5)' : 'rgba(251,146,60,0.5)'})` }}
+                strokeWidth="2.5" strokeDasharray="97.38" strokeDashoffset={97.38 - (pct / 100) * 97.38} strokeLinecap="round" />
             </svg>
             <span className="absolute text-[10px] sm:text-xs font-black text-white">{pct}%</span>
           </div>
@@ -331,8 +334,10 @@ const Dashboard = () => {
       {busy && <NeuralLoader message="Updating workspace" />}
 
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-[10%] top-[-8rem] h-80 w-80 rounded-full bg-primary/6 blur-[140px]" />
-        <div className="absolute bottom-[-10rem] right-[-5rem] h-96 w-96 rounded-full bg-emerald-500/4 blur-[160px]" />
+        <div className="absolute left-[5%] top-[-6rem] h-[500px] w-[500px] rounded-full bg-primary/8 blur-[160px]" />
+        <div className="absolute bottom-[-8rem] right-[-4rem] h-[420px] w-[420px] rounded-full bg-emerald-500/8 blur-[160px]" />
+        <div className="absolute top-[40%] left-[50%] h-72 w-72 rounded-full bg-sky-500/6 blur-[140px]" />
+        <div className="absolute top-[15%] right-[10%] h-56 w-56 rounded-full bg-violet-500/6 blur-[120px]" />
       </div>
 
       <div className="mx-auto w-full max-w-[1280px] flex flex-col gap-5 px-1 sm:px-3 lg:px-6">
@@ -343,10 +348,9 @@ const Dashboard = () => {
             <h1 className="text-3xl sm:text-4xl lg:text-[3rem] font-black uppercase tracking-tight leading-none text-white drop-shadow-lg">
               {greeting.text}, <span className="text-primary">{name}</span>
             </h1>
-            <button onClick={() => navigate('/onboarding')}
-              className="h-10 px-5 rounded-xl bg-primary text-black text-xs font-label font-black uppercase tracking-[0.15em] hover:brightness-110 active:translate-y-[2px] transition-all flex items-center gap-2 shadow-[0_3px_0_#b88200] active:shadow-none border-b border-primary/20 shrink-0">
-              <Plus size={15} /> New path
-            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-label uppercase tracking-widest text-white/20">{greeting.sub}</span>
           </div>
         </header>
 
@@ -429,7 +433,10 @@ const Dashboard = () => {
                     <h2 className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
                       <Target size={15} className="text-primary" /> Your learning paths
                     </h2>
-                    <span className="text-[9px] font-label uppercase tracking-wider text-on-surface-variant/40">{goals.length} {goals.length === 1 ? 'path' : 'paths'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="h-5 px-2 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-label font-black text-primary uppercase tracking-wider flex items-center">{goals.filter(g=>g.status==='active').length} active</span>
+                      <span className="h-5 px-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-label font-black text-emerald-400 uppercase tracking-wider flex items-center">{goals.filter(g=>g.status==='completed').length} done</span>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -451,22 +458,27 @@ const Dashboard = () => {
               {/* ── Right Column: Side Panel ── */}
               <aside className="w-full xl:w-[280px] shrink-0 flex flex-col gap-5">
                 {/* Notebook Card */}
-                <div className="p-5 sm:p-6 rounded-[2rem] border border-white/[0.04] bg-[#111111]/80 shadow-2xl flex flex-col gap-5">
+                <div className="p-5 sm:p-6 rounded-[2rem] border border-emerald-500/10 bg-gradient-to-br from-[#0a1a12]/90 to-[#111111]/80 shadow-2xl flex flex-col gap-5 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
                   <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl border border-white/5 bg-white/[0.02] flex items-center justify-center shrink-0">
-                      <BookText className="text-[#fdb813]" size={18} />
+                    <div className="w-10 h-10 rounded-xl border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <BookText className="text-emerald-400" size={18} />
                     </div>
-                    <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/90">Notebook</h4>
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/90">Notebook</h4>
+                      <p className="text-[9px] text-emerald-400/50 font-label uppercase tracking-wider">Your study notes</p>
+                    </div>
                   </div>
-                  <button onClick={() => navigate('/notebooks')} className="w-full h-11 rounded-xl bg-[#fdb813] text-black text-[10px] font-label font-black uppercase tracking-[0.2em] hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_4px_15px_rgba(253,184,19,0.15)] flex items-center justify-center">
-                    Open Editor
+                  <button onClick={() => navigate('/notebooks')} className="w-full h-11 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 text-black text-[10px] font-label font-black uppercase tracking-[0.2em] hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_4px_15px_rgba(52,211,153,0.2)] flex items-center justify-center gap-2">
+                    <BookText size={13} /> Open Editor
                   </button>
                 </div>
 
                 {/* Coach Link Card */}
-                <div className="p-5 rounded-[2rem] border border-white/[0.04] bg-[#111111]/80 shadow-2xl flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl border border-[#fdb813]/20 bg-[#fdb813]/10 flex items-center justify-center shrink-0">
-                    <Send className="text-[#fdb813]" size={18} />
+                <div className="p-5 rounded-[2rem] border border-sky-500/10 bg-gradient-to-br from-[#081420]/90 to-[#111111]/80 shadow-2xl flex items-center gap-4 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl pointer-events-none" />
+                  <div className="w-12 h-12 rounded-xl border border-sky-400/20 bg-sky-400/10 flex items-center justify-center shrink-0">
+                    <Send className="text-sky-400" size={18} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-[13px] font-black tracking-tight text-white flex items-center gap-1.5 mb-1">
@@ -478,6 +490,121 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Today & Streak Card */}
+                {(() => {
+                  // Compute today's stats from roadmap data
+                  const todayStr = new Date().toDateString();
+                  let partsPassedToday = 0;
+                  let questionsToday = 0;
+                  goals.forEach(g => {
+                    const rm = allRoadmaps[g.id];
+                    if (!rm) return;
+                    (rm.tasks || []).flatMap(t => t.parts || []).forEach(p => {
+                      if (p.status === 'passed') {
+                        // Count if updated today (use updated_at if available)
+                        if (p.updated_at && new Date(p.updated_at).toDateString() === todayStr) {
+                          partsPassedToday++;
+                        }
+                        // Count quiz attempts
+                        (p.quiz_results || []).forEach(qr => {
+                          if (qr.created_at && new Date(qr.created_at).toDateString() === todayStr) {
+                            questionsToday += (qr.total_questions || 0);
+                          }
+                        });
+                      }
+                    });
+                  });
+
+                  // Compute streak: count consecutive days with at least 1 passed part
+                  const daySet = new Set();
+                  goals.forEach(g => {
+                    const rm = allRoadmaps[g.id];
+                    if (!rm) return;
+                    (rm.tasks || []).flatMap(t => t.parts || []).forEach(p => {
+                      if (p.status === 'passed' && p.updated_at) {
+                        daySet.add(new Date(p.updated_at).toDateString());
+                      }
+                    });
+                  });
+                  let streak = 0;
+                  const check = new Date();
+                  while (daySet.has(check.toDateString())) {
+                    streak++;
+                    check.setDate(check.getDate() - 1);
+                  }
+
+                  return (
+                    <div className="rounded-[2rem] border border-[#fdb813]/15 bg-[#111111]/80 shadow-2xl overflow-hidden">
+                      {/* Header */}
+                      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-[#fdb813]/10 border border-[#fdb813]/20 flex items-center justify-center">
+                            <Zap size={14} className="text-[#fdb813]" />
+                          </div>
+                          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90">Today</span>
+                        </div>
+                        <span className="text-[9px] font-label uppercase tracking-widest text-white/20">{new Date().toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'})}</span>
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="px-5 pb-4 grid grid-cols-2 gap-3">
+                        <div className="bg-white/[0.03] rounded-2xl p-3.5 border border-white/[0.04]">
+                          <p className="text-[22px] font-black text-[#fdb813] leading-none mb-1">
+                            {partsPassedToday} <span className="text-white/20 text-xs font-normal">/ —</span>
+                          </p>
+                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35">Parts Done</p>
+                        </div>
+                        <div className="bg-white/[0.03] rounded-2xl p-3.5 border border-white/[0.04]">
+                          <p className="text-[22px] font-black text-[#fdb813] leading-none mb-1">
+                            {questionsToday} <span className="text-white/20 text-xs font-normal">/ —</span>
+                          </p>
+                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35">Questions</p>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="mx-5 h-px bg-white/[0.05]" />
+
+                      {/* Streak row */}
+                      <div className="px-5 py-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35 mb-2">Streak</p>
+                          <div className="flex items-center gap-5">
+                            <div>
+                              <p className="text-[9px] font-label uppercase tracking-wider text-white/30 mb-0.5">Current</p>
+                              <p className="text-base font-black text-[#fdb813]">{streak} day{streak !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="w-px h-8 bg-white/[0.06]" />
+                            <div>
+                              <p className="text-[9px] font-label uppercase tracking-wider text-white/30 mb-0.5">All-time</p>
+                              <p className="text-base font-black text-white/70">{globalStats.totalDone} parts</p>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Flame icon badge */}
+                        <div className="relative w-11 h-11 shrink-0">
+                          <div className="absolute inset-0 rounded-xl bg-[#fdb813]/10 border border-[#fdb813]/20 flex items-center justify-center">
+                            <Flame size={20} className={`${streak > 0 ? 'text-[#fdb813]' : 'text-white/20'}`} />
+                          </div>
+                          {streak > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#fdb813] text-black text-[9px] font-black flex items-center justify-center shadow-[0_0_8px_rgba(253,184,19,0.5)]">
+                              {streak}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* See all activity */}
+                      <button
+                        onClick={() => navigate('/calendar')}
+                        className="w-full flex items-center justify-center gap-1.5 py-3.5 border-t border-white/[0.05] text-[9px] font-label font-black uppercase tracking-[0.25em] text-white/30 hover:text-[#fdb813] hover:bg-[#fdb813]/5 transition-all"
+                      >
+                        See All Activity <ChevronRight size={11} strokeWidth={3} />
+                      </button>
+                    </div>
+                  );
+                })()}
               </aside>
             </div>
           </>

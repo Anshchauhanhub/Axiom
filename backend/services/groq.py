@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import logging
 import asyncio
 from typing import Optional
@@ -16,10 +17,15 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # ── Model routing: use the cheapest model that can handle each task ───
 # Heavy (roadmaps, docs, MCQs): 70B for quality structured JSON output
 # Light (entity detect, classification): 8B for speed + minimal tokens
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
+import instructor
+from schemas import ExamRoadmap
+
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "openai/gpt-oss-20b")
 
 _groq_client: Optional[AsyncGroq] = None
+_instructor_client = None
+
 
 def get_groq_client() -> AsyncGroq:
     """Singleton getter for the Native AsyncGroq client."""
@@ -28,6 +34,51 @@ def get_groq_client() -> AsyncGroq:
         api_key = os.getenv("GROQ_API_KEY")
         _groq_client = AsyncGroq(api_key=api_key)
     return _groq_client
+
+
+def get_instructor_client():
+    """Singleton getter for Instructor wrapped AsyncGroq client."""
+    global _instructor_client
+    if _instructor_client is None:
+        raw_client = get_groq_client()
+        _instructor_client = instructor.from_groq(raw_client, mode=instructor.Mode.JSON)
+    return _instructor_client
+
+
+async def generate_exam_roadmap_structured(
+    goal_title: str,
+    clean_context: str
+) -> ExamRoadmap:
+    """
+    STRICT STEP 4 CONSTRAINT: Use heavy generator (llama-3.3-70b-versatile) ONLY for this
+    final reasoning phase, feeding it clean context extracted by 8B model in Step 3.
+    Returns validated ExamRoadmap Pydantic object.
+    """
+    client = get_instructor_client()
+
+    system_prompt = (
+        "You are Edxiom AI, a high-accountability learning coach. "
+        "Build a structured, exhaustive, subject-grounded learning roadmap based strictly on the provided clean context. "
+        "Ensure modules have core topics and recommended video resources with satisfaction scores."
+    )
+    user_prompt = (
+        f"Target Goal/Entity: {goal_title}\n\n"
+        f"Verified Clean Context:\n{clean_context}\n\n"
+        "Generate the complete ExamRoadmap structure:"
+    )
+
+    roadmap: ExamRoadmap = await client.chat.completions.create(
+        model=GROQ_MODEL,
+        response_model=ExamRoadmap,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.3,
+        max_retries=3
+    )
+
+    return roadmap
 
 
 async def call_groq(system_prompt: str, user_prompt: str, model: str = None,
@@ -92,11 +143,48 @@ async def call_groq_fast(system_prompt: str, user_prompt: str,
     )
 
 
-# ── Grounded roadmap generation (replaces Anthropic Haiku) ────────────
+async def extract_clean_context_fast(raw_data: str, target_entity: str = "") -> str:
+    """
+    STRICT STEP 3 CONSTRAINT: Use Groq fast classifier (llama-3.1-8b-instant) ONLY
+    for retrieving, reading, and filtering raw HTML/web search data into a clean, 
+    high-density text context. Do NOT use the 70B model here.
+    """
+    if not raw_data or not raw_data.strip():
+        return "No search data found."
+
+    system_prompt = (
+        "You are Edxiom AI's fast text extraction engine. "
+        "Filter and extract ONLY real syllabus topics, core modules, exam subtopics, and academic concepts. "
+        "Strip out all web junk, navigation text, ads, and duplicate boilerplate. "
+        "Return clean, high-density text bullet points."
+    )
+    user_prompt = (
+        f"Target Entity/Exam: {target_entity}\n\n"
+        f"Raw Web Search Data:\n{raw_data[:12000]}\n\n"
+        "Extract concise, clean syllabus context:"
+    )
+
+    try:
+        return await call_groq(
+            system_prompt,
+            user_prompt,
+            model=GROQ_MODEL_FAST,
+            temperature=0.1,
+            max_tokens=800
+        )
+    except Exception as e:
+        logger.warning(f"Fast 8B extraction failed, returning trimmed raw data: {e}")
+        return raw_data[:3000]
+
+
+# ── Grounded roadmap generation ────────────
 
 GROUNDED_SYSTEM_PROMPT = (
     "You are Edxiom AI, a high-accountability learning coach. "
     "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
+    "CRITICAL ROADMAP RULE: Focus strictly on core academic, practical, and subject-matter syllabus topics (e.g. core concepts, modules, theory, practice, hands-on skills). "
+    "Do NOT include administrative meta-tasks or exam structural overview tasks like 'Understand Exam Pattern', 'Preliminary Examination', 'Mains Examination', 'Tips for Preparation', 'Resources' or 'Overview of Syllabus' as roadmap tasks. "
+    "Every task and subtopic MUST be a teachable, practical, and testable subject concept. "
     "Each item has: title (task name), parts (array of subtopic strings). "
     "Return ONLY valid JSON, no markdown, no explanation. "
     "Generate 10-15 granular tasks, each with 5-8 detailed sub-parts."
@@ -111,6 +199,9 @@ GROUNDED_ENTITY_SYSTEM_PROMPT = (
     "Many exams have multiple papers with different syllabi (e.g., GATE has 30+ papers: "
     "DA = Data Science and AI, AR = Architecture, CS = Computer Science, etc.). "
     "Match the roadmap to the SPECIFIC paper/branch mentioned in the user's goal. "
+    "CRITICAL ROADMAP RULE: Focus strictly on core academic, practical, and subject-matter syllabus topics (e.g. core concepts, modules, theory, practice, hands-on skills). "
+    "Do NOT include administrative meta-tasks or exam structural overview tasks like 'Understand Exam Pattern', 'Preliminary Examination', 'Mains Examination', 'Tips for Preparation', 'Resources' or 'Overview of Syllabus' as roadmap tasks. "
+    "Every task and subtopic MUST be a teachable, practical, and testable subject concept. "
     "Generate an exhaustive learning roadmap as a JSON array. "
     "Each item has: title (task name), parts (array of subtopic strings). "
     "Return ONLY valid JSON, no markdown, no explanation. "
@@ -136,7 +227,7 @@ async def generate_roadmap_grounded(
         )
     else:
         system = GROUNDED_SYSTEM_PROMPT
-        user_prompt = f"Create a detailed learning roadmap for: {goal_title}"
+        user_prompt = f"Create a detailed learning roadmap for core subject syllabus of: {goal_title}"
 
     raw = await call_groq(system, user_prompt, model=GROQ_MODEL)
     cleaned = _clean_json(raw)
@@ -209,12 +300,14 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
     system_prompt = (
         "You are Edxiom AI, a high-accountability learning coach. "
         "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
-        "The roadmap must be comprehensive, covering every nuance of the syllabus in detail. "
+        "CRITICAL ROADMAP RULE: Focus strictly on core academic, practical, and subject-matter syllabus topics. "
+        "Do NOT include administrative meta-tasks like 'Understand Exam Pattern', 'Preliminary Examination', 'Mains Examination', 'Tips for Preparation', 'Resources' or 'Overview'. "
+        "The roadmap must be comprehensive, covering every nuance of the subject syllabus in detail. "
         "Each item has: title (task name), parts (array of subtopic strings). "
         "Return ONLY valid JSON, no markdown, no explanation. "
         "Generate 10-15 granular tasks, each with 5-8 detailed sub-parts to ensure complete mastery."
     )
-    user_prompt = f"Create a detailed learning roadmap for: {goal_title}"
+    user_prompt = f"Create a detailed learning roadmap for core subject syllabus of: {goal_title}"
 
     raw = await call_groq(system_prompt, user_prompt)
     cleaned = _clean_json(raw)
@@ -226,7 +319,7 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
         raise ValueError(f"Failed to parse AI response as JSON: {e}")
 
 
-async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
+async def generate_mcqs(topic: str, count: int = 5, goal_title: str = None, task_title: str = None) -> list[dict]:
     """Generate MCQ questions for a topic, analyzing a YouTube video if present."""
     video_id = None
     if " || " in topic:
@@ -244,11 +337,13 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
         except Exception as e:
             logger.warning(f"Failed to fetch video transcript for MCQs: {e}")
 
+    context_str = f"Target Goal: '{goal_title}', Module: '{task_title}'." if goal_title else ""
+
     if transcript:
         system_prompt = (
-            f"You are Edxiom AI's quiz engine. Generate exactly {count} multiple-choice questions "
+            f"You are Edxiom AI's quiz engine. {context_str} Generate exactly {count} multiple-choice questions "
             f"by analyzing the provided YouTube video transcript for the topic '{clean_title}'.\n"
-            "Each question MUST test specific concepts, explanations, or details mentioned in the video transcript.\n"
+            "Each question MUST test specific practical concepts, explanations, or details mentioned in the video transcript.\n"
             "Return ONLY a JSON array where each item has:\n"
             '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3).\n'
             "Questions should be challenging and test deep understanding of the video content.\n"
@@ -257,13 +352,14 @@ async def generate_mcqs(topic: str, count: int = 5) -> list[dict]:
         user_prompt = f"Video Transcript:\n{transcript[:15000]}\n\nGenerate {count} MCQs based on the transcript."
     else:
         system_prompt = (
-            f"You are Edxiom AI's quiz engine. Generate exactly {count} multiple-choice questions. "
+            f"You are Edxiom AI's quiz engine. {context_str} Generate exactly {count} multiple-choice questions "
+            f"testing practical and core academic subject knowledge for the topic '{clean_title}'. "
             "Return ONLY a JSON array where each item has: "
             '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3). '
-            "Questions should be challenging and test deep understanding. "
+            "Questions should be challenging and test deep understanding of subject concepts. "
             "No markdown, no explanation, ONLY valid JSON."
         )
-        user_prompt = f"Generate {count} challenging MCQs about: {clean_title}"
+        user_prompt = f"Generate {count} challenging academic MCQs for topic '{clean_title}' in subject '{goal_title or clean_title}'"
 
     raw = await call_groq(system_prompt, user_prompt)
     cleaned = _clean_json(raw)
@@ -335,84 +431,137 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                 logger.info(f"🎯 Grounded chat with resolved entity: {res.entity.canonical_name}")
                 break
 
-            # 2. Universal Auto Web Search for syllabus/course/exam queries
+            # 2. Universal Auto Web Search for syllabus/course/exam/subject queries
+            # Always pre-fetch web search if user query relates to any subject, exam, or study topic
             text_lower = user_text.lower()
-            if any(k in text_lower for k in ["syllabus", "topic", "exam", "course", "subject", "pattern", "prepare", "study"]):
-                logger.info(f"🌐 Triggering automatic live web search pre-fetch for user query: '{user_text}'")
-                search_query = f"{user_text} official syllabus latest topics"
-                search_data = await search_internet(search_query, max_results=3)
+            should_search = (
+                any(k in text_lower for k in ["syllabus", "topic", "exam", "course", "subject", "pattern", "prepare", "study", "gate", "cbse", "class", "sem"])
+                or len(user_text.strip().split()) <= 5  # Short subject choices like "Probability and Statistics"
+            )
+            if should_search:
+                # Find any parent exam mentioned in recent conversation
+                parent_exam = ""
+                for past_m in reversed(messages):
+                    past_txt = past_m.get("content", "")
+                    for kw in ["gate da", "gate cs", "gate", "cbse class 10", "cbse class 12", "class 10", "class 12", "jee mains", "neet", "cat", "aws", "btech"]:
+                        if kw in past_txt.lower():
+                            parent_exam = kw.upper()
+                            break
+                    if parent_exam:
+                        break
+
+                search_query = f"{parent_exam} {user_text} official detailed syllabus topics modules".strip()
+                logger.info(f"🌐 Triggering automatic live web search pre-fetch: '{search_query}'")
+                search_data = await search_internet(search_query, max_results=5)
                 if search_data and "No relevant" not in search_data:
                     exam_grounding_context = (
-                        f"\n\n### LIVE WEB SEARCH RESULTS (GROUND TRUTH):\n{search_data}\n"
+                        f"\n\n### LIVE WEB SEARCH RESULTS (OFFICIAL GROUND TRUTH SYLLABUS):\n{search_data}\n"
+                        f"CRITICAL: Use these search results to extract and display the FULL, COMPLETE, DETAILED syllabus topics below. Do NOT shorten or omit core sub-topics!\n"
                     )
                 break
 
     system_prompt = (
-        "You are Edxiom AI, a strict, high-accountability AI study coach, human mentor, and teacher substitute. "
-        "You answer questions clearly, thoroughly, and act as a blunt, caring friend who wants the user to succeed.\n"
+        "You are Edxiom AI — a strict, high-accountability study coach, mentor, and teacher. "
+        "You are NOT a chatbot. You are a real teacher who helps students master ONE specific subject or skill at a time "
+        "by researching and providing their FULL, ACCURATE official syllabus from real-world data.\n"
         "\n"
         f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
         "\n"
-        "### NATURAL GREETING & MEMORY RULE (STRICT):\n"
-        "- DO NOT list, summarize, recite, or state the user's persistent profile facts (e.g. NEVER say 'I see you are a 4th-year student with 7 months left...', readiness score %, hours allocated, or previous goals) in your greeting or response!\n"
-        "- Persistent memory is SILENT background context for your calculations only. Never dump it to the user.\n"
-        "- Speak naturally, conversationally, and warmly like a real human mentor. When starting a chat or receiving greetings like 'hi' or 'hello', reply simply and naturally, e.g.: 'Hey! How are you doing today? What would you like to work on or learn next?'\n"
+        "### MEMORY RULE (STRICT):\n"
+        "- Persistent memory is SILENT background context for calculations only.\n"
+        "- NEVER dump profile stats, degrees, or previous goals in your messages.\n"
+        "- Speak naturally, warmly, like a real human mentor.\n"
         "\n"
-        "### INTERACTIVE 3-STEP DISCOVERY PROTOCOL:\n"
-        "1. **Step 1 (Goal & Syllabus Discussion)**: When user mentions a target goal/exam/skill, fetch/discuss the latest official syllabus over the internet. Discuss key topics warmly and naturally.\n"
-        "2. **Step 2 (User Preferences & Fact Extraction)**: Ask clarifying questions one or two at a time:\n"
-        "   - Total months / timeline available to achieve this goal.\n"
-        "   - Preferred video/teaching language (e.g. Hindi, Hinglish, English).\n"
-        "   - Favorite YouTubers, channels, or websites (or if they are starting from complete scratch).\n"
-        "   - Daily available study hours.\n"
-        "3. **Step 3 (Web-Derived & YouTube Playlist Synthesis)**: Synthesize real-world top-rated roadmaps and YouTube playlists matching their preferred language and creators into a master `draft_roadmap` (Array of modules with parts).\n"
+        "### SINGLE-SUBJECT / SINGLE-SKILL POLICY (MANDATORY PRINCIPLE):\n"
+        "To ensure study plans are easy to manage and schedule on a calendar timetable, every roadmap MUST focus on ONE specific subject or skill at a time.\n"
+        "- If a user mentions a broad multi-subject exam or grade (e.g., 'CBSE Class 10', 'GATE DA 2026', 'B.Tech CSE 4th Sem', 'JEE Mains'), DO NOT create a multi-subject roadmap!\n"
+        "- Instead, guide them warmly: 'To make your study plan clean, realistic, and easy to fit into your daily timetable, let's focus on ONE specific subject first! Which one would you like to start with? (For example: Mathematics, Science, Linear Algebra, Operating Systems, or Machine Learning?)'\n"
+        "- Once the user picks a single subject/skill (e.g., 'CBSE Class 10 Maths' or 'GATE DA Linear Algebra'), fetch and build the roadmap ONLY for that specific subject.\n"
         "\n"
-        "### STRUCTURED UI DIALOGUE CARD FORMAT (STRICT):\n"
-        "NEVER dump your response as a wall of text or list text questions!\n"
-        "Always structure your messages into clear sections:\n"
-        "- Start with 1 brief encouraging intro sentence.\n"
-        "- Use `### Syllabus & Topic Breakdown` to list core syllabus subjects using bold bullet points (`* **Topic**: description`).\n"
-        "- DO NOT write or list text questions in your response message! The UI has an interactive form widget for user inputs. End your message with a brief friendly note: 'Please complete the Interactive Preference Form below to choose your timeline, preferred teaching language, playlist, and study materials!'\n"
+        "### DETAILED SYLLABUS PRESENTATION RULES (CRITICAL):\n"
+        "When in `phase: 'discovery'` and presenting `### Syllabus & Topic Breakdown`:\n"
+        "1. You MUST list the FULL, THOROUGH, COMPREHENSIVE topic list derived from the web search results.\n"
+        "2. Do NOT write lazy 1-line or 2-line summaries! List at least 5 to 10 detailed bullet points covering all sub-modules, theorems, distributions, methods, and core concepts.\n"
+        "3. Example format:\n"
+        "   ### Syllabus & Topic Breakdown\n"
+        "   * **Counting & Basic Probability**: Permutations, combinations, axioms of probability, sample space, events\n"
+        "   * **Conditional & Independence**: Conditional probability, Bayes Theorem, independence of events, total probability\n"
+        "   * **Random Variables & Distributions**: Discrete & continuous variables, PMF, PDF, CDF, expectation, variance\n"
+        "   * **Standard Distributions**: Bernoulli, Binomial, Poisson, Uniform, Exponential, Normal/Gaussian distribution\n"
+        "   * **Joint Distributions**: Joint PMF/PDF, marginal distributions, conditional expectation, covariance, correlation\n"
+        "   * **Limit Theorems**: Law of large numbers, Central Limit Theorem (CLT)\n"
+        "   * **Descriptive Statistics**: Mean, median, mode, variance, standard deviation, skewness, kurtosis\n"
+        "   * **Inferential Statistics & Hypothesis Testing**: z-test, t-test, chi-square test, ANOVA, confidence intervals, p-values\n"
+        "4. ALWAYS leave TWO empty lines before the final confirmation question so markdown list tags render properly!\n"
         "\n"
-        "### DYNAMIC DRAFT BOX FACTS EXTRACTION:\n"
-        "For EVERY response, listen carefully and extract any available user facts in the `study_profile_update` field:\n"
+        "### PHASE STATE MACHINE — FOLLOW THIS EXACT STEP ORDER:\n"
+        "1. **Phase: chat**\n"
+        "   - Trigger: User says generic greetings ('hi', 'hello', 'help me') or vague statements.\n"
+        "   - Action: Warmly ask which specific subject, skill, or exam they want to learn.\n"
+        "   - Set phase: 'chat'. NEVER generate syllabus or draft_roadmap in chat phase.\n"
+        "\n"
+        "2. **Phase: discovery** (Subject Identified -> Display Syllabus & Ask User Approval)\n"
+        "   - Trigger: User mentions a specific subject/skill/exam (e.g. 'i have to learn python', 'Python Data Structures', 'GATE DA', 'Docker').\n"
+        "   - Action:\n"
+        "     a. Display the FULL, THOROUGH official syllabus under `### Syllabus & Topic Breakdown` with 5-8 detailed bullet points.\n"
+        "     b. End message with: 'Does this syllabus for [Subject/Skill Name] look good to you? Once confirmed, we will tailor your schedule preferences and build your master roadmap!'\n"
+        "     c. Set phase: 'discovery'.\n"
+        "     d. Extract target_exam in study_profile_update (e.g. {\"target_exam\": \"Python Data Structures\"}).\n"
+        "     e. Set draft_roadmap: null.\n"
+        "\n"
+        "3. **Phase: syllabus_review** (User Approves Syllabus -> Display Schedule Preferences Form)\n"
+        "   - Trigger: User confirms/approves the syllabus (e.g. 'yes', 'looks good', 'confirm', 'ok', 'correct', 'great', 'sure').\n"
+        "   - Action:\n"
+        "     a. Respond: 'Awesome! Let\\'s tailor your preparation roadmap schedule. Fill out your timeline and preference settings below, and I will synthesize your master learning path!'\n"
+        "     b. Set phase: 'syllabus_review'.\n"
+        "     c. Set draft_roadmap: null.\n"
+        "\n"
+        "4. **Phase: draft** (Schedule Submitted -> Generate Master Roadmap)\n"
+        "   - Trigger: User submits schedule preferences form (contains timeline/hours like '6m', '2 hrs/day', 'Synthesize Master Roadmap').\n"
+        "   - Action:\n"
+        "     a. Set phase: 'draft'.\n"
+        "     b. Set goal_title to the specific subject/skill name (e.g. 'Python Data Structures').\n"
+        "     c. Provide a clean 10-12 module breakdown in `draft_roadmap`.\n"
+        "\n"
+        "5. **Phase: ready** — User confirms draft and starts.\n"
+        "\n"
+        "### ROADMAP STRUCTURE (SINGLE SUBJECT FOCUS):\n"
+        "- Group the subject's syllabus into logical, chronological modules (e.g., Module 01: Real Numbers & Polynomials, Module 02: Linear Equations & Quadratic Equations, etc.).\n"
+        "- Each task represents a focused topic block that easily translates to calendar study sessions.\n"
+        "\n"
+        "### WEB SEARCH TOOL:\n"
+        "To search the internet: <edxiom_search>your search query</edxiom_search>\n"
+        "ALWAYS search when a specific subject/skill is chosen to get current official syllabus.\n"
+        "\n"
+        "### DYNAMIC STUDY PROFILE EXTRACTION:\n"
+        "For EVERY response, extract any user facts into study_profile_update:\n"
         "{\n"
-        '  "target_exam": "GATE DA 2026/etc",\n'
+        '  "target_exam": "CBSE Class 10 Mathematics / GATE DA Linear Algebra / etc",\n'
         '  "months_remaining": 6,\n'
         '  "preferred_language": "Hindi/Hinglish/English",\n'
-        '  "preferred_youtubers": "Physics Wallah/Gate Smashers/CodeWithHarry/etc",\n'
+        '  "preferred_youtubers": "Physics Wallah/Khan Academy/etc",\n'
         '  "study_hours_per_day": 2.0,\n'
         '  "learning_style": "From Scratch/Revision/etc"\n'
         "}\n"
         "\n"
         "### HOW TO BEHAVE:\n"
-        "1. **Tough-Love Mentor & Realistic Estimator**: Be a real friend/mentor. If the user tells you they want to crack a major exam in 2 months with 1 hr/day, calculate total hours (60 hrs vs 300+ needed), estimate pass probability, and tell them bluntly to increase daily hours!\n"
-        "2. **Give DETAILED answers**: When user asks a question (phase=chat), provide a THOROUGH, comprehensive explanation with headings and bullet points.\n"
-        "3. **ALWAYS SEARCH for exams/certifications**: If user mentions any named exam, certification, or skill, use <edxiom_search>query</edxiom_search> to get current real-world syllabi before generating roadmaps.\n"
-        "4. **Roadmap creation flow**:\n"
-        "   - discovery: Discuss syllabus and gather preferences (language, months, YouTubers, hours).\n"
-        "   - draft/ready: When user provides preferences (or submits their timeline/language choices), IMMEDIATELY generate a master web-derived roadmap tailored to their timeline and language in the `draft_roadmap` JSON field, and set `phase: 'draft'`.\n"
-        "\n"
-        "### WEB SEARCH TOOL:\n"
-        "To search the internet for current information, embed this tag in your response:\n"
-        "<edxiom_search>your search query</edxiom_search>\n"
+        "1. **One Subject at a Time**: Always encourage single-subject mastery. It keeps calendar planning simple, focused, and achievable.\n"
+        "2. **Teacher First**: Always display the syllabus and wait for user approval before schedule tailoring.\n"
+        "3. **Blunt & Caring**: Give realistic estimates for mastering the chosen subject.\n"
         "\n"
         "### OUTPUT FORMAT:\n"
         "Return ONLY a single-line JSON object. Escape all newlines as \\\\n.\n"
         "Fields:\n"
-        "- message: Your response text. Keep it interactive, natural, and conversational.\n"
-        "- phase: One of chat, discovery, draft, ready\n"
-        "- mood: Integer from 1 to 5 based on user progress/readiness (1=angry/strict, 3=neutral, 5=happy/praising).\n"
-        "- draft_roadmap: Include ONLY when phase is draft or ready. Array of objects: "
-        '[{"title": "Task Name", "parts": ["sub1", "sub2"]}].\n'
-        "- goal_title: Include ONLY when phase is draft or ready.\n"
-        "- study_profile_update: JSON object of extracted user facts for the Learning Draft Box.\n"
-        "\n"
-        "CRITICAL: NEVER recite background stats, degree, or previous goal details in greetings!\n"
-        "CRITICAL: Put roadmap data ONLY in draft_roadmap when phase is draft or ready.\n"
-        "IMPORTANT: Do NOT start responses with 'I see you are studying X'."
+        "- message: Your response text. Natural, conversational, warm, and structured.\n"
+        "- phase: EXACTLY one of: chat, discovery, syllabus_review, draft, ready\n"
+        "- mood: Integer 1-5 (1=strict, 3=neutral, 5=praising)\n"
+        "- draft_roadmap: ONLY when phase is 'draft' or 'ready'. Array: [{\"title\": \"...\", \"parts\": [\"...\", \"...\"]}].\n"
+        "- goal_title: ONLY when phase is 'draft' or 'ready'.\n"
+        "- study_profile_update: Always include if you extracted user facts.\n"
+        "CRITICAL: The 'message' field MUST contain ONLY clean natural language text. NEVER dump raw JSON arrays, raw JSON objects, or headings like '### DRAFT ROADMAP' or '### STUDY PROFILE UPDATE' inside the 'message' string!\n"
+        "CRITICAL: draft_roadmap MUST be null in chat, discovery, and syllabus_review phases.\n"
+        "CRITICAL: Always narrow multi-subject requests down to ONE primary subject or skill."
     )
-
     current_messages = [{"role": "system", "content": system_prompt}] + messages
     client = get_groq_client()
 
@@ -465,7 +614,7 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                             return {
                                 "message": "I've processed your request. Could you tell me more about what you'd like to focus on?",
                                 "phase": "discovery",
-                            }
+                             }
                         current_messages.append({"role": "user", "content": "Error: Your response was not valid JSON. Please provide ONLY the JSON object with no literal newlines inside string values. Use \\n for line breaks."})
                         continue
                 
@@ -475,26 +624,73 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                 
                 # Fix any double-escaped newlines that might have survived
                 if "message" in result and isinstance(result["message"], str):
-                    result["message"] = result["message"].replace("\\n", "\n")
+                    msg_text = result["message"].replace("\\n", "\n")
+                    # Clean out any raw JSON dumps or draft headers hallucinated inside message string
+                    msg_text = re.sub(r'###?\s*(DRAFT ROADMAP|GOAL TITLE|STUDY PROFILE UPDATE).*?(?=(###|\Z))', '', msg_text, flags=re.IGNORECASE | re.DOTALL)
+                    msg_text = re.sub(r'\[\s*\{\s*"title".*?\}\s*\]', '', msg_text, flags=re.DOTALL)
+                    msg_text = re.sub(r'\{\s*"(target_exam|months_remaining|study_hours_per_day|learning_style)".*?\}', '', msg_text, flags=re.DOTALL)
+                    msg_text = re.sub(r'\{\s*"message"\s*:.*\}', '', msg_text, flags=re.DOTALL)
+                    result["message"] = msg_text.strip()
 
                 # Ensure required fields exist
-                if "message" not in result:
-                    result["message"] = "Let me help you build your learning path."
+                if "message" not in result or not result["message"]:
+                    result["message"] = "Here is your customized learning plan."
                 if "phase" not in result:
                     result["phase"] = "discovery"
 
-                # Programmatic guardrail: if phase is not "draft" or "ready", clear the draft_roadmap!
-                if result.get("phase") not in ["draft", "ready"]:
+                # Normalize unknown phases to known ones
+                valid_phases = {"chat", "discovery", "syllabus_review", "draft", "ready"}
+                if result.get("phase") not in valid_phases:
+                    logger.warning(f"LLM returned unknown phase '{result.get('phase')}', defaulting to 'chat'")
+                    result["phase"] = "chat"
+
+                # PROGRAMMATIC GUARDRAIL: strictly enforce syllabus confirmation gate.
+                msg_lower = result.get("message", "").lower()
+                is_presenting_syllabus = "syllabus" in msg_lower or "topic breakdown" in msg_lower
+
+                if is_presenting_syllabus and result.get("phase") != "draft":
+                    result["phase"] = "discovery"
                     result["draft_roadmap"] = None
                     result["goal_title"] = None
-                
+                elif result.get("phase") in ["chat", "discovery", "syllabus_review"]:
+                    result["draft_roadmap"] = None
+                    result["goal_title"] = None
+
+                # Log the roadmap type for observability
+                if result.get("roadmap_type"):
+                    logger.info(f"📐 Roadmap type: {result['roadmap_type']}")
+
                 return result
 
         except RateLimitError as e:
-            logger.error(f"Groq Rate Limit during onboarding (attempt {attempt+1}): {e}")
+            logger.warning(f"Groq Rate Limit on {GROQ_MODEL} (attempt {attempt+1}): {e}")
             if attempt == 2:
-                raise
-            await asyncio.sleep(2.0)
+                # 🔄 Automatic fallback to 8B instant model (which has a separate 500,000 TPD quota)
+                try:
+                    logger.info(f"⚠️ 70B rate limit hit. Falling back to fast model ({GROQ_MODEL_FAST})...")
+                    fallback_resp = await client.chat.completions.create(
+                        model=GROQ_MODEL_FAST,
+                        messages=current_messages,
+                        temperature=0.7,
+                        max_tokens=2048,
+                    )
+                    cleaned = _clean_json(fallback_resp.choices[0].message.content)
+                    result = json.loads(cleaned)
+                    if "message" in result and isinstance(result["message"], str):
+                        msg_text = result["message"].replace("\\n", "\n")
+                        msg_text = re.sub(r'###?\s*(DRAFT ROADMAP|GOAL TITLE|STUDY PROFILE UPDATE).*?(?=(###|\Z))', '', msg_text, flags=re.IGNORECASE | re.DOTALL)
+                        msg_text = re.sub(r'\[\s*\{\s*"title".*?\}\s*\]', '', msg_text, flags=re.DOTALL)
+                        msg_text = re.sub(r'\{\s*"(target_exam|months_remaining|study_hours_per_day|learning_style)".*?\}', '', msg_text, flags=re.DOTALL)
+                        result["message"] = msg_text.strip()
+                    if "message" not in result or not result["message"]:
+                        result["message"] = "Here is your learning plan response."
+                    if "phase" not in result:
+                        result["phase"] = "discovery"
+                    return result
+                except Exception as fb_err:
+                    logger.error(f"Fallback fast model also failed: {fb_err}")
+                    raise e
+            await asyncio.sleep(1.5)
         except APIError as e:
             logger.error(f"Groq API Error during onboarding (attempt {attempt+1}): {e}")
             raise
@@ -528,6 +724,41 @@ async def generate_documentation(topic: str, research_data: str, transcript: str
     return await call_groq(system_prompt, user_prompt)
 
 
+def clean_youtube_title(title: str) -> str:
+    """Clean raw YouTube video/playlist titles into clean, academic task/module names."""
+    if not title or not isinstance(title, str):
+        return "Learning Module"
+    
+    t = title.strip()
+    
+    # Remove unicode emojis and special icons
+    t = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2300-\u23ff]', '', t)
+    
+    # Special brand goal title cleanup (only when title starts with the brand name)
+    if re.search(r'^STRIVERS?\s*A2Z.*DSA', t, re.IGNORECASE) and len(t) < 65:
+        return "Striver's A2Z Data Structures & Algorithms"
+            
+    # Remove creator / channel / playlist boilerplate extensions
+    t = re.sub(r'\s*\|\s*(Strivers|Striver|A2Z|DSA|Playlist|Course|Placements|Lecture|Tutorial|Full Course|202\d).*$', '', t, flags=re.IGNORECASE)
+    t = re.sub(r'\s*-\s*(Strivers|Striver|A2Z|DSA|Course|L\d+|Placement).*$', '', t, flags=re.IGNORECASE)
+    
+    # Remove clickbait / informal phrases
+    t = re.sub(r"(Don't watch my|Watch before|Must watch|Ka Baap|in \d+ Shot|Trick Explained|202\d)", '', t, flags=re.IGNORECASE)
+    
+    # Remove video index tags like "Re 4.", "Re 1.", "BS-7.", "BS-17.", "L9.", "L19.", "Lecture 1:"
+    t = re.sub(r'^(Re\s*\d+[\.:\s]*|BS-\d+[\.:\s]*|L\d+[\.:\s]*|Lecture\s*\d+[\.:\s]*|Chapter\s*\d+[\.:\s]*)', '', t, flags=re.IGNORECASE)
+    
+    # Clean pipes, extra spaces, and dangling symbols
+    t = re.sub(r'\s*\|\s*', ' - ', t)
+    t = re.sub(r'-\s*-+', '-', t)
+    t = re.sub(r'\s+', ' ', t).strip(' -:|')
+    
+    if not t or len(t) < 2:
+        return "Core Concept Overview"
+        
+    return t
+
+
 async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]) -> dict:
     """Generate a structured chapter-based roadmap and a specific goal title from a list of YouTube video titles and IDs."""
     # Extract titles for LLM processing
@@ -540,20 +771,20 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
         "You are Edxiom AI, a high-accountability learning coach.\n"
         "I will provide you with a list of video titles from a YouTube playlist.\n"
         "Your goal is to:\n"
-        "1. Synthesize a clean, professional, and specific Goal Title for the course (do not just copy the raw playlist title).\n"
+        "1. Synthesize a clean, professional, and academic Goal Title for the course (e.g., 'Data Structures & Algorithms' instead of raw playlist titles like 'STRIVERS A2Z-DSA COURSE | PLACEMENTS').\n"
         "2. Organize EVERY SINGLE ONE of these videos in chronological order into logical Modules.\n"
-        "3. For each module, generate a clean, professional synthesized Module Name (do not just use 'Chapter X' - create an educational, descriptive name).\n"
-        "4. For each video in a module, generate a clean, professional synthesized Module Task (Part) Name that describes what is taught in that video (do not just copy raw video titles which often have filler like 'Striver', 'In One Shot', '| DSA Playlist', etc. Clean them up into proper learning subtopics).\n"
+        "3. For each module, generate a clean, professional academic Module Name (e.g., 'Module 1: C++ Environment & Fundamentals', 'Module 2: Functional Recursion' - NEVER include clickbait or raw channel tags).\n"
+        "4. For each video in a module, generate a clean, professional academic Module Task Name that describes what is taught in that video (RENAME and CLEAN UP all informal/creator titles like 'Arrays Ka Baap', 'Don't watch my A2Z DSA Course', '| Strivers A2Z DSA Course', 'in 1 Shot' into proper, professional academic subtopics like 'Arrays & Basic Operations' or 'Introduction to Recursion').\n"
         "\n"
         "Return ONLY a JSON object with this exact structure:\n"
         "{\n"
-        '  "goal_title": "Synthesized Specific Goal Title",\n'
+        '  "goal_title": "Clean Academic Goal Title",\n'
         '  "roadmap": [\n'
         "    {\n"
-        '      "title": "Synthesized Module Name 1",\n'
+        '      "title": "Clean Academic Module Name 1",\n'
         '      "parts": [\n'
-        '        {"title": "Synthesized Module Task 1", "video_index": 0},\n'
-        '        {"title": "Synthesized Module Task 2", "video_index": 1}\n'
+        '        {"title": "Clean Academic Task Title 1", "video_index": 0},\n'
+        '        {"title": "Clean Academic Task Title 2", "video_index": 1}\n'
         "      ]\n"
         "    }\n"
         "  ]\n"
@@ -564,28 +795,33 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
     user_prompt = f"Playlist Title: {playlist_title}\n\nVideos:\n{video_list_str}\n\nGenerate the structured JSON roadmap."
 
     structured_roadmap = []
-    goal_title = playlist_title
+    goal_title = clean_youtube_title(playlist_title)
     
     try:
         raw = await call_groq(system_prompt, user_prompt)
         cleaned = _clean_json(raw)
         parsed = json.loads(cleaned)
         
-        goal_title = parsed.get("goal_title", playlist_title)
+        raw_gt = parsed.get("goal_title", playlist_title)
+        goal_title = clean_youtube_title(raw_gt)
         parsed_chapters = parsed.get("roadmap", [])
         
         for chapter in parsed_chapters:
-            chapter_title = chapter.get("title", f"Module {len(structured_roadmap) + 1}")
+            raw_ch = chapter.get("title", f"Module {len(structured_roadmap) + 1}")
+            chapter_title = clean_youtube_title(raw_ch)
+            if not chapter_title.startswith("Module"):
+                chapter_title = f"Module {len(structured_roadmap) + 1}: {chapter_title}"
+                
             parts = []
             for part_item in chapter.get("parts", []):
                 if isinstance(part_item, dict):
                     idx = part_item.get("video_index")
-                    p_title = part_item.get("title", "Untitled Part")
+                    p_title = clean_youtube_title(part_item.get("title", "Untitled Part"))
                     if idx is not None and 0 <= idx < len(videos):
                         v = videos[idx]
                         parts.append(f"{p_title} || {v['video_id']}")
                 elif isinstance(part_item, str):
-                    parts.append(part_item)
+                    parts.append(clean_youtube_title(part_item))
             if parts:
                 structured_roadmap.append({
                     "title": chapter_title,
@@ -598,10 +834,12 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
     # If parsing failed or returned empty roadmap, run programmatic fallback
     if not structured_roadmap:
         chunk_size = 10
+        goal_title = clean_youtube_title(playlist_title)
         for i in range(0, len(videos), chunk_size):
             chunk = videos[i:i+chunk_size]
-            chapter_title = f"Module {i//chunk_size + 1}: {chunk[0]['title']}"
-            parts = [f"{v['title']} || {v['video_id']}" for v in chunk]
+            first_clean = clean_youtube_title(chunk[0]['title'])
+            chapter_title = f"Module {i//chunk_size + 1}: {first_clean}"
+            parts = [f"{clean_youtube_title(v['title'])} || {v['video_id']}" for v in chunk]
             structured_roadmap.append({
                 "title": chapter_title,
                 "parts": parts
