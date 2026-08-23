@@ -19,12 +19,6 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
     return () => clearInterval(interval);
   }, [subMessages.length]);
 
-  // Square sizes (px) — must match the SVG rect dimensions below
-  const outerSize = 144; // w-36
-  const midSize   = 112; // w-28
-  const innerSize =  80; // w-20
-  const r = 12; // corner radius for the motion path rects
-
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center"
@@ -32,110 +26,40 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
     >
       <div className="flex flex-col items-center gap-8 animate-in fade-in duration-700">
 
-        {/* ── Squircle frames + orbiting dots ── */}
-        <div
-          className="relative flex items-center justify-center"
-          style={{ width: outerSize, height: outerSize }}
-        >
+        {/* ── Squircle Frames with Orbiting Dots ── */}
+        <div className="relative w-36 h-36 flex items-center justify-center">
 
-          {/* ── OUTER FRAME (gold, 144 × 144, perfectly upright) ── */}
+          {/* OUTER frame — gold, straight upright */}
+          <div className="absolute w-36 h-36 rounded-[2.2rem] border border-[#fdb813]/40 pointer-events-none" />
+          {/* Outer dot — circular orbit wrapper (no impact on frame) */}
           <div
-            className="absolute border border-[#fdb813]/40 bg-gradient-to-br from-[#fdb813]/[0.04] to-transparent pointer-events-none"
-            style={{
-              width: outerSize,
-              height: outerSize,
-              borderRadius: '2.2rem',
-              boxShadow: 'inset 0 0 20px rgba(253,184,19,0.05)',
-            }}
-          />
-          {/* Outer orbiting dot — travels the square perimeter */}
-          <div
-            className="absolute pointer-events-none"
-            style={{ width: outerSize, height: outerSize, top: 0, left: 0 }}
+            className="absolute w-36 h-36 rounded-full pointer-events-none"
+            style={{ animation: 'spin 6s linear infinite', transformOrigin: 'center center' }}
           >
-            <div
-              className="w-3.5 h-3.5 rounded-full bg-[#fdb813]"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                boxShadow: '0 0 14px #fdb813, 0 0 4px #fdb813',
-                offsetPath: `path('M ${r},0 L ${outerSize - r},0 Q ${outerSize},0 ${outerSize},${r} L ${outerSize},${outerSize - r} Q ${outerSize},${outerSize} ${outerSize - r},${outerSize} L ${r},${outerSize} Q 0,${outerSize} 0,${outerSize - r} L 0,${r} Q 0,0 ${r},0 Z')`,
-                offsetAnchor: 'center center',
-                animation: 'orbitSquare 5s linear infinite',
-              }}
-            />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#fdb813] shadow-[0_0_14px_#fdb813]" />
           </div>
 
-          {/* ── MIDDLE FRAME (emerald, 112 × 112) ── */}
+          {/* MIDDLE frame — emerald, straight upright */}
+          <div className="absolute w-28 h-28 rounded-[1.8rem] border border-emerald-400/40 pointer-events-none" />
+          {/* Middle dot — circular orbit, reverse */}
           <div
-            className="absolute border border-emerald-400/40 bg-gradient-to-br from-emerald-400/[0.04] to-transparent pointer-events-none"
-            style={{
-              width: midSize,
-              height: midSize,
-              borderRadius: '1.8rem',
-              boxShadow: 'inset 0 0 15px rgba(52,211,153,0.05)',
-            }}
-          />
-          {/* Middle orbiting dot */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              width: midSize,
-              height: midSize,
-              top: (outerSize - midSize) / 2,
-              left: (outerSize - midSize) / 2,
-            }}
+            className="absolute w-28 h-28 rounded-full pointer-events-none"
+            style={{ animation: 'spin 4.5s linear infinite reverse', transformOrigin: 'center center' }}
           >
-            <div
-              className="w-3 h-3 rounded-full bg-emerald-400"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                boxShadow: '0 0 12px #34d399, 0 0 4px #34d399',
-                offsetPath: `path('M ${r},0 L ${midSize - r},0 Q ${midSize},0 ${midSize},${r} L ${midSize},${midSize - r} Q ${midSize},${midSize} ${midSize - r},${midSize} L ${r},${midSize} Q 0,${midSize} 0,${midSize - r} L 0,${r} Q 0,0 ${r},0 Z')`,
-                offsetAnchor: 'center center',
-                animation: 'orbitSquare 3.8s linear infinite reverse',
-              }}
-            />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
           </div>
 
-          {/* ── INNER FRAME (sky-blue, 80 × 80) ── */}
+          {/* INNER frame — sky blue, straight upright */}
+          <div className="absolute w-20 h-20 rounded-[1.4rem] border border-sky-400/45 pointer-events-none" />
+          {/* Inner dot — circular orbit */}
           <div
-            className="absolute border border-sky-400/45 bg-gradient-to-br from-sky-400/[0.04] to-transparent pointer-events-none"
-            style={{
-              width: innerSize,
-              height: innerSize,
-              borderRadius: '1.4rem',
-              boxShadow: 'inset 0 0 10px rgba(56,189,248,0.05)',
-            }}
-          />
-          {/* Inner orbiting dot */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              width: innerSize,
-              height: innerSize,
-              top: (outerSize - innerSize) / 2,
-              left: (outerSize - innerSize) / 2,
-            }}
+            className="absolute w-20 h-20 rounded-full pointer-events-none"
+            style={{ animation: 'spin 3s linear infinite', transformOrigin: 'center center' }}
           >
-            <div
-              className="w-2.5 h-2.5 rounded-full bg-sky-400"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                boxShadow: '0 0 10px #38bdf8, 0 0 3px #38bdf8',
-                offsetPath: `path('M ${r},0 L ${innerSize - r},0 Q ${innerSize},0 ${innerSize},${r} L ${innerSize},${innerSize - r} Q ${innerSize},${innerSize} ${innerSize - r},${innerSize} L ${r},${innerSize} Q 0,${innerSize} 0,${innerSize - r} L 0,${r} Q 0,0 ${r},0 Z')`,
-                offsetAnchor: 'center center',
-                animation: 'orbitSquare 2.6s linear infinite',
-              }}
-            />
+            <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_10px_#38bdf8]" />
           </div>
 
-          {/* ── CENTER ICON BADGE ── */}
+          {/* CENTER icon badge — always stable */}
           <div className="relative z-10 w-14 h-14 rounded-2xl bg-[#161618] flex items-center justify-center border border-white/10 shadow-[0_10px_25px_rgba(0,0,0,0.8),_inset_0_1px_0_rgba(255,255,255,0.12)]">
             <span className="material-symbols-outlined text-[#fdb813] text-3xl animate-pulse">
               psychology
@@ -143,7 +67,7 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
           </div>
 
           {/* Ambient glow */}
-          <div className="absolute inset-0 rounded-full bg-[#fdb813]/10 blur-2xl animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 rounded-full blur-2xl animate-pulse pointer-events-none" style={{ background: 'rgba(253,184,19,0.08)' }} />
         </div>
 
         {/* Main message */}
@@ -177,10 +101,6 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
       </div>
 
       <style>{`
-        @keyframes orbitSquare {
-          from { offset-distance: 0%; }
-          to   { offset-distance: 100%; }
-        }
         @keyframes edxiomProgress {
           0%   { transform: translateX(-100%); width: 40%; }
           50%  { transform: translateX(80%);   width: 60%; }
