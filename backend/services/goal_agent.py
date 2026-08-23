@@ -272,6 +272,7 @@ async def enrich_with_youtube_node(state: GoalState) -> GoalState:
     """
     from services.search import search_youtube_videos
     import asyncio
+    import gc
 
     syllabus = state.get("verified_syllabus") or state.get("draft_syllabus")
     if not syllabus:
@@ -280,29 +281,36 @@ async def enrich_with_youtube_node(state: GoalState) -> GoalState:
     goal_text = state.get("clarified_goal") or state["raw_goal"]
     entity = state.get("detected_entity", "")
 
-    # Search YouTube for each task module in parallel
+    # Restrict concurrent searches to 2 max to save memory on Render
+    semaphore = asyncio.Semaphore(2)
+
+    # Search YouTube for each task module
     async def find_videos_for_task(task: dict) -> dict:
-        title = task.get("title", "")
-        search_query = f"{title} {entity} tutorial" if entity else f"{title} tutorial"
-        
-        try:
-            videos = await search_youtube_videos(search_query, max_results=1)
-            if videos:
-                video_id = videos[0]["video_id"]
-                # Attach video to the first part of this task
-                parts = task.get("parts", [])
-                if parts and isinstance(parts[0], str) and " || " not in parts[0]:
-                    parts[0] = f"{parts[0]} || {video_id}"
-                    task["parts"] = parts
-        except Exception as e:
-            logger.warning(f"YouTube enrichment failed for '{title}': {e}")
-        
-        return task
+        async with semaphore:
+            title = task.get("title", "")
+            search_query = f"{title} {entity} tutorial" if entity else f"{title} tutorial"
+            
+            try:
+                videos = await search_youtube_videos(search_query, max_results=1)
+                if videos:
+                    video_id = videos[0]["video_id"]
+                    # Attach video to the first part of this task
+                    parts = task.get("parts", [])
+                    if parts and isinstance(parts[0], str) and " || " not in parts[0]:
+                        parts[0] = f"{parts[0]} || {video_id}"
+                        task["parts"] = parts
+            except Exception as e:
+                logger.warning(f"YouTube enrichment failed for '{title}': {e}")
+            
+            return task
 
     try:
-        # Run all YouTube searches in parallel (one per task module)
+        # Limit enrichment to top 8 task modules max
+        tasks_to_enrich = syllabus[:8]
+        remaining_tasks = syllabus[8:]
+
         enriched_tasks = await asyncio.gather(
-            *[find_videos_for_task(task) for task in syllabus],
+            *[find_videos_for_task(task) for task in tasks_to_enrich],
             return_exceptions=True,
         )
         
@@ -314,6 +322,8 @@ async def enrich_with_youtube_node(state: GoalState) -> GoalState:
             elif isinstance(result, dict):
                 final_syllabus.append(result)
         
+        final_syllabus.extend(remaining_tasks)
+        
         if final_syllabus:
             state["verified_syllabus"] = final_syllabus
             video_count = sum(
@@ -324,6 +334,8 @@ async def enrich_with_youtube_node(state: GoalState) -> GoalState:
             logger.info(f"🎬 YouTube enrichment complete: {video_count} videos attached")
     except Exception as e:
         logger.warning(f"YouTube enrichment failed (non-fatal): {e}")
+    finally:
+        gc.collect()
 
     return state
 

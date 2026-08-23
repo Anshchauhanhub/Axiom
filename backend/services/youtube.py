@@ -66,8 +66,9 @@ async def _fallback_youtube_search(query: str, limit: int = 5) -> List[Dict]:
         async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10.0) as client:
             res = await client.get(str(q_quoted))
             if res.status_code == 200:
-                video_ids = re.findall(r'/watch\?v=([a-zA-Z0-9_-]{11})', res.text)
-                titles = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]*)\"\}', res.text)
+                html_chunk = res.text[:250000]
+                video_ids = re.findall(r'/watch\?v=([a-zA-Z0-9_-]{11})', html_chunk)
+                titles = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]*)\"\}', html_chunk)
                 
                 unique = []
                 seen = set()

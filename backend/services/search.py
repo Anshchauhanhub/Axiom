@@ -56,8 +56,9 @@ async def _fallback_httpx_search(query: str, max_results: int = 5) -> str:
             resp = await client.post(url, data={"q": query})
             if resp.status_code == 200:
                 import re
-                snippets = re.findall(r'<a class=\"result__snippet[^\"]*\"[^>]*>(.*?)</a>', resp.text, re.DOTALL)
-                titles = re.findall(r'<a class=\"result__url[^\"]*\"[^>]*>(.*?)</a>', resp.text, re.DOTALL)
+                html_chunk = resp.text[:200000]
+                snippets = re.findall(r'<a class=\"result__snippet[^\"]*\"[^>]*>(.*?)</a>', html_chunk, re.DOTALL)
+                titles = re.findall(r'<a class=\"result__url[^\"]*\"[^>]*>(.*?)</a>', html_chunk, re.DOTALL)
                 
                 formatted = []
                 for i in range(min(len(snippets), max_results)):

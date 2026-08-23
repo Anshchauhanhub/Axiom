@@ -35,7 +35,8 @@ async def synthesize_part_content(part_title: str, goal_title: str = None) -> st
             async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10.0) as client:
                 res = await client.get(url)
                 if res.status_code == 200:
-                    matches = re.findall(r'/watch\?v=([a-zA-Z0-9_-]{11})', res.text)
+                    html_chunk = res.text[:250000]
+                    matches = re.findall(r'/watch\?v=([a-zA-Z0-9_-]{11})', html_chunk)
                     if matches:
                         video_id = matches[0]
                         logger.info(f"✅ Found YouTube video: {video_id}")
