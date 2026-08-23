@@ -179,7 +179,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
             onClick={() => setIsMobileOpen(false)}
           />
           {/* Drawer */}
-          <aside className="absolute left-0 top-0 h-full w-[280px] bg-[#0e0e10] border-r border-white/5 flex flex-col py-6 px-3 shadow-2xl animate-in slide-in-from-left duration-300 pt-safe">
+          <aside className="absolute left-0 top-0 h-full w-[280px] bg-black border-r border-white/5 flex flex-col py-6 px-3 shadow-2xl animate-in slide-in-from-left duration-300 pt-safe">
             {/* Close button */}
             <div className="flex items-center justify-between px-2 mb-6">
               <Link to="/" className="group flex items-center" onClick={() => setIsMobileOpen(false)}>
@@ -263,7 +263,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
       )}
 
       {/* Desktop SideNavBar */}
-      <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-full transition-all duration-300 bg-[#0e0e10] py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40 ${isCollapsed ? 'w-20 items-center px-2' : 'w-56'}`}>
+      <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-full transition-all duration-300 bg-black py-8 px-4 shadow-[40px_0_60px_-10px_rgba(77,142,255,0.05)] z-40 ${isCollapsed ? 'w-20 items-center px-2' : 'w-56'}`}>
 
         {/* Header / Logo */}
         <div className={`mb-8 px-2 flex ${isCollapsed ? 'flex-col items-center pt-2' : 'items-center justify-between'}`}>

@@ -192,7 +192,7 @@ const Auth = () => {
   );
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a0a0b] py-12 px-4">
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black py-12 px-4">
       {/* Dynamic Background */}
       <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] animate-pulse pointer-events-none" />
@@ -217,8 +217,8 @@ const Auth = () => {
             {mode === 'login' ? 'Welcome' : 'Join'} <span className="text-primary drop-shadow-glow">Edxiom</span>
           </h1>
           <p className="text-on-surface-variant/60 font-label text-[10px] uppercase tracking-[0.3em]">
-            {mode === 'login' ? (accountType === 'creator' ? 'Creator login to manage your learners' : 'Sign in to continue your journey') : 
-             mode === 'register' ? (accountType === 'creator' ? 'Create your creator workspace' : 'Create your account to get started') : 
+            {mode === 'login' ? 'Sign in to continue your journey' : 
+             mode === 'register' ? 'Create your account to get started' : 
              mode === 'forgot-password' ? 'Reset your password' : 'Enter your new password'}
           </p>
         </div>
@@ -226,35 +226,6 @@ const Auth = () => {
         <div className="auth-glass rounded-[3rem] border border-white/5 p-8 sm:p-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           {/* Subtle Scanner Line */}
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent auth-scan" />
-
-          {(mode === 'login' || mode === 'register') && (
-            <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-white/5 bg-surface-container-lowest/40 p-1">
-              <button
-                type="button"
-                onClick={() => setAccountType('student')}
-                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 transition-all ${
-                  accountType === 'student'
-                    ? 'bg-primary text-black shadow-[0_12px_30px_rgba(253,184,19,0.18)]'
-                    : 'text-on-surface-variant/50 hover:bg-white/5 hover:text-on-surface'
-                }`}
-              >
-                <ShieldCheck size={15} />
-                <span className="font-label text-[10px] font-black uppercase tracking-[0.18em]">Student</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setAccountType('creator')}
-                className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 transition-all ${
-                  accountType === 'creator'
-                    ? 'bg-primary text-black shadow-[0_12px_30px_rgba(253,184,19,0.18)]'
-                    : 'text-on-surface-variant/50 hover:bg-white/5 hover:text-on-surface'
-                }`}
-              >
-                <Sparkles size={15} />
-                <span className="font-label text-[10px] font-black uppercase tracking-[0.18em]">Creator</span>
-              </button>
-            </div>
-          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             {mode !== 'reset-password' && (
@@ -339,8 +310,8 @@ const Auth = () => {
               <div className="relative z-10 flex items-center justify-center gap-3">
                 <span className="font-label font-black text-xs uppercase tracking-[0.3em]">
                   {loading ? 'Processing...' : (
-                    mode === 'login' ? (accountType === 'creator' ? 'Creator Sign In' : 'Sign In') : 
-                    mode === 'register' ? (accountType === 'creator' ? 'Creator Sign Up' : 'Sign Up') : 
+                    mode === 'login' ? 'Sign In' : 
+                    mode === 'register' ? 'Sign Up' : 
                     mode === 'forgot-password' ? 'Send Reset Link' : 'Update Password'
                   )}
                 </span>
@@ -355,7 +326,7 @@ const Auth = () => {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/10"></div>
                 </div>
-                <div className="relative bg-[#0a0a0b] px-4 text-[10px] font-label font-bold text-on-surface-variant/40 uppercase tracking-widest">
+                <div className="relative bg-black px-4 text-[10px] font-label font-bold text-on-surface-variant/40 uppercase tracking-widest">
                   Or continue with
                 </div>
               </div>

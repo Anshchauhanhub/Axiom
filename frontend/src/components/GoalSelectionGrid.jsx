@@ -22,7 +22,7 @@ const GoalSelectionGrid = ({ onSelect, loading }) => {
             key={cat.id}
             onClick={() => onSelect(cat.name)}
             disabled={loading}
-            className="group relative flex flex-col justify-between bg-[#0e0e10] border border-white/10 hover:border-primary/50 rounded-3xl p-4 text-left overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_10px_30px_rgba(253,184,19,0.15)] disabled:opacity-50"
+            className="group relative flex flex-col justify-between bg-surface border border-white/10 hover:border-primary/50 rounded-3xl p-4 text-left overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_10px_30px_rgba(253,184,19,0.15)] disabled:opacity-50"
           >
             {/* Top Badge Number */}
             <div className="flex items-center justify-between mb-3 z-10">
@@ -41,7 +41,7 @@ const GoalSelectionGrid = ({ onSelect, loading }) => {
                 alt={cat.name} 
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e10] via-transparent to-transparent opacity-80"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-80"></div>
             </div>
 
             {/* Content */}

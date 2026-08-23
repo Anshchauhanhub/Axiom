@@ -6,13 +6,13 @@
 
 /* ─── Theme: Colors, Fonts, Border Radii ─────────────────────────────── */
 :root {
-  --bg: #0F1115;
-  --surface: #171A21;
-  --surface-2: #1D2129;
-  --surface-hover: #252A33;
+  --bg: #000000;
+  --surface: #0a0a0c;
+  --surface-2: #121216;
+  --surface-hover: #1a1a20;
   --text: #F5F7FA;
   --text-muted: #A7AFBC;
-  --border: #2A303A;
+  --border: #22262f;
   --accent: #F5B51B;
   --accent-text: #111111;
 }

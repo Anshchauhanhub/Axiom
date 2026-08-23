@@ -393,7 +393,7 @@ const Onboarding = () => {
           {/* AI Architect Card */}
           <button 
             onClick={() => setOnboardingMode('chat')}
-            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-primary/50 hover:shadow-[0_0_80px_rgba(253,184,19,0.15)] overflow-hidden animate-in slide-in-from-left-12 duration-1000"
+            className="group relative bg-black/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-primary/50 hover:shadow-[0_0_80px_rgba(253,184,19,0.15)] overflow-hidden animate-in slide-in-from-left-12 duration-1000"
           >
             {/* Scanner Effect */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>
@@ -419,7 +419,7 @@ const Onboarding = () => {
           {/* YouTube Playlist Card */}
           <button 
             onClick={() => setOnboardingMode('youtube')}
-            className="group relative bg-[#0e0e10]/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-emerald-500/50 hover:shadow-[0_0_80px_rgba(16,185,129,0.15)] overflow-hidden animate-in slide-in-from-right-12 duration-1000"
+            className="group relative bg-black/80 backdrop-blur-xl p-8 sm:p-12 rounded-[4rem] border border-white/5 text-left transition-all duration-500 hover:scale-[1.05] hover:border-emerald-500/50 hover:shadow-[0_0_80px_rgba(16,185,129,0.15)] overflow-hidden animate-in slide-in-from-right-12 duration-1000"
           >
             {/* Scanner Effect */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/10 to-transparent h-20 w-full animate-scan opacity-0 group-hover:opacity-100 pointer-events-none z-10"></div>

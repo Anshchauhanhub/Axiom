@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { toggleGoalStatus, deleteGoal } from '../services/api';
 import NeuralLoader from '../components/NeuralLoader';
+import SettingsModal from '../components/SettingsModal';
 import {
   Activity, ArrowRight, BookOpen, BookText, CalendarClock, CheckCircle2, ChevronDown,
   ChevronRight, Clock3, Flame, GraduationCap, Layers, Pause, Play,
@@ -226,6 +227,8 @@ const Dashboard = () => {
   const [busy, setBusy] = useState(false);
   const [nextSchedule, setNextSchedule] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('notifications');
 
   const featuredSlides = useMemo(() => {
     if (!goals || goals.length === 0) return FEATURED_SLIDES;
@@ -475,48 +478,84 @@ const Dashboard = () => {
                 </div>
 
                 {/* Coach Link Card */}
-                <div className="p-5 rounded-[2rem] border border-sky-500/10 bg-gradient-to-br from-[#081420]/90 to-[#111111]/80 shadow-2xl flex items-center gap-4 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl pointer-events-none" />
-                  <div className="w-12 h-12 rounded-xl border border-sky-400/20 bg-sky-400/10 flex items-center justify-center shrink-0">
-                    <Send className="text-sky-400" size={18} />
+                <div
+                  onClick={() => {
+                    window.open('https://t.me/Axiomneurobot', '_blank');
+                    if (!user.telegram_chat_id) {
+                      setSettingsTab('notifications');
+                      setIsSettingsOpen(true);
+                    }
+                  }}
+                  className="p-5 rounded-[2rem] border border-sky-500/10 bg-gradient-to-br from-[#081420]/90 to-[#111111]/80 shadow-2xl flex items-center justify-between gap-4 relative overflow-hidden cursor-pointer group hover:border-sky-400/40 hover:shadow-[0_0_25px_rgba(56,189,248,0.15)] transition-all duration-300 active:scale-[0.98]"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-sky-500/10 transition-all" />
+                  
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-12 h-12 rounded-xl border border-sky-400/20 bg-sky-400/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Send className="text-sky-400" size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-[13px] font-black tracking-tight text-white flex items-center gap-1.5 mb-1 group-hover:text-sky-300 transition-colors">
+                        Coach Link
+                        <span className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor] ${user.telegram_chat_id ? 'bg-emerald-400 text-emerald-400' : 'bg-red-400 text-red-400'}`} />
+                      </h4>
+                      <p className="text-[10px] text-on-surface-variant/50 font-medium tracking-wide leading-tight truncate">
+                        {user.telegram_chat_id ? 'Nudges active. Click to open.' : 'Offline. Connect @Axiomneurobot.'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-[13px] font-black tracking-tight text-white flex items-center gap-1.5 mb-1">
-                      Coach Link
-                      <span className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor] ${user.telegram_chat_id ? 'bg-emerald-400 text-emerald-400' : 'bg-red-400 text-red-400'}`} />
-                    </h4>
-                    <p className="text-[10px] text-on-surface-variant/50 font-medium tracking-wide leading-tight">
-                      {user.telegram_chat_id ? 'Nudges active.' : 'Offline. Connect Telegram in settings.'}
-                    </p>
+
+                  <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-sky-400/20 bg-sky-400/10 text-sky-400 group-hover:bg-sky-400 group-hover:text-black transition-all">
+                    <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
 
                 {/* Today & Streak Card */}
                 {(() => {
-                  // Compute today's stats from roadmap data
                   const todayStr = new Date().toDateString();
-                  let partsPassedToday = 0;
-                  let questionsToday = 0;
+
+                  // 1. Goals Stats
+                  const totalGoals = goals.length;
+                  const completedGoals = goals.filter(g => {
+                    if (g.status === 'completed' || g.status === 'passed') return true;
+                    const rm = allRoadmaps[g.id];
+                    if (!rm) return false;
+                    const parts = (rm.tasks || []).flatMap(t => t.parts || []);
+                    return parts.length > 0 && parts.every(p => p.status === 'passed');
+                  }).length;
+
+                  // 2. Today's Tasks Stats
+                  let todayCompletedTasks = 0;
+                  let todayTotalTasks = 0;
+
                   goals.forEach(g => {
                     const rm = allRoadmaps[g.id];
                     if (!rm) return;
-                    (rm.tasks || []).flatMap(t => t.parts || []).forEach(p => {
-                      if (p.status === 'passed') {
-                        // Count if updated today (use updated_at if available)
-                        if (p.updated_at && new Date(p.updated_at).toDateString() === todayStr) {
-                          partsPassedToday++;
-                        }
-                        // Count quiz attempts
-                        (p.quiz_results || []).forEach(qr => {
-                          if (qr.created_at && new Date(qr.created_at).toDateString() === todayStr) {
-                            questionsToday += (qr.total_questions || 0);
-                          }
-                        });
+                    const parts = (rm.tasks || []).flatMap(t => t.parts || []);
+                    parts.forEach(p => {
+                      const isPassedToday = p.status === 'passed' && p.updated_at && new Date(p.updated_at).toDateString() === todayStr;
+                      const isActive = p.status === 'active' || p.status === 'in_progress';
+
+                      if (isPassedToday) {
+                        todayCompletedTasks++;
+                        todayTotalTasks++;
+                      } else if (isActive) {
+                        todayTotalTasks++;
                       }
                     });
                   });
 
-                  // Compute streak: count consecutive days with at least 1 passed part
+                  if (todayTotalTasks === 0 && goals.length > 0) {
+                    goals.forEach(g => {
+                      const rm = allRoadmaps[g.id];
+                      if (!rm) return;
+                      const parts = (rm.tasks || []).flatMap(t => t.parts || []);
+                      const activeParts = parts.filter(p => p.status === 'active' || p.status === 'passed');
+                      todayTotalTasks += activeParts.length;
+                    });
+                  }
+
+                  // 3. Streak Calculations (Current & Longest Streak)
                   const daySet = new Set();
                   goals.forEach(g => {
                     const rm = allRoadmaps[g.id];
@@ -527,12 +566,54 @@ const Dashboard = () => {
                       }
                     });
                   });
+
+                  // Current Streak
                   let streak = 0;
                   const check = new Date();
+                  check.setHours(0, 0, 0, 0);
+
+                  if (!daySet.has(check.toDateString())) {
+                    const yesterday = new Date(check);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    if (daySet.has(yesterday.toDateString())) {
+                      check.setDate(check.getDate() - 1);
+                    }
+                  }
+
                   while (daySet.has(check.toDateString())) {
                     streak++;
                     check.setDate(check.getDate() - 1);
                   }
+
+                  // Longest Streak
+                  const sortedDates = Array.from(daySet)
+                    .map(dStr => new Date(dStr))
+                    .sort((a, b) => a - b);
+
+                  let longestStreak = 0;
+                  let currentChain = 0;
+                  let prevTime = null;
+
+                  sortedDates.forEach(d => {
+                    d.setHours(0, 0, 0, 0);
+                    const time = d.getTime();
+                    if (prevTime === null) {
+                      currentChain = 1;
+                    } else {
+                      const diffDays = Math.round((time - prevTime) / (1000 * 60 * 60 * 24));
+                      if (diffDays === 1) {
+                        currentChain++;
+                      } else if (diffDays > 1) {
+                        currentChain = 1;
+                      }
+                    }
+                    prevTime = time;
+                    if (currentChain > longestStreak) {
+                      longestStreak = currentChain;
+                    }
+                  });
+
+                  longestStreak = Math.max(longestStreak, streak);
 
                   return (
                     <div className="rounded-[2rem] border border-[#fdb813]/15 bg-[#111111]/80 shadow-2xl overflow-hidden">
@@ -551,15 +632,15 @@ const Dashboard = () => {
                       <div className="px-5 pb-4 grid grid-cols-2 gap-3">
                         <div className="bg-white/[0.03] rounded-2xl p-3.5 border border-white/[0.04]">
                           <p className="text-[22px] font-black text-[#fdb813] leading-none mb-1">
-                            {partsPassedToday} <span className="text-white/20 text-xs font-normal">/ —</span>
+                            {completedGoals} <span className="text-white/20 text-xs font-normal">/ {totalGoals}</span>
                           </p>
-                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35">Parts Done</p>
+                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35">Goals Done</p>
                         </div>
                         <div className="bg-white/[0.03] rounded-2xl p-3.5 border border-white/[0.04]">
                           <p className="text-[22px] font-black text-[#fdb813] leading-none mb-1">
-                            {questionsToday} <span className="text-white/20 text-xs font-normal">/ —</span>
+                            {todayCompletedTasks} <span className="text-white/20 text-xs font-normal">/ {todayTotalTasks > 0 ? todayTotalTasks : '—'}</span>
                           </p>
-                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35">Questions</p>
+                          <p className="text-[9px] font-label font-black uppercase tracking-widest text-white/35">Today's Tasks</p>
                         </div>
                       </div>
 
@@ -577,8 +658,8 @@ const Dashboard = () => {
                             </div>
                             <div className="w-px h-8 bg-white/[0.06]" />
                             <div>
-                              <p className="text-[9px] font-label uppercase tracking-wider text-white/30 mb-0.5">All-time</p>
-                              <p className="text-base font-black text-white/70">{globalStats.totalDone} parts</p>
+                              <p className="text-[9px] font-label uppercase tracking-wider text-white/30 mb-0.5">Longest</p>
+                              <p className="text-base font-black text-white/70">{longestStreak} day{longestStreak !== 1 ? 's' : ''}</p>
                             </div>
                           </div>
                         </div>
@@ -610,6 +691,12 @@ const Dashboard = () => {
           </>
         )}
       </div>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        initialTab={settingsTab}
+      />
     </div>
   );
 };

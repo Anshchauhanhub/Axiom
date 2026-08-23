@@ -52,11 +52,11 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0e0e10] text-on-surface selection:bg-primary/30 overflow-x-hidden">
+    <div className="min-h-screen bg-black text-on-surface selection:bg-primary/30 overflow-x-hidden">
       {/* ─── Navigation ─── */}
       <nav className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 ${isScrolled
-          ? 'bg-[#0e0e10]/90 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.5)] border-b border-outline-variant/10'
-          : 'bg-gradient-to-b from-[#0e0e10]/80 to-transparent border-b border-transparent'
+          ? 'bg-black/90 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.5)] border-b border-outline-variant/10'
+          : 'bg-gradient-to-b from-black/80 to-transparent border-b border-transparent'
         }`}>
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex items-center justify-between h-20 sm:h-24">
 
@@ -106,7 +106,7 @@ const Landing = () => {
         {/* Mobile Menu Dropdown */}
         <div className={`md:hidden overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
           }`}>
-          <div className="bg-[#0e0e10]/98 backdrop-blur-2xl border-t border-outline-variant/10 px-6 py-6 space-y-3">
+          <div className="bg-black/98 backdrop-blur-2xl border-t border-outline-variant/10 px-6 py-6 space-y-3">
             <a href="#features" onClick={() => setMobileMenuOpen(false)}
               className="block text-sm font-label font-bold uppercase tracking-[0.15em] text-on-surface-variant hover:text-primary transition-colors py-3 border-b border-outline-variant/5">
               Features

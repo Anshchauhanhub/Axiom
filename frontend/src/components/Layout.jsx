@@ -71,7 +71,7 @@ const Layout = ({ children }) => {
       {!hideNavigation && (
         <>
           {/* Mobile Header Background to prevent overlap */}
-          <div className="lg:hidden fixed top-0 left-0 w-full h-20 bg-[#0e0e10]/95 backdrop-blur-xl border-b border-white/5 z-[50] pt-safe"></div>
+          <div className="lg:hidden fixed top-0 left-0 w-full h-20 bg-black/95 backdrop-blur-xl border-b border-white/5 z-[50] pt-safe"></div>
           
           <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           {path !== '/notebooks' && <TopNav />}

@@ -6,14 +6,20 @@ import { linkTelegram, updateSchedule, updateProfile, uploadProfileImage } from 
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
 
-const SettingsModal = ({ isOpen, onClose }) => {
+const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
   const { user, logout, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const fileInputRef = useRef(null);
   const modalRef = useRef(null);
   const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
   const [chatId, setChatId] = useState('');
   const [schedule, setSchedule] = useState(user?.study_schedule || ['12:00', '18:00']);
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
@@ -129,7 +135,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
       {/* Modal Container */}
       <div 
         ref={modalRef}
-        className="relative w-full max-w-[720px] max-h-[85vh] bg-[#131315] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300 mx-4"
+        className="relative w-full max-w-[720px] max-h-[85vh] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300 mx-4"
       >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
@@ -347,7 +353,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
                           {saving ? 'Linking...' : 'Link Telegram'}
                         </button>
                         <p className="text-[11px] text-white/30 leading-relaxed">
-                          Open Telegram → message <a href="https://t.me/Edxiomneurobot" target="_blank" rel="noopener noreferrer" className="text-[#0088cc] hover:underline font-semibold">@Edxiomneurobot</a> → send <code className="bg-white/5 px-1.5 py-0.5 rounded text-white/60">/start</code> → copy your Chat ID
+                          Open Telegram → message <a href="https://t.me/Axiomneurobot" target="_blank" rel="noopener noreferrer" className="text-[#0088cc] hover:underline font-semibold">@Axiomneurobot</a> → send <code className="bg-white/5 px-1.5 py-0.5 rounded text-white/60">/start</code> → copy your Chat ID
                         </p>
                       </div>
                     )}
