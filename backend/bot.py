@@ -1,6 +1,7 @@
 import os
 import logging
 from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import Conflict
 from telegram.ext import (
     Application,
     CommandHandler,

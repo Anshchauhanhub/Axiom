@@ -23,22 +23,59 @@ load_dotenv()
 
 logger = logging.getLogger("edxiom.cache")
 
+import httpx
+
 SIMILARITY_THRESHOLD = float(os.getenv("CACHE_SIMILARITY_THRESHOLD", "0.91"))
+ENABLE_SEMANTIC_EMBEDDINGS = os.getenv("ENABLE_SEMANTIC_EMBEDDINGS", "false").lower() in ("true", "1", "yes", "t")
 
 _embedder = None
 
 
 def _get_embedder():
-    """Lazy-load the SentenceTransformer so cold-start is fast when not needed."""
+    """Lazy-load local SentenceTransformer only if explicitly enabled."""
     global _embedder
+    if not ENABLE_SEMANTIC_EMBEDDINGS:
+        return None
     if _embedder is None:
         try:
             from sentence_transformers import SentenceTransformer
             _embedder = SentenceTransformer("all-MiniLM-L6-v2")
             logger.info("✅ SentenceTransformer (all-MiniLM-L6-v2) loaded.")
-        except ImportError:
-            logger.warning("⚠️ sentence-transformers not installed. Semantic cache disabled.")
+        except Exception as e:
+            logger.warning(f"⚠️ PyTorch SentenceTransformer disabled/failed ({e}). Using Tier 1 SHA256 Hash Cache.")
     return _embedder
+
+
+async def fetch_embedding_vector(text_val: str) -> Optional[list[float]]:
+    """
+    Generate embedding vector using hosted API (0 MB local RAM footprint).
+    Falls back to local SentenceTransformer if ENABLE_SEMANTIC_EMBEDDINGS is True.
+    """
+    embedding_url = os.getenv("EMBEDDING_API_URL")
+    embedding_key = os.getenv("EMBEDDING_API_KEY")
+
+    if embedding_url:
+        try:
+            headers = {"Authorization": f"Bearer {embedding_key}"} if embedding_key else {}
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.post(embedding_url, json={"input": text_val}, headers=headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    if "data" in data and len(data["data"]) > 0:
+                        return data["data"][0]["embedding"]
+                    elif "embedding" in data:
+                        return data["embedding"]
+        except Exception as e:
+            logger.warning(f"Hosted embedding API error (non-fatal): {e}")
+
+    embedder = _get_embedder()
+    if embedder:
+        try:
+            return embedder.encode(text_val).tolist()
+        except Exception as e:
+            logger.warning(f"Local embedder failed: {e}")
+
+    return None
 
 
 # ── Normalization ─────────────────────────────────────────────────────
@@ -99,12 +136,11 @@ async def check_cache(goal_text: str, db: AsyncSession) -> dict:
         await db.commit()
         return {"tier": "exact", "template": dict(exact), "score": 1.0}
 
-    # ── Tier 2: Semantic match (pgvector in Postgres) ─────────
-    embedder = _get_embedder()
+    # ── Tier 2: Semantic match (pgvector in Postgres via Hosted/Local Embedding) ─────────
+    vector = await fetch_embedding_vector(normalize_goal(goal_text))
 
-    if embedder:
+    if vector:
         try:
-            vector = embedder.encode(normalize_goal(goal_text)).tolist()
             vector_str = "[" + ",".join(map(str, vector)) + "]"
 
             query = text(
@@ -159,15 +195,9 @@ async def save_to_cache(
     goal_hash = get_goal_hash(goal_text)
     template_id = str(uuid.uuid4())
 
-    # Generate embedding vector if embedder is available
-    embedder = _get_embedder()
-    vector_str = None
-    if embedder:
-        try:
-            vector = embedder.encode(normalize_goal(goal_text)).tolist()
-            vector_str = "[" + ",".join(map(str, vector)) + "]"
-        except Exception as e:
-            logger.warning(f"Failed to generate vector for cache save: {e}")
+    # Generate embedding vector if embedder or hosted API is available
+    vector = await fetch_embedding_vector(normalize_goal(goal_text))
+    vector_str = "[" + ",".join(map(str, vector)) + "]" if vector else None
 
     # Entity-linked syllabi expire faster since exam patterns change
     expiry_days = 90 if detected_entity else 365

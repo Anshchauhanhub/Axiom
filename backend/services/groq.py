@@ -25,6 +25,7 @@ GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "openai/gpt-oss-20b")
 
 _groq_client: Optional[AsyncGroq] = None
 _instructor_client = None
+_GROQ_SEMAPHORE = asyncio.Semaphore(10)
 
 
 def get_groq_client() -> AsyncGroq:
@@ -54,78 +55,74 @@ async def generate_exam_roadmap_structured(
     final reasoning phase, feeding it clean context extracted by 8B model in Step 3.
     Returns validated ExamRoadmap Pydantic object.
     """
-    client = get_instructor_client()
+    async with _GROQ_SEMAPHORE:
+        client = get_instructor_client()
 
-    system_prompt = (
-        "You are Edxiom AI, a high-accountability learning coach. "
-        "Build a structured, exhaustive, subject-grounded learning roadmap based strictly on the provided clean context. "
-        "Ensure modules have core topics and recommended video resources with satisfaction scores."
-    )
-    user_prompt = (
-        f"Target Goal/Entity: {goal_title}\n\n"
-        f"Verified Clean Context:\n{clean_context}\n\n"
-        "Generate the complete ExamRoadmap structure:"
-    )
+        system_prompt = (
+            "You are Edxiom AI, a high-accountability learning coach. "
+            "Build a structured, exhaustive, subject-grounded learning roadmap based strictly on the provided clean context. "
+            "Ensure modules have core topics and recommended video resources with satisfaction scores."
+        )
+        user_prompt = (
+            f"Target Goal/Entity: {goal_title}\n\n"
+            f"Verified Clean Context:\n{clean_context}\n\n"
+            "Generate the complete ExamRoadmap structure:"
+        )
 
-    roadmap: ExamRoadmap = await client.chat.completions.create(
-        model=GROQ_MODEL,
-        response_model=ExamRoadmap,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.3,
-        max_retries=3
-    )
+        roadmap: ExamRoadmap = await client.chat.completions.create(
+            model=GROQ_MODEL,
+            response_model=ExamRoadmap,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+            max_retries=3
+        )
 
-    return roadmap
+        return roadmap
 
 
 async def call_groq(system_prompt: str, user_prompt: str, model: str = None,
                      temperature: float = 0.7, max_tokens: int = None) -> str:
-    """Call Groq API via Native AsyncGroq SDK. Returns raw response string.
+    """Call Groq API via Native AsyncGroq SDK. Returns raw response string."""
+    async with _GROQ_SEMAPHORE:
+        use_model = model or GROQ_MODEL
+        client = get_groq_client()
 
-    Args:
-        model: Override default model. Use GROQ_MODEL_FAST for fast/cheap tasks.
-        temperature: Lower = more deterministic (good for classification).
-        max_tokens: Cap output length to save tokens.
-    """
-    use_model = model or GROQ_MODEL
-    client = get_groq_client()
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
+        kwargs = {
+            "model": use_model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        if max_tokens:
+            kwargs["max_tokens"] = max_tokens
 
-    kwargs = {
-        "model": use_model,
-        "messages": messages,
-        "temperature": temperature,
-    }
-    if max_tokens:
-        kwargs["max_tokens"] = max_tokens
-
-    for attempt in range(3):
-        try:
-            response = await client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
-        except RateLimitError as e:
-            if attempt == 2:
-                logger.error(f"Rate limit exceeded ({use_model}): {e}")
+        for attempt in range(3):
+            try:
+                response = await client.chat.completions.create(**kwargs)
+                return response.choices[0].message.content
+            except RateLimitError as e:
+                if attempt == 2:
+                    logger.error(f"Rate limit exceeded ({use_model}): {e}")
+                    raise
+                await asyncio.sleep(1.5 * (attempt + 1))
+            except APIConnectionError as e:
+                if attempt == 2:
+                    logger.error(f"Connection error ({use_model}): {e}")
+                    raise
+                await asyncio.sleep(1.0 * (attempt + 1))
+            except APIError as e:
+                logger.error(f"Groq API error ({use_model}): {e}")
                 raise
-            await asyncio.sleep(1.5 * (attempt + 1))
-        except APIConnectionError as e:
-            if attempt == 2:
-                logger.error(f"Connection error ({use_model}): {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error calling Groq ({use_model}): {e}")
                 raise
-            await asyncio.sleep(1.0 * (attempt + 1))
-        except APIError as e:
-            logger.error(f"Groq API error ({use_model}): {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error calling Groq ({use_model}): {e}")
-            raise
 
 
 async def call_groq_fast(system_prompt: str, user_prompt: str,
