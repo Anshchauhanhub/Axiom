@@ -524,7 +524,7 @@ const Dashboard = () => {
                     return parts.length > 0 && parts.every(p => p.status === 'passed');
                   }).length;
 
-                  // 2. Today's Tasks Stats
+                  // 2. Today's Tasks & Progress Stats
                   let todayCompletedTasks = 0;
                   let todayTotalTasks = 0;
 
@@ -533,13 +533,10 @@ const Dashboard = () => {
                     if (!rm) return;
                     const parts = (rm.tasks || []).flatMap(t => t.parts || []);
                     parts.forEach(p => {
-                      const isPassedToday = p.status === 'passed' && p.updated_at && new Date(p.updated_at).toDateString() === todayStr;
-                      const isActive = p.status === 'active' || p.status === 'in_progress';
-
-                      if (isPassedToday) {
+                      if (p.status === 'passed') {
                         todayCompletedTasks++;
                         todayTotalTasks++;
-                      } else if (isActive) {
+                      } else if (p.status === 'active' || p.status === 'in_progress') {
                         todayTotalTasks++;
                       }
                     });
@@ -550,70 +547,15 @@ const Dashboard = () => {
                       const rm = allRoadmaps[g.id];
                       if (!rm) return;
                       const parts = (rm.tasks || []).flatMap(t => t.parts || []);
-                      const activeParts = parts.filter(p => p.status === 'active' || p.status === 'passed');
-                      todayTotalTasks += activeParts.length;
+                      todayTotalTasks += parts.length;
+                      todayCompletedTasks += parts.filter(p => p.status === 'passed').length;
                     });
                   }
 
-                  // 3. Streak Calculations (Current & Longest Streak)
-                  const daySet = new Set();
-                  goals.forEach(g => {
-                    const rm = allRoadmaps[g.id];
-                    if (!rm) return;
-                    (rm.tasks || []).flatMap(t => t.parts || []).forEach(p => {
-                      if (p.status === 'passed' && p.updated_at) {
-                        daySet.add(new Date(p.updated_at).toDateString());
-                      }
-                    });
-                  });
-
-                  // Current Streak
-                  let streak = 0;
-                  const check = new Date();
-                  check.setHours(0, 0, 0, 0);
-
-                  if (!daySet.has(check.toDateString())) {
-                    const yesterday = new Date(check);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    if (daySet.has(yesterday.toDateString())) {
-                      check.setDate(check.getDate() - 1);
-                    }
-                  }
-
-                  while (daySet.has(check.toDateString())) {
-                    streak++;
-                    check.setDate(check.getDate() - 1);
-                  }
-
-                  // Longest Streak
-                  const sortedDates = Array.from(daySet)
-                    .map(dStr => new Date(dStr))
-                    .sort((a, b) => a - b);
-
-                  let longestStreak = 0;
-                  let currentChain = 0;
-                  let prevTime = null;
-
-                  sortedDates.forEach(d => {
-                    d.setHours(0, 0, 0, 0);
-                    const time = d.getTime();
-                    if (prevTime === null) {
-                      currentChain = 1;
-                    } else {
-                      const diffDays = Math.round((time - prevTime) / (1000 * 60 * 60 * 24));
-                      if (diffDays === 1) {
-                        currentChain++;
-                      } else if (diffDays > 1) {
-                        currentChain = 1;
-                      }
-                    }
-                    prevTime = time;
-                    if (currentChain > longestStreak) {
-                      longestStreak = currentChain;
-                    }
-                  });
-
-                  longestStreak = Math.max(longestStreak, streak);
+                  // 3. Streak Calculations (From backend user.current_streak or active activity)
+                  const rawStreak = user?.current_streak ?? 0;
+                  const streak = rawStreak > 0 ? rawStreak : (todayCompletedTasks > 0 ? 1 : 0);
+                  const longestStreak = Math.max(streak, rawStreak);
 
                   return (
                     <div className="rounded-[2rem] border border-[#fdb813]/15 bg-[#111111]/80 shadow-2xl overflow-hidden">

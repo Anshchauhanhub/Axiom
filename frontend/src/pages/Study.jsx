@@ -30,6 +30,7 @@ const Study = () => {
   const [loading, setLoading] = useState(false);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
+  const [completingPart, setCompletingPart] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(15 * 60);
   const [learningContent, setLearningContent] = useState(null);
@@ -43,6 +44,15 @@ const Study = () => {
   const saveTimeoutRef = useRef(null);
   const editorRef = useRef(null);
   const initialNotesRef = useRef(null);
+  const mainRef = useRef(null);
+
+  // Auto-scroll main container & window to top on phase, part, or task changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [phase, activePartId, activeTask?.id]);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -87,10 +97,11 @@ const Study = () => {
           activeTaskRef.current = true;
         } else if (activeTask) {
           const freshTask = roadmap.tasks.find(t => t.id === activeTask.id);
-          if (freshTask) {
+          // If the current activeTask is completed (passed), automatically switch to the newly unlocked active task
+          if (freshTask && freshTask.status !== 'passed') {
             setActiveTask(freshTask);
           } else {
-            setActiveTask(foundTask);
+            setActiveTask(foundTask || freshTask);
           }
         }
       }
@@ -200,6 +211,7 @@ const Study = () => {
   };
 
   const handleStartQuiz = async () => {
+    if (loading || loadingQuiz || completingPart) return;
     const partId = activePartId;
     const title = partTitle;
     setLoading(true);
@@ -224,16 +236,20 @@ const Study = () => {
   };
 
   const handleMarkComplete = async () => {
+    if (loading || completingPart) return;
     setLoading(true);
+    setCompletingPart(true);
     setError('');
     try {
       await completeDirect(activePartId);
+      activeTaskRef.current = false; // Reset lock ref so natural progress task is chosen
       await refreshData();
       refreshUser();
       setPhase('select'); // Directly return to roadmap
     } catch (e) {
       setError(e.message);
     } finally {
+      setCompletingPart(false);
       setLoading(false);
     }
   };
@@ -335,6 +351,18 @@ const Study = () => {
 
   const renderLoaders = () => (
     <>
+      {completingPart && (
+        <NeuralLoader
+          message="RECORDING MILESTONE"
+          subMessages={[
+            'Verifying module completion',
+            'Updating neural roadmap node',
+            'Calculating streak milestone',
+            'Synchronizing progress record',
+            'Returning to roadmap hub',
+          ]}
+        />
+      )}
       {loadingQuiz && (
         <NeuralLoader
           message="PREPARING ASSESSMENT"
@@ -807,12 +835,22 @@ const Study = () => {
                   return (
                     <button
                       onClick={handleMarkComplete}
-                      className="group relative px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105"
+                      disabled={loading || completingPart}
+                      className="group relative px-12 sm:px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                       <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
                       <span className="relative font-label font-black tracking-[0.4em] text-on-primary-container text-lg uppercase flex items-center gap-4">
-                         Complete & Continue
-                         <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">check_circle</span>
+                         {completingPart ? (
+                           <>
+                             Processing...
+                             <span className="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+                           </>
+                         ) : (
+                           <>
+                             Complete & Continue
+                             <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">check_circle</span>
+                           </>
+                         )}
                       </span>
                     </button>
                   );
@@ -821,12 +859,22 @@ const Study = () => {
                 return (
                   <button
                     onClick={handleStartQuiz}
-                    className="group relative px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105"
+                    disabled={loading || loadingQuiz}
+                    className="group relative px-12 sm:px-20 py-7 bg-primary rounded-full overflow-hidden transition-all duration-700 active:scale-95 shadow-[0_20px_60px_rgba(253,184,19,0.4)] hover:shadow-primary/60 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-700"></div>
                     <span className="relative font-label font-black tracking-[0.6em] text-on-primary-container text-lg uppercase flex items-center gap-4">
-                       Initiate Assessment
-                       <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">bolt</span>
+                       {loadingQuiz ? (
+                         <>
+                           Preparing...
+                           <span className="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+                         </>
+                       ) : (
+                         <>
+                           Initiate Assessment
+                           <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">bolt</span>
+                         </>
+                       )}
                     </span>
                   </button>
                 );
@@ -903,7 +951,7 @@ const Study = () => {
       {renderLoaders()}
       
       <div className={`flex w-full h-full relative overflow-hidden ${showNotes ? 'flex-1' : ''}`}>
-        <main className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
+        <main ref={mainRef} className={`flex-1 transition-all duration-700 ease-in-out h-full overflow-y-auto custom-scrollbar ${showNotes ? 'pr-2' : ''}`}>
           <div className={`w-full mx-auto px-3 sm:px-10 py-4 lg:py-6 ${showNotes ? 'p-4 sm:p-6' : ''}`}>
              {phaseContent}
           </div>

@@ -57,7 +57,10 @@ async def search_transcript_playlists(query: str, limit: int = 5) -> List[Dict]:
 
 
 async def _fallback_youtube_search(query: str, limit: int = 5) -> List[Dict]:
-    """Fallback youtube search using httpx html parsing."""
+    """Fallback youtube search using httpx html parsing and DuckDuckGo search."""
+    video_ids = []
+    titles = []
+
     try:
         q_quoted = httpx.URL(f"https://www.youtube.com/results?search_query={query}")
         headers = {
@@ -67,27 +70,41 @@ async def _fallback_youtube_search(query: str, limit: int = 5) -> List[Dict]:
             res = await client.get(str(q_quoted))
             if res.status_code == 200:
                 html_chunk = res.text[:250000]
-                video_ids = re.findall(r'/watch\?v=([a-zA-Z0-9_-]{11})', html_chunk)
+                video_ids = re.findall(
+                    r'(?:/watch\?v=|"videoId":\s*"|watchEndpoint":\s*{\s*"videoId":\s*")([a-zA-Z0-9_-]{11})',
+                    html_chunk
+                )
                 titles = re.findall(r'\"title\":\{\"runs\":\[\{\"text\":\"([^\"]*)\"\}', html_chunk)
-                
-                unique = []
-                seen = set()
-                for idx, vid in enumerate(video_ids):
-                    if vid not in seen:
-                        seen.add(vid)
-                        title = titles[idx] if idx < len(titles) else f"Tutorial on {query}"
-                        unique.append({
-                            "video_id": vid,
-                            "title": title,
-                            "url": f"https://www.youtube.com/watch?v={vid}",
-                            "satisfaction_score": 8.5
-                        })
-                        if len(unique) >= limit:
-                            break
-                return unique
     except Exception as e:
         logger.warning(f"Fallback YouTube search error: {e}")
-    return []
+
+    # Fallback to DuckDuckGo search if YouTube search returns no matches
+    if not video_ids:
+        try:
+            ddg_url = "https://html.duckduckgo.com/html/"
+            ddg_query = f"site:youtube.com {query}"
+            async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, follow_redirects=True, timeout=10.0) as client:
+                resp = await client.post(ddg_url, data={"q": ddg_query})
+                if resp.status_code == 200:
+                    video_ids = re.findall(r'watch\?v=([a-zA-Z0-9_-]{11})', resp.text[:200000])
+        except Exception as e:
+            logger.warning(f"DuckDuckGo video fallback search error: {e}")
+
+    unique = []
+    seen = set()
+    for idx, vid in enumerate(video_ids):
+        if len(vid) == 11 and vid not in ("watch_popup", "00000000000") and vid not in seen:
+            seen.add(vid)
+            title = titles[idx] if idx < len(titles) else f"Tutorial on {query}"
+            unique.append({
+                "video_id": vid,
+                "title": title,
+                "url": f"https://www.youtube.com/watch?v={vid}",
+                "satisfaction_score": 8.5
+            })
+            if len(unique) >= limit:
+                break
+    return unique
 
 
 async def get_video_transcript(video_id: str) -> Optional[str]:
