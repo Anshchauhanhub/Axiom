@@ -5,10 +5,11 @@ Model routing (Native Groq SDK, $0 cost):
     - detect_entity → llama-3.1-8b-instant (fast, ~20 tokens, classification)
     - synthesize_draft → llama-3.3-70b-versatile (quality structured JSON)
     - intake, clarify, verify → rule-based (no LLM, $0)
+    - resolve_best_creator → llama-3.1-8b-instant (fast, ~30 tokens, one-shot selection)
 
 State machine engine (Vanilla Python Async):
     intake → clarify (if needed) → detect_entity → fetch_entity_context (if entity found)
-    → synthesize_draft → verify_syllabus → enrich_with_youtube → done
+    → synthesize_draft → verify_syllabus → resolve_best_creator → enrich_with_youtube → done
 """
 
 import logging
@@ -17,6 +18,93 @@ import re
 from typing import TypedDict, Optional
 
 logger = logging.getLogger("edxiom.goal_agent")
+
+
+# ── Creator Registry ──────────────────────────────────────────────────
+# Maps topic keywords → (canonical_creator_name, search_suffix)
+# The search_suffix is appended to every YouTube query so ALL modules
+# pull from the same creator's catalog.
+
+_CREATOR_MAP: list[tuple[list[str], str, str]] = [
+    # (keywords_to_match, creator_display_name, yt_search_suffix)
+    (
+        ["dsa", "data structure", "algorithm", "leetcode", "binary tree",
+         "graph", "dynamic programming", "recursion", "backtracking",
+         "linked list", "stack", "queue", "heap", "trie"],
+        "Striver (takeUforward)",
+        "Striver takeUforward",
+    ),
+    (
+        ["gate cs", "gate computer science", "operating system", "dbms",
+         "computer network", "toc", "theory of computation", "compiler design",
+         "digital logic", "discrete mathematics", "computer organization"],
+        "Gate Smashers",
+        "Gate Smashers",
+    ),
+    (
+        ["gate da", "data science", "machine learning", "deep learning",
+         "neural network", "statistics", "probability", "linear algebra",
+         "calculus", "optimization", "numpy", "pandas", "scikit"],
+        "CampusX",
+        "CampusX",
+    ),
+    (
+        ["python", "django", "flask", "fastapi"],
+        "CodeWithHarry",
+        "CodeWithHarry",
+    ),
+    (
+        ["javascript", "react", "node", "typescript", "vue", "angular",
+         "web development", "html", "css", "full stack"],
+        "Chai aur Code",
+        "Chai aur Code",
+    ),
+    (
+        ["java", "spring boot", "hibernate", "microservices"],
+        "Telusko",
+        "Telusko",
+    ),
+    (
+        ["c++", "competitive programming", "cp"],
+        "Luv",
+        "Luv competitive programming",
+    ),
+    (
+        ["system design", "low level design", "high level design", "lld", "hld"],
+        "Gaurav Sen",
+        "Gaurav Sen",
+    ),
+    (
+        ["devops", "docker", "kubernetes", "aws", "azure", "gcp", "cloud",
+         "terraform", "jenkins", "ci/cd"],
+        "TechWorld with Nana",
+        "TechWorld with Nana",
+    ),
+    (
+        ["physics", "chemistry", "biology", "neet", "jee", "class 11", "class 12",
+         "cbse", "12th", "11th"],
+        "Physics Wallah",
+        "Physics Wallah",
+    ),
+    (
+        ["mathematics", "maths", "calculus", "algebra", "geometry",
+         "trigonometry", "class 10", "class 9", "10th", "9th"],
+        "Khan Academy",
+        "Khan Academy",
+    ),
+    (
+        ["upsc", "civil services", "ias", "ips", "general studies",
+         "polity", "history", "geography", "economy"],
+        "Unacademy UPSC",
+        "Unacademy UPSC",
+    ),
+    (
+        ["cat", "mba", "quantitative aptitude", "verbal ability",
+         "logical reasoning", "dilr"],
+        "2IIM CAT",
+        "2IIM",
+    ),
+]
 
 
 # ── Agent State ───────────────────────────────────────────────────────
@@ -33,6 +121,14 @@ class GoalState(TypedDict):
     draft_syllabus: Optional[list[dict]]
     verified_syllabus: Optional[list[dict]]
     verification_passed: bool
+    selected_creator: Optional[str]       # e.g. "Striver takeUforward"
+    selected_creator_name: Optional[str]  # e.g. "Striver (takeUforward)" (human-readable)
+    # ── User preferences (from InteractiveDiscoveryCard / finalize form) ──
+    preferred_language: Optional[str]     # "Hindi", "Hinglish", or "English"
+    target_months: Optional[int]          # How many months user has
+    daily_hours: Optional[float]          # Study hours per day
+    playlist_url: Optional[str]           # User-provided YouTube playlist URL
+    website_url: Optional[str]            # User-provided website/article URL
     conversation_turns: int
     execution_time_ms: float
     error: Optional[str]
@@ -65,20 +161,52 @@ Respond with only the entity name (expanded) or NONE, nothing else."""
 
 def intake_node(state: GoalState) -> GoalState:
     """
-    Parse the raw goal for missing slots.  This is pure rule-based logic —
-    no LLM call needed.  Just checks whether the goal is specific enough.
+    Parse the raw goal for missing slots AND extract structured user preferences.
+    Pure rule-based — no LLM call, $0 cost.
     """
-    raw = state["raw_goal"].lower()
+    raw = state["raw_goal"]
+    raw_lower = raw.lower()
     missing = []
 
-    # Check for a timeline/deadline indicator
-    has_timeline = bool(re.search(r'\d+\s*(day|week|month|hour)', raw)) or \
-                   any(w in raw for w in ["deadline", "by ", "before ", "within "])
+    # ── Extract preferred language ────────────────────────────────────────
+    lang = None
+    if any(w in raw_lower for w in ["hindi", "in hindi", "\u0939\u093f\u0902\u0926\u0940"]):
+        lang = "Hindi"
+    elif any(w in raw_lower for w in ["hinglish", "hindi english"]):
+        lang = "Hinglish"
+    elif any(w in raw_lower for w in ["english", "in english"]):
+        lang = "English"
+    if lang and not state.get("preferred_language"):
+        state["preferred_language"] = lang
+        logger.info(f"🇨🇳 Detected preferred language: {lang}")
+
+    # ── Extract target months ─────────────────────────────────────────────
+    if not state.get("target_months"):
+        m = re.search(r'(\d+)\s*month', raw_lower)
+        if m:
+            state["target_months"] = int(m.group(1))
+        else:
+            # Also check "X weeks" or "X days"
+            wk = re.search(r'(\d+)\s*week', raw_lower)
+            dy = re.search(r'(\d+)\s*day', raw_lower)
+            if wk:
+                state["target_months"] = max(1, round(int(wk.group(1)) / 4))
+            elif dy:
+                state["target_months"] = max(1, round(int(dy.group(1)) / 30))
+
+    # ── Extract daily study hours ─────────────────────────────────────────
+    if not state.get("daily_hours"):
+        h = re.search(r'(\d+(?:\.\d+)?)\s*(?:hr|hour|hrs|hours?)\s*/\s*day', raw_lower)
+        if h:
+            state["daily_hours"] = float(h.group(1))
+
+    # ── Check for missing critical slots ──────────────────────────────────
+    has_timeline = bool(re.search(r'\d+\s*(day|week|month|hour)', raw_lower)) or \
+                   any(w in raw_lower for w in ["deadline", "by ", "before ", "within "])
     if not has_timeline:
         missing.append("timeline")
 
-    # Check for skill-level indicator
-    has_level = any(w in raw for w in [
+    has_level = any(w in raw_lower for w in [
         "beginner", "intermediate", "advanced", "expert",
         "basics", "fundamentals", "zero", "scratch", "already know",
         "refresh", "deep dive", "mastery"
@@ -90,7 +218,10 @@ def intake_node(state: GoalState) -> GoalState:
     state["needs_clarification"] = len(missing) > 0
     state["conversation_turns"] = state.get("conversation_turns", 0)
 
-    logger.info(f"Intake: missing_slots={missing}, needs_clarification={state['needs_clarification']}")
+    logger.info(
+        f"Intake: missing_slots={missing}, lang={lang}, "
+        f"months={state.get('target_months')}, hours={state.get('daily_hours')}"
+    )
     return state
 
 
@@ -259,18 +390,103 @@ async def synthesize_draft_node(state: GoalState) -> GoalState:
     return state
 
 
+# ── Creator Resolution — pick ONE best creator for the entire goal ────
+
+def _resolve_creator_from_registry(goal_text: str, entity: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Deterministically resolve the best single YouTube creator for a goal.
+    Returns (yt_search_suffix, creator_display_name) or (None, None) if no match.
+    Checks the registry in priority order — first match wins.
+    """
+    combined = f"{entity or ''} {goal_text}".lower()
+    for keywords, display_name, search_suffix in _CREATOR_MAP:
+        if any(kw in combined for kw in keywords):
+            return search_suffix, display_name
+    return None, None
+
+
+async def resolve_best_creator_node(state: GoalState) -> GoalState:
+    """
+    ONE-SHOT creator selection that runs after syllabus verification.
+
+    Strategy (priority order):
+      1. Registry lookup — deterministic, $0 cost, <1ms
+      2. LLM fallback (Groq 8B, ~15 tokens) — for niche/unknown goals
+      3. Generic fallback — 'full course tutorial playlist'
+
+    Language rule:
+      If user selected Hindi or Hinglish, the language suffix is appended to
+      the creator suffix so ALL YouTube searches are biased toward that language.
+      The registry already maps many topics to Hindi-primary creators
+      (CampusX, CodeWithHarry, Chai aur Code, Gate Smashers, Physics Wallah).
+    """
+    goal_text = state.get("clarified_goal") or state["raw_goal"]
+    entity = state.get("detected_entity", "") or ""
+    lang = state.get("preferred_language") or "English"
+
+    # Step 1: Registry lookup (deterministic)
+    suffix, display_name = _resolve_creator_from_registry(goal_text, entity)
+    if suffix:
+        # Append language hint if Hindi/Hinglish — biases YouTube search toward
+        # that creator's Hindi-medium content without breaking the creator filter.
+        if lang in ("Hindi", "Hinglish"):
+            lang_tag = "Hindi" if lang == "Hindi" else "Hinglish"
+            suffix = f"{suffix} {lang_tag}"
+            logger.info(f"🇨🇳 Language suffix added: '{lang_tag}'")
+        state["selected_creator"] = suffix
+        state["selected_creator_name"] = display_name
+        logger.info(f"🎨 Creator resolved (registry): {display_name} → suffix='{suffix}'")
+        return state
+
+    # Step 2: LLM fallback for niche goals (Groq 8B, ~15 tokens)
+    try:
+        from services.groq import call_groq_fast
+        lang_note = f" Prefer a {lang}-medium channel." if lang in ("Hindi", "Hinglish") else ""
+        lm_prompt = (
+            f"You are a YouTube educator recommender.\n"
+            f"A student wants to learn: '{goal_text}'.{lang_note}\n"
+            f"Pick EXACTLY ONE well-known YouTube channel or educator that has the BEST "
+            f"complete playlist/course for this topic.\n"
+            f"Examples: 'MIT OpenCourseWare', 'freeCodeCamp', 'Fireship', "
+            f"'Sentdex', 'StatQuest with Josh Starmer', 'Corey Schafer', '3Blue1Brown'.\n"
+            f"Respond with ONLY the channel name, nothing else."
+        )
+        raw = await call_groq_fast(
+            system_prompt="You are a YouTube channel recommender. Respond with only a channel name.",
+            user_prompt=lm_prompt,
+            max_tokens=15,
+        )
+        creator_name = raw.strip().strip('"').strip("'").strip()
+        if creator_name and len(creator_name) > 2:
+            final_suffix = f"{creator_name} {lang}" if lang in ("Hindi", "Hinglish") else creator_name
+            state["selected_creator"] = final_suffix
+            state["selected_creator_name"] = creator_name
+            logger.info(f"🤖 Creator resolved (LLM 8B): '{creator_name}' lang={lang}")
+            return state
+    except Exception as e:
+        logger.warning(f"LLM creator resolution failed (non-fatal): {e}")
+
+    # Step 3: Generic fallback
+    lang_suffix = f" {lang}" if lang in ("Hindi", "Hinglish") else ""
+    state["selected_creator"] = f"full course tutorial playlist{lang_suffix}"
+    state["selected_creator_name"] = None
+    logger.info(f"🔖 Creator resolved (generic fallback, lang={lang})")
+    return state
+
+
 # ── YouTube Video Enrichment — attach best videos to each part ────────
 
 async def enrich_with_youtube_node(state: GoalState) -> GoalState:
     """
     After the roadmap is generated, search YouTube for the best tutorial
-    video for each task module. Appends video_id to part titles using
-    the ' || video_id' convention that synthesis.py already understands.
-    
-    Searches in parallel for speed. Uses the 8B model to pick the best
-    video per module (costs ~10 tokens each).
+    video for each task module — ALL from the SAME creator selected by
+    resolve_best_creator_node, with channel-name verification in every
+    search layer (via creator_hint param passed to search_youtube_video_id).
+
+    Uses the ' || video_id' convention so synthesis.py can embed the video.
+    Limits to Semaphore(2) for Render memory safety.
     """
-    from services.search import search_youtube_videos
+    from services.youtube import search_youtube_video_id  # direct import for creator_hint support
     import asyncio
     import gc
 
@@ -278,60 +494,69 @@ async def enrich_with_youtube_node(state: GoalState) -> GoalState:
     if not syllabus:
         return state
 
-    goal_text = state.get("clarified_goal") or state["raw_goal"]
-    entity = state.get("detected_entity", "")
+    entity = state.get("detected_entity", "") or ""
+    creator_suffix = state.get("selected_creator") or "full course tutorial"
+    creator_name = state.get("selected_creator_name") or creator_suffix
+    logger.info(f"🎬 YouTube enrichment — creator locked to: '{creator_name}' suffix='{creator_suffix}'")
 
-    # Restrict concurrent searches to 2 max to save memory on Render
     semaphore = asyncio.Semaphore(2)
 
-    # Search YouTube for each task module
-    async def find_videos_for_task(task: dict) -> dict:
+    async def find_video_for_task(task: dict) -> dict:
         async with semaphore:
             title = task.get("title", "")
-            search_query = f"{title} {entity} tutorial" if entity else f"{title} tutorial"
-            
+            # Scoped query: entity + module topic + creator suffix (language already baked in)
+            if entity:
+                search_query = f"{entity} {title} {creator_suffix}"
+            else:
+                search_query = f"{title} {creator_suffix}"
+
             try:
-                videos = await search_youtube_videos(search_query, max_results=1)
-                if videos:
-                    video_id = videos[0]["video_id"]
-                    # Attach video to the first part of this task
+                # Pass creator_suffix as creator_hint — YouTube layers will verify channel name
+                video_id = await search_youtube_video_id(
+                    query=search_query,
+                    creator_hint=creator_suffix,
+                )
+                if video_id:
                     parts = task.get("parts", [])
                     if parts and isinstance(parts[0], str) and " || " not in parts[0]:
                         parts[0] = f"{parts[0]} || {video_id}"
                         task["parts"] = parts
+                        logger.debug(
+                            f"✅ Attached {video_id} to '{title}' (creator: {creator_name})"
+                        )
             except Exception as e:
                 logger.warning(f"YouTube enrichment failed for '{title}': {e}")
-            
+
             return task
 
     try:
-        # Limit enrichment to top 8 task modules max
         tasks_to_enrich = syllabus[:8]
         remaining_tasks = syllabus[8:]
 
         enriched_tasks = await asyncio.gather(
-            *[find_videos_for_task(task) for task in tasks_to_enrich],
+            *[find_video_for_task(task) for task in tasks_to_enrich],
             return_exceptions=True,
         )
-        
-        # Filter out exceptions, keep successfully enriched tasks
+
         final_syllabus = []
         for result in enriched_tasks:
             if isinstance(result, Exception):
                 logger.warning(f"YouTube enrichment error: {result}")
             elif isinstance(result, dict):
                 final_syllabus.append(result)
-        
+
         final_syllabus.extend(remaining_tasks)
-        
+
         if final_syllabus:
             state["verified_syllabus"] = final_syllabus
             video_count = sum(
-                1 for t in final_syllabus 
-                for p in t.get("parts", []) 
+                1 for t in final_syllabus
+                for p in t.get("parts", [])
                 if isinstance(p, str) and " || " in p
             )
-            logger.info(f"🎬 YouTube enrichment complete: {video_count} videos attached")
+            logger.info(
+                f"🎬 Enrichment complete: {video_count} videos from '{creator_name}'"
+            )
     except Exception as e:
         logger.warning(f"YouTube enrichment failed (non-fatal): {e}")
     finally:
@@ -488,14 +713,19 @@ async def run_goal_agent(
     user_id: str,
     raw_goal: str,
     clarification_reply: Optional[str] = None,
+    preferred_language: Optional[str] = None,
+    target_months: Optional[int] = None,
+    daily_hours: Optional[float] = None,
+    playlist_url: Optional[str] = None,
+    website_url: Optional[str] = None,
 ) -> GoalState:
     """
     Run the high-performance Vanilla Async Goal-Setting Agent Pipeline.
 
-    Pipeline: intake → clarify? → detect_entity → fetch_entity_context? → synthesize_draft → verify → enrich_youtube
+    Pipeline: intake → clarify? → detect_entity → fetch_entity_context? → synthesize_draft → verify → resolve_creator → enrich_youtube
 
-    If `clarification_reply` is None, this is the first invocation.
-    If provided, this is a follow-up after the user answered a clarification question.
+    User preferences (preferred_language, target_months, daily_hours, playlist_url, website_url)
+    are injected into state at startup so every node can read them.
 
     Returns the final GoalState. Check:
       - state["needs_clarification"]: True → return clarification_question to user, wait for reply
@@ -515,6 +745,14 @@ async def run_goal_agent(
         "draft_syllabus": None,
         "verified_syllabus": None,
         "verification_passed": False,
+        "selected_creator": None,
+        "selected_creator_name": None,
+        # Inject caller-provided preferences (override what intake_node parses)
+        "preferred_language": preferred_language,
+        "target_months": target_months,
+        "daily_hours": daily_hours,
+        "playlist_url": playlist_url,
+        "website_url": website_url,
         "conversation_turns": 0,
         "execution_time_ms": 0.0,
         "error": None,
@@ -549,10 +787,16 @@ async def run_goal_agent(
     # ── Step 5: Verify syllabus against source (no LLM call) ──────────
     state = verify_syllabus_node(state)
 
-    # ── Step 6: Enrich with YouTube videos (parallel search) ──────────
+    # ── Step 6: Resolve single best YouTube creator for the goal ──────
+    state = await resolve_best_creator_node(state)
+
+    # ── Step 7: Enrich all modules with videos from that ONE creator ──
     state = await enrich_with_youtube_node(state)
 
     state["execution_time_ms"] = round((time.perf_counter() - start_time) * 1000, 2)
-    logger.info(f"⚡ Goal agent pipeline completed in {state['execution_time_ms']}ms")
+    logger.info(
+        f"⚡ Goal agent pipeline completed in {state['execution_time_ms']}ms "
+        f"(creator: {state.get('selected_creator_name') or 'generic'})"
+    )
 
     return state

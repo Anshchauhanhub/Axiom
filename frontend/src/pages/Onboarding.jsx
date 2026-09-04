@@ -344,9 +344,11 @@ const Onboarding = () => {
         study_sessions: studySessions,
         quiz_level: quizLevel,
         quiz_questions: includeQuizzes ? quizQuestions : 0,
-        include_quizzes: includeQuizzes
+        include_quizzes: includeQuizzes,
+        target_months: extractedProfile.months_remaining,
+        daily_hours: extractedProfile.study_hours_per_day,
       };
-      const newGoal = await finalizeGoal(title, draftRoadmap, settings);
+      const newGoal = await finalizeGoal(title, draftRoadmap, settings, extractedProfile);
       if (newGoal && newGoal.id) {
         setSelectedGoalId(newGoal.id);
       }

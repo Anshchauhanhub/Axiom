@@ -269,6 +269,11 @@ class FinalizeGoalRequest(BaseModel):
     title: str
     roadmap: list[dict]
     settings: Optional[dict] = None
+    preferred_language: Optional[str] = None
+    target_months: Optional[int] = None
+    daily_hours: Optional[float] = None
+    playlist_url: Optional[str] = None
+    website_url: Optional[str] = None
 
 
 class YoutubeRoadmapRequest(BaseModel):

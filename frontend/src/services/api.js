@@ -162,8 +162,17 @@ export const getSessionMessages = (sessionId) =>
 export const deleteChatSession = (sessionId) =>
   request('DELETE', `/goals/chat-sessions/${sessionId}`);
 
-export const finalizeGoal = (title, roadmap, settings = {}) =>
-  request('POST', '/goals/finalize', { title, roadmap, settings });
+export const finalizeGoal = (title, roadmap, settings = {}, preferences = {}) =>
+  request('POST', '/goals/finalize', {
+    title,
+    roadmap,
+    settings,
+    preferred_language: preferences.preferred_language || preferences.language,
+    target_months: preferences.target_months || preferences.months,
+    daily_hours: preferences.daily_hours || preferences.dailyHours,
+    playlist_url: preferences.playlist_url || preferences.playlistUrl,
+    website_url: preferences.website_url || preferences.websiteUrl,
+  });
 
 export const quickActivateGoal = (title) =>
   request('POST', '/goals/quick-activate', { title });

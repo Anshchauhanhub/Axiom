@@ -1,7 +1,14 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import 'katex/dist/katex.min.css';
+import { cleanLatexMath } from '../utils/mathUtils';
 import { Bot, User, Globe, BookOpen, HelpCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 import InteractiveDiscoveryCard from './InteractiveDiscoveryCard';
+
 
 const cleanDisplayMessage = (msg) => {
   if (!msg || typeof msg !== 'string') return '';
@@ -14,8 +21,9 @@ const cleanDisplayMessage = (msg) => {
 
 const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, isLastAssistantMessage }) => {
   const isAI = role === 'assistant';
-  const showDiscoveryCard = isAI && phase === 'syllabus_review' && isLastAssistantMessage && onDiscoverySubmit;
   const displayMessage = isAI ? cleanDisplayMessage(message) : message;
+  const formattedMessage = cleanLatexMath(displayMessage);
+
 
   return (
     <div className={`flex w-full gap-4 ${isAI ? 'justify-start' : 'justify-end'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
@@ -40,7 +48,10 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
 
         <div className="prose prose-sm prose-invert max-w-none space-y-3">
           <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false }]]}
             components={{
+
               p: ({ node, ...props }) => <p className="text-xs leading-relaxed font-light m-0 text-on-surface/90" {...props} />,
               h3: ({ node, children, ...props }) => {
                 const text = String(children);
@@ -79,9 +90,10 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
               }
             }}
           >
-            {displayMessage}
+            {formattedMessage}
           </ReactMarkdown>
         </div>
+
 
         {/* Embedded Interactive Discovery Form Widget */}
         {showDiscoveryCard && (

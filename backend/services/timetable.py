@@ -75,23 +75,35 @@ def generate_schedule_dates(
     user_timezone: str = "Asia/Kolkata",
     target_date: Optional[str] = None,
     start_from: Optional[datetime] = None,
+    target_months: Optional[int] = None,
+    daily_hours: Optional[float] = None,
 ) -> list[datetime]:
     """
     Generate a list of scheduled datetime objects for `num_parts` study sessions.
 
-    Pure arithmetic — distributes parts across available time slots.
+    STRICT RULE: Never cut the syllabus. If the user has 1 month for 80 DSA parts,
+    fit ALL 80 by packing multiple tasks per day (calendar compression) instead
+    of extending past the deadline.
+
+    Compression logic:
+      - Compute available_days from target_months or target_date.
+      - slots_per_day = ceil(total_parts / available_days).
+      - Auto-generate that many evenly-spaced time slots per study day.
 
     Args:
         num_parts: Total number of parts to schedule.
         study_days: Days of the week (0=Sun, 1=Mon, ..., 6=Sat). Default Mon-Fri.
-        study_sessions: Time slots like ["09:00", "18:00"]. Default ["18:00"].
+        study_sessions: Base time slots. Overridden when compression is needed.
         user_timezone: User's timezone string.
-        target_date: Optional ISO date deadline. If set, sessions are compressed to fit.
+        target_date: Optional ISO deadline (YYYY-MM-DD). Used if target_months not set.
         start_from: Start scheduling from this datetime. Default: now.
+        target_months: User's target months (preferred over target_date).
+        daily_hours: Available study hours/day — used to space compressed slots.
 
     Returns:
         List of timezone-aware datetime objects, one per part.
     """
+    import math
     if not study_days:
         study_days = [1, 2, 3, 4, 5]  # Mon-Fri
     if not study_sessions:
@@ -105,45 +117,62 @@ def generate_schedule_dates(
     now = start_from or datetime.now(tz)
     current_date = now.date()
 
-    # Parse session times and sort
-    session_times = sorted([
-        datetime.strptime(s, "%H:%M").time() for s in study_sessions
-    ])
-
-    # If there's a deadline, calculate max available slots to see if we need
-    # to pack more sessions per day
-    if target_date:
+    # ── Determine deadline date ───────────────────────────────────────────
+    from datetime import date as _date
+    import calendar
+    deadline_date = None
+    if target_months and target_months > 0:
+        m = current_date.month + target_months
+        year = current_date.year + (m - 1) // 12
+        month = (m - 1) % 12 + 1
+        max_days = calendar.monthrange(year, month)[1]
+        day = min(current_date.day, max_days)
+        deadline_date = _date(year, month, day)
+    elif target_date:
         try:
-            deadline = datetime.strptime(target_date, "%Y-%m-%d").date()
-            available_days = sum(
-                1 for i in range((deadline - current_date).days + 1)
-                if ((current_date + timedelta(days=i)).weekday() + 1) % 7 in study_days
-            )
-            available_slots = available_days * len(session_times)
-
-            if available_slots < num_parts and available_days > 0:
-                # Not enough slots — add more sessions per day
-                extra_needed = num_parts - available_slots
-                extra_per_day = (extra_needed // available_days) + 1
-                # Generate additional evenly-spaced session times
-                for i in range(extra_per_day):
-                    hour = min(9 + i * 2, 22)  # 9am, 11am, 1pm, etc.
-                    new_time = time(hour, 0)
-                    if new_time not in session_times:
-                        session_times.append(new_time)
-                session_times.sort()
-                logger.info(f"📅 Compressed schedule: {len(session_times)} sessions/day to meet deadline")
+            deadline_date = datetime.strptime(target_date, "%Y-%m-%d").date()
         except (ValueError, TypeError):
-            pass  # Invalid date format, ignore deadline
+            pass
 
-    # Generate the schedule
+    # ── Calendar compression ──────────────────────────────────────────────
+    if deadline_date and num_parts > 0:
+        available_days = sum(
+            1 for i in range((deadline_date - current_date).days + 1)
+            if ((current_date + timedelta(days=i)).weekday() + 1) % 7 in study_days
+        )
+        if available_days > 0:
+            slots_per_day = math.ceil(num_parts / available_days)
+            if slots_per_day > 1:
+                # Auto-generate evenly-spaced slots within daily_hours window
+                hours_span = min(daily_hours or 8.0, 10.0)
+                start_hour = 9
+                generated = []
+                for i in range(slots_per_day):
+                    frac = i * hours_span / slots_per_day
+                    hour = start_hour + int(frac)
+                    minute = int((frac - int(frac)) * 60)
+                    generated.append(f"{min(hour, 22):02d}:{minute:02d}")
+                study_sessions = generated
+                logger.info(
+                    f"📅 Calendar compression: {num_parts} parts in {available_days} days "
+                    f"→ {slots_per_day} slots/day: {study_sessions}"
+                )
+
+    # ── Parse session times ───────────────────────────────────────────────
+    try:
+        session_times = sorted([
+            datetime.strptime(s, "%H:%M").time() for s in study_sessions
+        ])
+    except Exception:
+        session_times = [datetime.strptime("18:00", "%H:%M").time()]
+
+    # ── Generate schedule ─────────────────────────────────────────────────
     schedules = []
-    safety_limit = num_parts * 30  # prevent infinite loops
+    safety_limit = num_parts * 60
     iterations = 0
 
     while len(schedules) < num_parts and iterations < safety_limit:
         iterations += 1
-        # Convert to frontend day format (0=Sun, 1=Mon, ...)
         frontend_day = (current_date.weekday() + 1) % 7
 
         if frontend_day in study_days:
@@ -153,7 +182,6 @@ def generate_schedule_dates(
                 except Exception:
                     dt = datetime.combine(current_date, s_time).replace(tzinfo=tz)
 
-                # Only schedule future times (or if we're past today)
                 if dt > now or current_date > now.date():
                     schedules.append(dt)
                     if len(schedules) == num_parts:
@@ -162,6 +190,8 @@ def generate_schedule_dates(
         current_date += timedelta(days=1)
 
     return schedules
+
+
 
 
 def reschedule_from_today(

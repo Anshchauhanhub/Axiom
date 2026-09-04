@@ -505,11 +505,16 @@ async def finalize_goal(
     # ── Schedule with arithmetic timetable engine ─────────────────────
     settings = req.settings or {}
     total_parts = sum(len(task_data.get("parts", [])) for task_data in req.roadmap)
+    target_months = req.target_months or settings.get("target_months") or settings.get("months_remaining")
+    daily_hours = req.daily_hours or settings.get("daily_hours") or settings.get("study_hours_per_day")
+
     schedules = generate_schedule_dates(
         num_parts=total_parts,
         study_days=settings.get("study_days"),
         study_sessions=settings.get("study_sessions"),
         user_timezone=user_tz,
+        target_months=target_months,
+        daily_hours=daily_hours,
     )
     schedule_idx = 0
 

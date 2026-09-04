@@ -700,25 +700,35 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
 
 async def generate_documentation(topic: str, research_data: str, transcript: str = None) -> str:
     """Generate a structured study guide for a topic using research data and optionally a YouTube transcript."""
+    from services.math_utils import clean_latex_math
+
     system_prompt = (
         "You are Edxiom AI, a high-fidelity learning assistant. "
         "Your goal is to create a comprehensive, engaging, and structured study guide "
-        "based on the provided raw research data and any provided video transcripts/content. "
-        "### GUIDELINES:\n"
-        "1. **Structured Layout**: Use Markdown headers (##, ###).\n"
-        "2. **Content Depth**: Explain core concepts, 'why it matters', and 'how it works' in detail.\n"
-        "3. **Visual Aids**: Use bullet points, bold text for key terms, and code blocks if applicable.\n"
-        "4. **Tone**: Intellectual, professional, yet accessible.\n"
-        "5. **Formatting**: Ensure it looks premium when rendered in a dark-themed UI.\n"
-        "\n"
+        "based on the provided raw research data and any provided video transcripts/content.\n\n"
+        "### CRITICAL FORMATTING & LATEX MATH RULES:\n"
+        "1. **STRICT MATH DELIMITERS**: ALL mathematical expressions, equations, variables, matrices, and symbols MUST use standard LaTeX math delimiters:\n"
+        "   - Use `$ ... $` for inline variables and math expressions (e.g. `$m \\times n$`, `$p_i$`, `$i^{\\text{th}}$`, `$R_i \\leftrightarrow R_j$`, `$r = \\operatorname{rank}(A)$`, `$\\mathbf{x}_0$`, `$\\varnothing$`).\n"
+        "   - Use `$$ ... $$` on dedicated lines for display/block equations and multi-line matrices.\n"
+        "   - NEVER write LaTeX commands (like `\\operatorname`, `\\mathbf`, `\\qquad`, `\\begin{...}`) outside of `$ ... $` or `$$ ... $$`.\n"
+        "   - NEVER wrap math in parentheses or brackets without dollar signs (e.g. NEVER write `(p_i)` or `(r = \\operatorname{rank}(A))` or `([A\\mid \\mathbf{b}])` - write `$p_i$`, `$r = \\operatorname{rank}(A)$`, `$[*A \\mid \\mathbf{b}*]$`).\n"
+        "   - NEVER embed rogue dollar signs inside an unclosed math block.\n"
+        "2. **NO RAW HTML**: NEVER output HTML tags like `<br>` or `<br/>`. Use standard Markdown line breaks.\n"
+        "3. **MATRIX & MULTI-LINE EQUATIONS**: In environments like `cases`, `bmatrix`, `pmatrix`, `align`:\n"
+        "   - ALWAYS double-escape backslashes for row separators so they yield `\\\\` (e.g., `a_1x_1 + b_1 = 0 \\\\ a_2x_2 + b_2 = 0`).\n"
+        "4. **STRUCTURED LAYOUT**: Use Markdown headers (##, ###), tables, code blocks, and bold key terms.\n"
+        "5. **TONE**: Intellectual, professional, yet accessible.\n\n"
         "Return ONLY the Markdown content, no conversational fillers."
     )
+
     if transcript:
         user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}\n\nYouTube Video Transcript:\n{transcript[:15000]}"
     else:
         user_prompt = f"Topic: {topic}\n\nResearch Data:\n{research_data}"
 
-    return await call_groq(system_prompt, user_prompt)
+    raw_doc = await call_groq(system_prompt, user_prompt)
+    return clean_latex_math(raw_doc)
+
 
 
 def clean_youtube_title(title: str) -> str:

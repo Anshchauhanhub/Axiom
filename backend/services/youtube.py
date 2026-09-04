@@ -91,37 +91,70 @@ def _write_cache(query: str, video_id: Optional[str]) -> None:
 
 # ── Layer 1: YouTube Data API v3 ──────────────────────────────────────
 
-async def _search_via_youtube_api(query: str) -> Optional[str]:
+def _channel_matches_hint(channel_title: str, creator_hint: str) -> bool:
+    """
+    Check if a YouTube channel title is from the intended creator.
+    Splits the hint into words and checks if ANY word appears in the channel title.
+    Case-insensitive. e.g. 'Striver takeUforward' matches 'takeUforward' channel.
+    """
+    if not creator_hint or not channel_title:
+        return False
+    hint_lower = creator_hint.lower()
+    channel_lower = channel_title.lower()
+    # Check whole hint first (exact phrase)
+    if hint_lower in channel_lower:
+        return True
+    # Check individual words (2+ chars) — avoids matching 'a', 'the', etc.
+    for word in hint_lower.split():
+        if len(word) >= 3 and word in channel_lower:
+            return True
+    return False
+
+
+async def _search_via_youtube_api(query: str, creator_hint: Optional[str] = None) -> Optional[str]:
     """
     Query YouTube Data API v3 /search endpoint.
     10,000 free units/day (each search = 100 units → 100 free searches/day).
-    Returns the best video_id for the query.
-    Only active when YOUTUBE_API_KEY is set in the environment.
+
+    When creator_hint is given, fetches up to 10 results with snippet and picks
+    the FIRST video whose channelTitle matches the hint. Falls back to first
+    result if no channel match is found.
     """
     if not YOUTUBE_API_KEY:
         return None
     try:
+        max_results = 10 if creator_hint else 5
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.get(
                 "https://www.googleapis.com/youtube/v3/search",
                 params={
-                    "part": "id",
+                    "part": "id,snippet",  # snippet gives us channelTitle for verification
                     "q": query,
                     "type": "video",
                     "videoDuration": "medium",   # 4–20 min — skip shorts & multi-hour lectures
-                    "maxResults": 5,
-                    "relevanceLanguage": "en",
+                    "maxResults": max_results,
                     "safeSearch": "moderate",
                     "key": YOUTUBE_API_KEY,
                 },
             )
             if resp.status_code == 200:
                 items = resp.json().get("items", [])
+                first_valid = None
                 for item in items:
                     vid = item.get("id", {}).get("videoId", "")
-                    if vid and len(vid) == 11:
-                        logger.info(f"✅ YouTube Data API found video: {vid}")
-                        return vid
+                    if not vid or len(vid) != 11:
+                        continue
+                    if first_valid is None:
+                        first_valid = vid  # fallback if no channel match
+                    if creator_hint:
+                        channel = item.get("snippet", {}).get("channelTitle", "")
+                        if _channel_matches_hint(channel, creator_hint):
+                            logger.info(f"✅ YT API creator match: channel='{channel}' vid={vid}")
+                            return vid
+                # No channel match — use first valid result
+                if first_valid:
+                    logger.info(f"✅ YouTube Data API found video (no exact channel match): {first_valid}")
+                    return first_valid
             elif resp.status_code == 403:
                 data = resp.json()
                 reason = data.get("error", {}).get("errors", [{}])[0].get("reason", "")
@@ -138,20 +171,24 @@ async def _search_via_youtube_api(query: str) -> Optional[str]:
 
 # ── Layer 2: yt-dlp ────────────────────────────────────────────────────
 
-async def _search_via_ytdlp(query: str) -> Optional[str]:
+async def _search_via_ytdlp(query: str, creator_hint: Optional[str] = None) -> Optional[str]:
     """
     Use yt-dlp to search YouTube via its internal mobile API.
     yt-dlp uses Android client headers, bypassing HTML bot walls.
+
+    When creator_hint is given, fetches 5 results and picks the first
+    whose uploader/channel name matches the hint.
     """
     try:
+        n_results = 5 if creator_hint else 1
         cmd = [
             "yt-dlp",
             "--no-playlist",
-            "--get-id",
-            "--match-filter", "duration > 60",   # skip shorts < 1 min
+            "--match-filter", "duration > 60",
             "--no-warnings",
             "--quiet",
-            f"ytsearch1:{query}",
+            "--print", "%(channel)s|%(id)s",  # channel name + id on each line
+            f"ytsearch{n_results}:{query}",
         ]
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -159,20 +196,34 @@ async def _search_via_ytdlp(query: str) -> Optional[str]:
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20.0)
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=25.0)
         except asyncio.TimeoutError:
             proc.kill()
             logger.warning("yt-dlp search timed out")
             return None
 
-        video_id = stdout.decode().strip()
-        if video_id and len(video_id) == 11 and re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
-            logger.info(f"✅ yt-dlp found video: {video_id}")
-            return video_id
+        lines = [l.strip() for l in stdout.decode().splitlines() if l.strip()]
+        first_valid = None
+        for line in lines:
+            parts = line.rsplit("|", 1)
+            if len(parts) != 2:
+                continue
+            channel, vid = parts[0].strip(), parts[1].strip()
+            if not (vid and len(vid) == 11 and re.match(r'^[a-zA-Z0-9_-]{11}$', vid)):
+                continue
+            if first_valid is None:
+                first_valid = vid
+            if creator_hint and _channel_matches_hint(channel, creator_hint):
+                logger.info(f"✅ yt-dlp creator match: channel='{channel}' vid={vid}")
+                return vid
+
+        if first_valid:
+            logger.info(f"✅ yt-dlp found video: {first_valid}")
+            return first_valid
 
         logger.debug(f"yt-dlp returned no valid ID for '{query}'. stderr: {stderr.decode()[:200]}")
     except FileNotFoundError:
-        logger.warning("yt-dlp not installed — skipping Layer 1")
+        logger.warning("yt-dlp not installed — skipping Layer 2")
     except Exception as e:
         logger.warning(f"yt-dlp search error: {e}")
     return None
@@ -180,10 +231,12 @@ async def _search_via_ytdlp(query: str) -> Optional[str]:
 
 # ── Layer 2: duckduckgo-search library ────────────────────────────────
 
-async def _search_via_ddg(query: str) -> Optional[str]:
+async def _search_via_ddg(query: str, creator_hint: Optional[str] = None) -> Optional[str]:
     """
     Use the duckduckgo-search library's videos() method.
     It uses DDG's internal VQD JSON API — not raw HTML scraping.
+
+    When creator_hint is given, checks the result publisher/title for a match.
     """
     try:
         from duckduckgo_search import DDGS
@@ -193,20 +246,31 @@ async def _search_via_ddg(query: str) -> Optional[str]:
             with DDGS() as ddg:
                 results = list(ddg.videos(
                     f"site:youtube.com {query}",
-                    max_results=5,
+                    max_results=8,
                 ))
             return results
 
         results = await loop.run_in_executor(None, _ddg_search)
+        first_valid = None
         for r in results:
             url = r.get("content", "") or r.get("url", "")
             match = re.search(r'[?&]v=([a-zA-Z0-9_-]{11})', url)
-            if match:
-                video_id = match.group(1)
-                logger.info(f"✅ DDG library found video: {video_id}")
-                return video_id
+            if not match:
+                continue
+            video_id = match.group(1)
+            if first_valid is None:
+                first_valid = video_id
+            if creator_hint:
+                publisher = r.get("publisher", "") or r.get("uploader", "") or ""
+                title = r.get("title", "")
+                if _channel_matches_hint(publisher, creator_hint) or _channel_matches_hint(title, creator_hint):
+                    logger.info(f"✅ DDG creator match: publisher='{publisher}' vid={video_id}")
+                    return video_id
+        if first_valid:
+            logger.info(f"✅ DDG library found video: {first_valid}")
+            return first_valid
     except ImportError:
-        logger.warning("duckduckgo-search not installed — skipping Layer 2")
+        logger.warning("duckduckgo-search not installed — skipping Layer 3")
     except Exception as e:
         logger.warning(f"DDG library search error: {e}")
     return None
@@ -214,11 +278,12 @@ async def _search_via_ddg(query: str) -> Optional[str]:
 
 # ── Layer 3: Invidious round-robin ────────────────────────────────────
 
-async def _search_via_invidious(query: str) -> Optional[str]:
+async def _search_via_invidious(query: str, creator_hint: Optional[str] = None) -> Optional[str]:
     """
     Query public Invidious instances (open-source YT front-ends).
-    They proxy YouTube and expose a clean JSON API — their servers
-    talk to YT so ours don't have to.
+    They proxy YouTube and expose a clean JSON API.
+
+    When creator_hint is given, checks the `author` field of each result.
     """
     for instance in _INVIDIOUS_INSTANCES:
         try:
@@ -229,11 +294,21 @@ async def _search_via_invidious(query: str) -> Optional[str]:
                 )
                 if resp.status_code == 200:
                     data = resp.json()
+                    first_valid = None
                     for item in data:
                         vid = item.get("videoId", "")
-                        if vid and len(vid) == 11:
-                            logger.info(f"✅ Invidious ({instance}) found video: {vid}")
-                            return vid
+                        if not (vid and len(vid) == 11):
+                            continue
+                        if first_valid is None:
+                            first_valid = vid
+                        if creator_hint:
+                            author = item.get("author", "")
+                            if _channel_matches_hint(author, creator_hint):
+                                logger.info(f"✅ Invidious creator match: author='{author}' vid={vid}")
+                                return vid
+                    if first_valid:
+                        logger.info(f"✅ Invidious ({instance}) found video: {first_valid}")
+                        return first_valid
         except Exception as e:
             logger.debug(f"Invidious instance {instance} failed: {e}")
     logger.warning("All Invidious instances exhausted")
@@ -242,13 +317,23 @@ async def _search_via_invidious(query: str) -> Optional[str]:
 
 # ── Public API: search_youtube_video_id ───────────────────────────────
 
-async def search_youtube_video_id(query: str) -> Optional[str]:
+async def search_youtube_video_id(
+    query: str,
+    creator_hint: Optional[str] = None,
+) -> Optional[str]:
     """
     Resilient 4-layer YouTube video search.
     Returns an 11-char video_id, or None if all layers fail.
     Results are cached (positive 7d / negative 24h).
+
+    Args:
+        query: Search query string (should already contain creator name).
+        creator_hint: Channel/creator name to verify against. When set, each
+                      layer fetches multiple candidates and picks the first
+                      whose channel name matches. Falls back to first result
+                      if no match is found — never blocks completely.
     """
-    # Layer 0: Cache check
+    # Layer 0: Cache check (keyed on query; creator_hint is already baked in)
     cached = _read_cache(query)
     if cached is not None:
         if cached == "":
@@ -257,22 +342,22 @@ async def search_youtube_video_id(query: str) -> Optional[str]:
         logger.info(f"🗂️  Cache hit for '{query}': {cached}")
         return cached
 
-    logger.info(f"🔍 YouTube search (all layers) for: '{query}'")
+    logger.info(f"🔍 YouTube search for: '{query}' (creator_hint={creator_hint!r})")
 
     # Layer 1: YouTube Data API v3 (fastest, official)
-    video_id = await _search_via_youtube_api(query)
+    video_id = await _search_via_youtube_api(query, creator_hint)
 
     # Layer 2: yt-dlp (mobile API emulation)
     if not video_id:
-        video_id = await _search_via_ytdlp(query)
+        video_id = await _search_via_ytdlp(query, creator_hint)
 
     # Layer 3: DDG library (VQD JSON API)
     if not video_id:
-        video_id = await _search_via_ddg(query)
+        video_id = await _search_via_ddg(query, creator_hint)
 
     # Layer 4: Invidious round-robin
     if not video_id:
-        video_id = await _search_via_invidious(query)
+        video_id = await _search_via_invidious(query, creator_hint)
 
     # Cache result (positive or negative)
     _write_cache(query, video_id)

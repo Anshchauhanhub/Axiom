@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import 'katex/dist/katex.min.css';
+import { cleanLatexMath } from '../utils/mathUtils';
+
+
 import { useAuth } from '../context/AuthContext';
 import { startQuiz, submitQuiz, getPartContent, updateGoalNotes, completeDirect } from '../services/api';
 import { useData } from '../context/DataContext';
@@ -411,6 +418,7 @@ const Study = () => {
 
     // Clean out youtube tag strings from the text so ReactMarkdown renders the rest
     const cleanText = text.replace(/\[youtube:[a-zA-Z0-9_-]{11}\]/g, '').trim();
+    const formattedMathText = cleanLatexMath(cleanText);
 
     return (
       <div className="space-y-6 text-on-surface-variant">
@@ -429,8 +437,11 @@ const Study = () => {
         ))}
 
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false }]]}
           components={{
+
+
             // Headings
             h1: ({ children }) => (
               <h1 className="text-3xl sm:text-4xl font-black text-on-surface mt-10 mb-6 uppercase tracking-tight border-b border-primary/20 pb-4 flex items-center gap-3">
@@ -559,8 +570,9 @@ const Study = () => {
             }
           }}
         >
-          {cleanText}
+          {formattedMathText}
         </ReactMarkdown>
+
       </div>
     );
   };  const renderNotebook = () => {
