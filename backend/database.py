@@ -61,6 +61,8 @@ async def init_db():
         # Agentic system upgrade: roadmap template cache + goal tracking columns
         await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES roadmap_templates(id)"))
         await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS cache_hit BOOLEAN DEFAULT FALSE"))
+        await conn.execute(text("ALTER TABLE parts ADD COLUMN IF NOT EXISTS requires_quiz BOOLEAN NOT NULL DEFAULT TRUE"))
+        await conn.execute(text("ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS session_type VARCHAR NOT NULL DEFAULT 'architect'"))
         # Entity-detection + verification pipeline columns
         await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS detected_entity TEXT"))
         await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS verification_passed BOOLEAN DEFAULT TRUE"))

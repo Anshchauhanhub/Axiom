@@ -23,6 +23,7 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
   const isAI = role === 'assistant';
   const displayMessage = isAI ? cleanDisplayMessage(message) : message;
   const formattedMessage = cleanLatexMath(displayMessage);
+  const showDiscoveryCard = isAI && phase === 'syllabus_review' && isLastAssistantMessage;
 
 
   return (
@@ -33,10 +34,10 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
         </div>
       )}
 
-      <div className={`max-w-[85%] px-5 py-4 rounded-[2rem] shadow-2xl relative group ${
+      <div className={`max-w-[85%] px-5 py-3 relative group ${
         isAI 
-          ? 'bg-surface-container-low border border-outline-variant/10 text-on-surface rounded-tl-none space-y-3' 
-          : 'bg-primary border border-primary/20 text-on-primary-container rounded-tr-none'
+          ? 'bg-surface-container-low border border-outline-variant/10 text-on-surface rounded-[2rem] rounded-tl-none shadow-2xl space-y-3' 
+          : 'bg-[#212121] text-white rounded-[24px]'
       }`}>
         {/* Tool Badge if searching */}
         {isAI && phase === 'syllabus' && (
@@ -52,7 +53,7 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
             rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false }]]}
             components={{
 
-              p: ({ node, ...props }) => <p className="text-xs leading-relaxed font-light m-0 text-on-surface/90" {...props} />,
+              p: ({ node, ...props }) => <p className="text-base sm:text-lg leading-relaxed font-light m-0 text-on-surface/90" {...props} />,
               h3: ({ node, children, ...props }) => {
                 const text = String(children);
                 const isSyllabus = text.toLowerCase().includes('syllabus') || text.toLowerCase().includes('topic');
@@ -67,7 +68,7 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
                         : 'bg-surface-container-highest/60 border-outline-variant/20 text-white'
                   }`}>
                     {isSyllabus ? <BookOpen size={18} className="shrink-0 text-primary" /> : isQuestions ? <HelpCircle size={18} className="shrink-0 text-secondary" /> : <Sparkles size={18} className="shrink-0 text-purple-400" />}
-                    <h3 className="text-xs font-headline font-bold uppercase tracking-wider m-0 text-current" {...props}>
+                    <h3 className="text-sm font-headline font-bold uppercase tracking-wider m-0 text-current" {...props}>
                       {children}
                     </h3>
                   </div>
@@ -77,7 +78,7 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
               ul: ({ node, ...props }) => <ul className="space-y-1.5 my-2 pl-0 list-none" {...props} />,
               ol: ({ node, ...props }) => <ol className="space-y-2 my-2 pl-0 list-none" {...props} />,
               li: ({ node, children, ...props }) => (
-                <li className="flex items-start gap-2.5 text-xs font-light bg-black/20 p-2.5 rounded-xl border border-white/5 hover:border-primary/20 transition-all" {...props}>
+                <li className="flex items-start gap-2.5 text-base sm:text-lg font-light bg-black/20 p-3 rounded-xl border border-white/5 hover:border-primary/20 transition-all" {...props}>
                   <CheckCircle2 size={14} className="text-primary/70 shrink-0 mt-0.5" />
                   <div className="flex-1 text-on-surface-variant/90">{children}</div>
                 </li>
@@ -85,8 +86,8 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
               code: ({ node, className, children, ...props }) => {
                 const isBlock = /language-/.test(className || '');
                 return isBlock 
-                  ? <pre className="bg-surface-container-highest p-4 rounded-xl overflow-x-auto my-2"><code className="text-xs font-mono" {...props}>{children}</code></pre>
-                  : <code className="bg-surface-container-highest px-1.5 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>;
+                  ? <pre className="bg-surface-container-highest p-4 rounded-xl overflow-x-auto my-2"><code className="text-sm font-mono" {...props}>{children}</code></pre>
+                  : <code className="bg-surface-container-highest px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>;
               }
             }}
           >
@@ -106,11 +107,6 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
         )}
       </div>
 
-      {!isAI && (
-        <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-surface-container-high flex items-center justify-center border border-outline-variant/10 shadow-lg">
-          <User size={20} className="text-on-surface-variant" />
-        </div>
-      )}
     </div>
   );
 };

@@ -316,6 +316,89 @@ async def generate_roadmap(goal_title: str) -> list[dict]:
         raise ValueError(f"Failed to parse AI response as JSON: {e}")
 
 
+# ── Keyword heuristic fallback for classify_parts_for_quiz ──────────────────
+_NO_QUIZ_KEYWORDS = frozenset({
+    "introduction", "intro", "overview", "history", "background", "about",
+    "getting started", "prerequisites", "prerequisite", "setup", "install",
+    "installation", "environment", "configuration", "what is", "why",
+    "course outline", "syllabus", "guidelines", "strategy", "tips",
+    "resources", "tools", "exam pattern", "pattern", "format", "schedule",
+    "motivation", "roadmap", "plan", "approach", "summary", "revision plan",
+})
+
+def _keyword_requires_quiz(part_title: str) -> bool:
+    """Fast O(1) heuristic: return False when the title clearly needs no quiz."""
+    lower = part_title.lower()
+    return not any(kw in lower for kw in _NO_QUIZ_KEYWORDS)
+
+
+async def classify_parts_for_quiz(
+    parts: list[str],
+    task_title: str,
+    goal_title: str,
+) -> list[bool]:
+    """
+    Evaluate whether each part in a task warrants a multiple-choice quiz.
+
+    Returns a list[bool] parallel to `parts`:
+      - True  → technical / conceptual / syntactical / problem-solving topic → show quiz
+      - False → history / setup / install / overview / meta-topic → skip quiz, use "Complete & Continue"
+
+    Strategy: single batched LLM call on the fast/cheap model to classify all
+    parts of a task in one shot. Falls back to keyword heuristic on failure.
+    """
+    if not parts:
+        return []
+
+    system_prompt = (
+        "You are a curriculum classifier for an adaptive learning platform. "
+        "Given a list of lesson titles from a learning module, decide whether each "
+        "lesson warrants a multiple-choice knowledge quiz.\n\n"
+        "RULES:\n"
+        "- Return true  for: technical concepts, syntax, algorithms, data structures, "
+        "  problem-solving, mathematical derivations, API usage, SQL queries, design patterns, "
+        "  scientific principles, code writing, analytical topics.\n"
+        "- Return false for: course introductions, history/origin stories, tool installation, "
+        "  environment setup, prerequisite checklists, exam pattern overviews, tips & strategies, "
+        "  motivational content, resource lists, roadmap summaries.\n\n"
+        "Return ONLY a JSON array of booleans, one per input title, in the same order. "
+        "No markdown, no explanation, no keys — just a bare JSON array like [true, false, true]."
+    )
+
+    numbered = "\n".join(f"{i+1}. {p}" for i, p in enumerate(parts))
+    user_prompt = (
+        f"Goal: {goal_title}\n"
+        f"Module: {task_title}\n\n"
+        f"Lessons to classify:\n{numbered}\n\n"
+        "Return a JSON boolean array (same length as the list above):"
+    )
+
+    try:
+        raw = await call_groq(
+            system_prompt,
+            user_prompt,
+            model=GROQ_MODEL_FAST,   # cheap/fast model — classification only
+            temperature=0.1,
+            max_tokens=len(parts) * 10 + 20,  # tight token budget
+        )
+        cleaned = _clean_json(raw)
+        result = json.loads(cleaned)
+
+        if isinstance(result, list) and len(result) == len(parts):
+            # Coerce to bool in case the model returns 0/1 integers
+            return [bool(v) for v in result]
+
+        logger.warning(
+            f"classify_parts_for_quiz: unexpected result shape "
+            f"(expected {len(parts)}, got {len(result)}). Falling back to heuristic."
+        )
+    except Exception as e:
+        logger.warning(f"classify_parts_for_quiz LLM call failed ({e}). Using keyword heuristic.")
+
+    # Keyword heuristic fallback
+    return [_keyword_requires_quiz(p) for p in parts]
+
+
 async def generate_mcqs(topic: str, count: int = 5, goal_title: str = None, task_title: str = None) -> list[dict]:
     """Generate MCQ questions for a topic, analyzing a YouTube video if present."""
     video_id = None
@@ -402,7 +485,7 @@ def _normalize_draft_roadmap(roadmap):
     return normalized
 
 
-async def generate_onboarding_response(messages: list[dict], goal_context: str = "No active goal.") -> dict:
+async def generate_onboarding_response(messages: list[dict], goal_context: str = "No active goal.", session_type: str = "architect") -> dict:
     """Handle versatile Edxiom AI chat — general study Q&A + roadmap creation on demand."""
     import re
     from services.exam_resolver import resolve_exam
@@ -457,17 +540,38 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
                     )
                 break
 
-    system_prompt = (
-        "You are Edxiom AI — a strict, high-accountability study coach, mentor, and teacher. "
-        "You are NOT a chatbot. You are a real teacher who helps students master ONE specific subject or skill at a time "
-        "by researching and providing their FULL, ACCURATE official syllabus from real-world data.\n"
-        "\n"
-        f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
-        "\n"
-        "### MEMORY RULE (STRICT):\n"
-        "- Persistent memory is SILENT background context for calculations only.\n"
-        "- NEVER dump profile stats, degrees, or previous goals in your messages.\n"
-        "- Speak naturally, warmly, like a real human mentor.\n"
+    if session_type == "assistant":
+        system_prompt = (
+            "You are Edxiom AI — a daily study companion and helpful tutor.\n"
+            "Your main role is to help the user with daily tasks, explain concepts, answer questions, and act like ChatGPT.\n"
+            "\n"
+            f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
+            "\n"
+            "### BEHAVIOR RULES:\n"
+            "- Be conversational, warm, and helpful.\n"
+            "- Explain concepts clearly and concisely.\n"
+            "- You can summarize text, translate, and analyze data if asked.\n"
+            "\n"
+            "### OUTPUT FORMAT:\n"
+            "Return ONLY a single-line JSON object. Escape all newlines as \\\\n.\n"
+            "Fields:\n"
+            "- message: Your helpful response text.\n"
+            "- phase: ALWAYS return 'chat'.\n"
+            "- mood: Integer 1-5 (3=neutral).\n"
+            "CRITICAL: NEVER generate roadmaps or try to move into discovery phases."
+        )
+    else:
+        system_prompt = (
+            "You are Edxiom AI — a strict, high-accountability study coach, mentor, and teacher. "
+            "You are NOT a chatbot. You are a real teacher who helps students master ONE specific subject or skill at a time "
+            "by researching and providing their FULL, ACCURATE official syllabus from real-world data.\n"
+            "\n"
+            f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
+            "\n"
+            "### MEMORY RULE (STRICT):\n"
+            "- Persistent memory is SILENT background context for calculations only.\n"
+            "- NEVER dump profile stats, degrees, or previous goals in your messages.\n"
+            "- Speak naturally, warmly, like a real human mentor.\n"
         "\n"
         "### SINGLE-SUBJECT / SINGLE-SKILL POLICY (MANDATORY PRINCIPLE):\n"
         "To ensure study plans are easy to manage and schedule on a calendar timetable, every roadmap MUST focus on ONE specific subject or skill at a time.\n"

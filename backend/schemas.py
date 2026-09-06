@@ -153,6 +153,7 @@ class PartResponse(BaseModel):
     title: str
     status: str
     content: Optional[Union[list, str]] = None
+    requires_quiz: bool = True  # Smart filter: False means show "Complete & Continue" instead of quiz
 
     class Config:
         from_attributes = True
@@ -256,6 +257,7 @@ class ChatSessionResponse(BaseModel):
 class OnboardingChatRequest(BaseModel):
     messages: list[ChatMessage]
     session_id: Optional[str] = None
+    session_type: Optional[str] = "architect"
 
 
 class OnboardingChatResponse(BaseModel):

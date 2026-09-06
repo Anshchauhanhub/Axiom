@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { onboardingChat, getChatSessions, getSessionMessages, deleteChatSession, getAllTasks } from '../services/api';
+import { assistantChat, getAssistantSessions, getSessionMessages, deleteAssistantSession } from '../services/api';
 import MessageBubble from './MessageBubble';
 import MoodFace from './MoodFace';
 import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose, Trash2, Paperclip, X } from 'lucide-react';
+import { useMood } from '../context/MoodContext';
 
 const AIAgentChat = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mood, setMood] = useState(3);
+
+  // Consume global mood — no independent API call needed
+  const { mood, label: moodLabel, refreshMood } = useMood();
+
   const [selectedFile, setSelectedFile] = useState(null);
   
   // New State for Toolbar Functionality
@@ -38,68 +42,14 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     }
   }, [showHistory, isOpen]);
 
-  // Calculate mood based on task discipline — mirrors TopNav overdue logic exactly
+  // Refresh mood whenever the chat panel opens so it's always current
   useEffect(() => {
-    const calculateMood = async () => {
-      try {
-        const tasks = await getAllTasks();
-        if (!tasks || tasks.length === 0) {
-          setMood(3);
-          return;
-        }
-
-        const now = new Date();
-        const todayStr = now.toDateString();
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-
-        let overdueCount = 0;       // same logic as TopNav
-        let todayHasTasks = false;
-        let todayTotalTasks = 0;
-        let todayDoneTasks = 0;
-
-        tasks.forEach(t => {
-          if (!t.scheduled_at) return;
-          const scheduled = new Date(t.scheduled_at);
-          const scheduledDateStr = scheduled.toDateString();
-          // A task is done if completed_at is set OR status is passed
-          const isDone = !!(t.completed_at || t.status === 'passed');
-
-          if (scheduledDateStr === todayStr) {
-            todayHasTasks = true;
-            todayTotalTasks++;
-            if (isDone) todayDoneTasks++;
-          } else if (scheduled < todayStart && !isDone) {
-            // Same as TopNav: !completed_at && scheduled < now
-            overdueCount++;
-          }
-        });
-
-        // Mood rules (overdue COUNT not days — mirrors what notifications show)
-        if (overdueCount >= 2) {
-          setMood(1); // Very angry — multiple overdue tasks
-        } else if (overdueCount === 1) {
-          setMood(2); // Angry — 1 overdue task
-        } else if (todayHasTasks && todayDoneTasks >= todayTotalTasks) {
-          setMood(5); // All today's tasks done!
-        } else if (todayHasTasks && todayDoneTasks > 0) {
-          setMood(4); // Some done today
-        } else if (todayHasTasks) {
-          setMood(3); // Tasks due today, still time
-        } else {
-          setMood(4); // No tasks today, nothing overdue
-        }
-      } catch (e) {
-        setMood(3);
-      }
-    };
-
-    if (isOpen) calculateMood();
-  }, [isOpen]);
+    if (isOpen) refreshMood();
+  }, [isOpen, refreshMood]);
 
   const fetchSessions = async () => {
     try {
-      const data = await getChatSessions();
+      const data = await getAssistantSessions();
       setSessions(data?.sessions || []);
     } catch (e) {
       console.error('Failed to fetch chat sessions', e);
@@ -120,7 +70,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
   const handleDeleteSession = async (e, sessionId) => {
     e.stopPropagation();
     try {
-      await deleteChatSession(sessionId);
+      await deleteAssistantSession(sessionId);
       setSessions(prev => prev.filter(s => s.id !== sessionId));
       if (currentSessionId === sessionId) {
         startNewChat();
@@ -174,10 +124,11 @@ const AIAgentChat = ({ isOpen, onClose }) => {
 
     try {
       // Pass the current session ID if it exists so the backend groups them
-      const res = await onboardingChat(newMessages, currentSessionId);
+      const res = await assistantChat(newMessages, currentSessionId);
       const assistantMessage = res?.message || res?.response;
       if (res?.mood) {
-          setMood(res.mood);
+          // Backend signals a mood change — trigger a fresh global evaluation
+          refreshMood();
       }
       if (assistantMessage) {
          setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
@@ -293,9 +244,9 @@ const AIAgentChat = ({ isOpen, onClose }) => {
               </div>
               <div className="hidden sm:block">
                 <p className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface/90 leading-none">Edxiom AI</p>
-                <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wider mt-0.5">
-                  {mood === 5 ? 'Tasks done today' : mood === 4 ? 'On track' : mood === 3 ? 'Tasks due today' : mood === 2 ? '1 day missed' : 'Multiple days missed'}
-                </p>
+                 <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wider mt-0.5">
+                  {moodLabel}
+                 </p>
               </div>
             </div>
             
@@ -395,7 +346,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Do anything with AI or attach a file..."
-                className="flex-1 bg-transparent text-sm text-on-surface py-2 pl-3 outline-none border-none ring-0 focus:outline-none focus:ring-0 focus:border-transparent shadow-none font-light placeholder:text-on-surface-variant/50"
+                className="flex-1 bg-transparent text-base text-on-surface py-2 pl-3 outline-none border-none ring-0 focus:outline-none focus:ring-0 focus:border-transparent shadow-none font-light placeholder:text-on-surface-variant/50"
               />
               <div className="flex items-center gap-2 pr-1">
                 <button 

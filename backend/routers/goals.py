@@ -14,7 +14,7 @@ from schemas import (
     CacheStatsResponse
 )
 from auth import get_current_user
-from services.groq import generate_roadmap, generate_roadmap_from_playlist
+from services.groq import generate_roadmap, generate_roadmap_from_playlist, classify_parts_for_quiz
 from services.synthesis import synthesize_part_content
 from services.youtube import get_playlist_data
 from services.roadmap_cache import check_cache, save_to_cache, invalidate_template
@@ -106,17 +106,21 @@ async def gen_roadmap(
         db.add(task)
         await db.flush()
 
+        part_titles = task_data.get("parts", [])
+        quiz_flags = await classify_parts_for_quiz(part_titles, task.title, goal.title)
         parts_out = []
-        for pidx, part_title in enumerate(task_data.get("parts", [])):
+        for pidx, part_title in enumerate(part_titles):
+            req_quiz = quiz_flags[pidx] if pidx < len(quiz_flags) else True
             part = Part(
                 task_id=task.id,
                 title=part_title,
                 order_index=pidx,
                 status="active" if idx == 0 and pidx == 0 else "locked",
+                requires_quiz=req_quiz,
             )
             db.add(part)
             await db.flush()
-            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status))
+            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status, requires_quiz=part.requires_quiz))
 
         tasks_out.append(TaskResponse(
             id=task.id,
@@ -161,7 +165,14 @@ async def get_roadmap(
 
     tasks_out = []
     for task in tasks:
-        parts_out = [PartResponse(id=p.id, title=p.title, status=p.status) for p in task.parts]
+        parts_out = [
+            PartResponse(
+                id=p.id,
+                title=p.title,
+                status=p.status,
+                requires_quiz=getattr(p, 'requires_quiz', True)
+            ) for p in task.parts
+        ]
         tasks_out.append(TaskResponse(
             id=task.id,
             title=task.title,
@@ -225,12 +236,13 @@ async def list_goals(
 
 @router.get("/chat-sessions")
 async def get_chat_sessions(
+    session_type: str = "architect",
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
         select(ChatSession)
-        .where(ChatSession.user_id == user.id)
+        .where(ChatSession.user_id == user.id, ChatSession.session_type == session_type)
         .order_by(ChatSession.updated_at.desc())
     )
     sessions = result.scalars().all()
@@ -282,7 +294,7 @@ async def onboarding_chat(
         # If no session_id, create a new session
         if not session_id:
             title_text = req.messages[-1].content[:30] + ("..." if len(req.messages[-1].content) > 30 else "")
-            new_session = ChatSession(user_id=user.id, title=title_text)
+            new_session = ChatSession(user_id=user.id, title=title_text, session_type=req.session_type)
             db.add(new_session)
             await db.commit()
             await db.refresh(new_session)
@@ -369,7 +381,7 @@ async def onboarding_chat(
         from groq import RateLimitError
         
         try:
-            response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context)
+            response_data = await generate_onboarding_response(formatted_messages, goal_context=goal_context, session_type=req.session_type)
         except RateLimitError as rle:
             logger.warning(f"Groq Rate Limit Error caught gracefully: {rle}")
             return {
@@ -530,21 +542,25 @@ async def finalize_goal(
         db.add(task)
         await db.flush()
 
+        part_titles = task_data.get("parts", [])
+        quiz_flags = await classify_parts_for_quiz(part_titles, task.title, goal.title)
         parts_out = []
-        for pidx, part_title in enumerate(task_data.get("parts", [])):
+        for pidx, part_title in enumerate(part_titles):
             part_schedule = schedules[schedule_idx] if schedule_idx < len(schedules) else None
             schedule_idx += 1
+            req_quiz = quiz_flags[pidx] if pidx < len(quiz_flags) else True
             
             part = Part(
                 task_id=task.id,
                 title=part_title,
                 order_index=pidx,
                 status="active" if idx == 0 and pidx == 0 else "locked",
-                scheduled_at=part_schedule
+                scheduled_at=part_schedule,
+                requires_quiz=req_quiz,
             )
             db.add(part)
             await db.flush()
-            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status))
+            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status, requires_quiz=part.requires_quiz))
 
         tasks_out.append(TaskResponse(
             id=task.id,
@@ -664,21 +680,25 @@ async def quick_activate(
         db.add(task)
         await db.flush()
 
+        part_titles = task_data.get("parts", [])
+        quiz_flags = await classify_parts_for_quiz(part_titles, task.title, goal.title)
         parts_out = []
-        for pidx, part_title in enumerate(task_data.get("parts", [])):
+        for pidx, part_title in enumerate(part_titles):
             part_schedule = schedules[schedule_idx] if schedule_idx < len(schedules) else None
             schedule_idx += 1
+            req_quiz = quiz_flags[pidx] if pidx < len(quiz_flags) else True
             
             part = Part(
                 task_id=task.id,
                 title=part_title,
                 order_index=pidx,
                 status="active" if idx == 0 and pidx == 0 else "locked",
-                scheduled_at=part_schedule
+                scheduled_at=part_schedule,
+                requires_quiz=req_quiz,
             )
             db.add(part)
             await db.flush()
-            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status))
+            parts_out.append(PartResponse(id=part.id, title=part.title, status=part.status, requires_quiz=part.requires_quiz))
 
         tasks_out.append(TaskResponse(
             id=task.id,

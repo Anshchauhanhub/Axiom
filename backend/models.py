@@ -106,6 +106,7 @@ class Part(Base):
     status = Column(String, default="locked")  # locked, active, passed
     content = Column(Text, nullable=True)
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    requires_quiz = Column(Boolean, default=True, nullable=False)  # Smart filter: False for intros/setup/history
 
     task = relationship("Task", back_populates="parts")
     quiz_results = relationship("QuizResult", back_populates="part", cascade="all, delete-orphan")
@@ -133,6 +134,7 @@ class ChatSession(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=True)
+    session_type = Column(String, nullable=False, default="architect") # architect or assistant
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

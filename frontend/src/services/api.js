@@ -7,9 +7,16 @@ export const setToken = (token) => localStorage.setItem('edxiom_token', token);
 export const clearToken = () => localStorage.removeItem('edxiom_token');
 export const isLoggedIn = () => !!getToken();
 
-const headers = () => ({
+const AUTH_HEADER = 'Authorization';
+
+const authHeaders = () => {
+  const token = getToken();
+  return token ? { [AUTH_HEADER]: `Bearer ${token}` } : {};
+};
+
+const jsonHeaders = () => ({
   'Content-Type': 'application/json',
-  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+  ...authHeaders(),
 });
 
 // --- Sanitized error messages ---
@@ -19,32 +26,39 @@ const SAFE_ERROR_MAP = {
 };
 
 function sanitizeError(message) {
-  // Return mapped safe message, or the server message if it's short and non-technical
   if (SAFE_ERROR_MAP[message]) return SAFE_ERROR_MAP[message];
-  // Don't expose stack traces or internal details
   if (message && message.length < 200 && !message.includes('Traceback') && !message.includes('Error:')) {
     return message;
   }
   return 'Something went wrong. Please try again.';
 }
 
-async function request(method, path, body = null) {
-  const opts = { method, headers: headers() };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${API_BASE}${path}`, opts);
+async function parseResponse(res) {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return res.json();
+  }
+  return {};
+}
+
+async function handleResponse(res) {
   if (res.status === 401) {
     clearToken();
-    // Disabled redirect for debugging
-    // window.location.href = '/login';
     throw new Error('Session expired');
   }
   if (res.status === 429) {
     throw new Error('Too many requests. Please wait a moment and try again.');
   }
-  const contentType = res.headers.get('content-type') || '';
-  const data = contentType.includes('application/json') ? await res.json() : {};
+
+  const data = await parseResponse(res);
   if (!res.ok) throw new Error(sanitizeError(data.detail || 'Request failed'));
   return data;
+}
+
+async function request(method, path, body = null) {
+  const opts = { method, headers: jsonHeaders() };
+  if (body) opts.body = JSON.stringify(body);
+  return handleResponse(await fetch(`${API_BASE}${path}`, opts));
 }
 
 // --- Password Validation (mirrors backend rules) ---
@@ -83,7 +97,6 @@ export const resetPassword = (token, newPassword) => {
 export const googleLogin = (credential, accountType = 'student') =>
   request('POST', '/auth/google', { credential, account_type: accountType });
 
-
 export const linkTelegram = (chatId) =>
   request('POST', '/auth/link-telegram', { telegram_chat_id: chatId });
 
@@ -92,7 +105,7 @@ export const getProfile = () => request('GET', '/users/me');
 
 export const earnCredit = () => request('POST', '/users/earn-credit');
 
-export const unlockTask = (taskId, useCredit = true) => 
+export const unlockTask = (taskId, useCredit = true) =>
   request('POST', `/goals/tasks/${taskId}/unlock?use_credit=${useCredit}`);
 
 export const updateProfile = (data) => request('PATCH', '/users/profile', data);
@@ -100,25 +113,14 @@ export const updateProfile = (data) => request('PATCH', '/users/profile', data);
 export const uploadProfileImage = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
-  
+
   const res = await fetch(`${API_BASE}/users/profile/image`, {
     method: 'POST',
-    headers: {
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
-      // Do NOT set Content-Type header manually here; the browser sets it with the boundary for FormData
-    },
+    headers: authHeaders(),
     body: formData,
   });
 
-  if (res.status === 401) {
-    clearToken();
-    window.location.href = '/login';
-    throw new Error('Session expired');
-  }
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Request failed');
-  return data;
+  return handleResponse(res);
 };
 
 export const updateSchedule = (timezone, schedule) =>
@@ -150,17 +152,26 @@ export const submitQuiz = (quizToken, answers) =>
 export const getActiveQuiz = () => request('GET', '/quiz/active');
 export const completeDirect = (partId) => request('POST', `/quiz/complete-direct/${partId}`);
 
-// --- Conversational Onboarding ---
-export const onboardingChat = (messages, sessionId = null) =>
-  request('POST', '/goals/chat', { messages, session_id: sessionId });
+// --- Architect Chat (Onboarding) ---
+export const architectChat = (messages, sessionId = null) =>
+  request('POST', '/goals/chat', { messages, session_id: sessionId, session_type: 'architect' });
 
-export const getChatSessions = () => request('GET', '/goals/chat-sessions');
+export const getArchitectSessions = () => request('GET', '/goals/chat-sessions?session_type=architect');
+
+export const deleteArchitectSession = (sessionId) =>
+  request('DELETE', `/goals/chat-sessions/${sessionId}`);
+
+// --- Assistant Chat (Edxiom AI) ---
+export const assistantChat = (messages, sessionId = null) =>
+  request('POST', '/goals/chat', { messages, session_id: sessionId, session_type: 'assistant' });
+
+export const getAssistantSessions = () => request('GET', '/goals/chat-sessions?session_type=assistant');
+
+export const deleteAssistantSession = (sessionId) =>
+  request('DELETE', `/goals/chat-sessions/${sessionId}`);
 
 export const getSessionMessages = (sessionId) =>
   request('GET', `/goals/chat-sessions/${sessionId}/messages`);
-
-export const deleteChatSession = (sessionId) =>
-  request('DELETE', `/goals/chat-sessions/${sessionId}`);
 
 export const finalizeGoal = (title, roadmap, settings = {}, preferences = {}) =>
   request('POST', '/goals/finalize', {
@@ -183,16 +194,14 @@ export const generateYoutubeRoadmap = (url) =>
 // --- Personal Workspace ---
 export const getPersonalTasks = () => request('GET', '/personal/');
 export const createPersonalTask = (data) => request('POST', '/personal/', data);
-export const updatePersonalTask = (taskId, status) => request('PUT', `/personal/${taskId}?status_str=${status}`);
+export const updatePersonalTask = (taskId, status) =>
+  request('PUT', `/personal/${taskId}?status_str=${status}`);
 export const deletePersonalTask = (taskId) => request('DELETE', `/personal/${taskId}`);
-export const activateGoal = (goalId) =>
-  request('POST', `/goals/${goalId}/activate`);
- 
-export const deleteGoal = (goalId) =>
-  request('DELETE', `/goals/${goalId}`);
- 
-export const toggleGoalStatus = (goalId) =>
-  request('POST', `/goals/${goalId}/toggle`);
+export const activateGoal = (goalId) => request('POST', `/goals/${goalId}/activate`);
+
+export const deleteGoal = (goalId) => request('DELETE', `/goals/${goalId}`);
+
+export const toggleGoalStatus = (goalId) => request('POST', `/goals/${goalId}/toggle`);
 
 export const updateGoalNotes = (goalId, notes) =>
   request('PATCH', `/goals/${goalId}/notes`, { notes });

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import AIAgentChat from './AIAgentChat';
 import MoodFace from './MoodFace';
-import { getAllTasks, isLoggedIn } from '../services/api';
+import { useMood } from '../context/MoodContext';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -13,36 +13,9 @@ const Layout = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const hideAIAgent = hideNavigation || ['/onboarding'].includes(path);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [mood, setMood] = useState(4);
 
-  // Auto-calculate mood from task progress
-  useEffect(() => {
-    if (hideAIAgent || !isLoggedIn()) return;
-    const calculateMood = async () => {
-      try {
-        const tasks = await getAllTasks();
-        if (!tasks || tasks.length === 0) { setMood(4); return; }
-        const now = new Date();
-        const total = tasks.length;
-        let completed = 0, overdue = 0;
-        tasks.forEach(t => {
-          if (t.completed_at) {
-            completed++;
-          } else if (t.scheduled_at && new Date(t.scheduled_at) < now) {
-            overdue++;
-          }
-        });
-        const completionRatio = completed / total;
-        const overdueRatio = overdue / total;
-
-        if (completionRatio >= 0.7) setMood(5);
-        else if (completionRatio >= 0.3) setMood(4);
-        else if (overdueRatio >= 0.5) setMood(3);
-        else setMood(4);
-      } catch (e) { setMood(4); }
-    };
-    calculateMood();
-  }, [hideAIAgent, path]);
+  // Global mood — single source of truth from MoodContext
+  const { mood } = useMood();
 
   const getMoodGradient = (m) => {
     switch (m) {

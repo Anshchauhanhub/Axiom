@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-  onboardingChat, finalizeGoal, getChatSessions, getSessionMessages, deleteChatSession, 
+  architectChat, finalizeGoal, getArchitectSessions, getSessionMessages, deleteArchitectSession, 
   clearChatHistory, generateYoutubeRoadmap 
 } from '../services/api';
 import { useData } from '../context/DataContext';
@@ -105,7 +105,7 @@ const Onboarding = () => {
 
   const loadChatSessions = async () => {
     try {
-      const res = await getChatSessions();
+      const res = await getArchitectSessions();
       setChatSessions(res.sessions || []);
     } catch (e) {
       console.error(e);
@@ -138,7 +138,7 @@ const Onboarding = () => {
   const handleDeleteSession = async (e, sessionId) => {
     e.stopPropagation();
     try {
-      await deleteChatSession(sessionId);
+      await deleteArchitectSession(sessionId);
       setChatSessions(prev => prev.filter(s => s.id !== sessionId));
       if (currentSessionId === sessionId) {
         startFreshSession();
@@ -190,7 +190,7 @@ const Onboarding = () => {
     }
 
     try {
-      const res = await onboardingChat([...messages, userMsg], currentSessionId);
+      const res = await architectChat([...messages, userMsg], currentSessionId);
       if (res.session_id && !currentSessionId) {
          setCurrentSessionId(res.session_id);
          loadChatSessions();
@@ -243,7 +243,7 @@ const Onboarding = () => {
     setIsTyping(true);
 
     try {
-      const res = await onboardingChat([...messages, userMsg], currentSessionId);
+      const res = await architectChat([...messages, userMsg], currentSessionId);
       if (res.session_id && !currentSessionId) {
         setCurrentSessionId(res.session_id);
         loadChatSessions();
@@ -298,7 +298,7 @@ const Onboarding = () => {
     setPhase('discovery');
     
     try {
-      const res = await onboardingChat([userMsg], null);
+      const res = await architectChat([userMsg], null);
       if (res.session_id) {
          setCurrentSessionId(res.session_id);
          loadChatSessions();
@@ -452,7 +452,7 @@ const Onboarding = () => {
     <div className="w-full flex-1 min-h-[500px] flex animate-in fade-in duration-1000">
       {loading && <NeuralLoader message="PROCESSING..." />}
 
-      <div className={`flex w-full bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm ${onboardingMode === 'chat' ? 'flex-row' : 'flex-col'}`}>
+      <div className={`flex w-full h-[85vh] bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm ${onboardingMode === 'chat' ? 'flex-row' : 'flex-col'}`}>
         
         {/* Left Sidebar for Chat Mode */}
         {onboardingMode === 'chat' && (
@@ -502,7 +502,7 @@ const Onboarding = () => {
               <div>
 
                 <h2 className="text-base sm:text-xl font-black font-headline uppercase tracking-tighter text-on-surface">
-                  {onboardingMode === 'chat' ? 'Edxiom Assistant' : onboardingMode === 'youtube' ? 'Playlist Architect' : 'Path Selector'}
+                  {onboardingMode === 'chat' ? 'AI Architect' : onboardingMode === 'youtube' ? 'Playlist Architect' : 'Path Selector'}
                 </h2>
               </div>
             </div>
@@ -555,7 +555,7 @@ const Onboarding = () => {
                         onChange={(e) => setInputText(e.target.value)}
                         disabled={isTyping}
                         placeholder="Ask anything or upload a syllabus/doc..."
-                        className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] pl-14 py-4 pr-16 text-on-surface text-base focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
+                        className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] pl-14 py-4 pr-16 text-on-surface text-lg focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                         <button type="submit" disabled={(!inputText.trim() && !selectedFile) || isTyping} className="w-8 h-8 flex items-center justify-center bg-white text-black rounded-full hover:brightness-110 disabled:opacity-20 disabled:bg-surface-container-highest disabled:text-on-surface-variant transition-all">
@@ -565,13 +565,13 @@ const Onboarding = () => {
                     </div>
                  </form>
                  <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
-                    <button onClick={() => setInputText("Generate a study plan for Quantum Physics")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-sm hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+                    <button onClick={() => setInputText("Generate a study plan for Quantum Physics")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
                       <Sparkles size={16} /> Create a curriculum
                     </button>
-                    <button onClick={() => setInputText("I need to practice React.js hooks")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-sm hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+                    <button onClick={() => setInputText("I need to practice React.js hooks")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
                       <Edit3 size={16} /> Write or practice
                     </button>
-                    <button onClick={() => setInputText("Explain the theory of relativity")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-sm hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+                    <button onClick={() => setInputText("Explain the theory of relativity")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
                       <Compass size={16} /> Look something up
                     </button>
                  </div>

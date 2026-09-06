@@ -839,11 +839,11 @@ const Study = () => {
                 </span>
               </button>
             ) : (() => {
-                 const lowerTitle = partTitle.toLowerCase();
-                 const isIntro = lowerTitle.includes('intro') || lowerTitle.includes('setup') || lowerTitle.includes('install') || lowerTitle.includes('overview') || lowerTitle.includes('getting started') || lowerTitle.includes('prerequisite') || lowerTitle.includes('environment') || lowerTitle.includes('pattern') || lowerTitle.includes('examination') || lowerTitle.includes('tips') || lowerTitle.includes('resource') || lowerTitle.includes('syllabus') || lowerTitle.includes('guidelines') || lowerTitle.includes('strategy') || lowerTitle.includes('format');
+                 const activePartObj = roadmap?.tasks?.flatMap(t => t.parts).find(p => p.id === activePartId);
+                 const requiresQuiz = activePartObj?.requires_quiz ?? true;
                  const quizzesDisabled = activeGoal?.settings?.include_quizzes !== true;
                  
-                 if (isIntro || quizzesDisabled) {
+                 if (!requiresQuiz || quizzesDisabled) {
                   return (
                     <button
                       onClick={handleMarkComplete}
