@@ -20,6 +20,11 @@ def set_bot(bot):
     _bot_instance = bot
 
 
+def stop_scheduler():
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+
+
 async def check_and_send_nudges():
     """Check all users' study schedules and send Telegram nudges at the right time."""
     if _bot_instance is None:

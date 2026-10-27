@@ -27,6 +27,13 @@ async def test_health_check():
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
+@pytest.mark.skipif(not HAS_BACKEND_DEPS, reason="Backend dependencies are not installed")
+def test_telegram_webhook_route_is_retired():
+    assert not any(
+        getattr(route, "path", None) == "/api/v1/telegram/webhook"
+        for route in app.routes
+    )
+
 @pytest.mark.asyncio
 @pytest.mark.skipif(not HAS_BACKEND_DEPS, reason="Backend dependencies are not installed")
 async def test_root_fallback():

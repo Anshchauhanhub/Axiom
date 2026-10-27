@@ -1,8 +1,18 @@
 """
 Two-Tier Roadmap Cache — exact-hash (Postgres) + semantic (pgvector + MiniLM).
 
-Tier 1: Normalize goal text, SHA256 hash, check `roadmap_templates` table. Free, instant.
-Tier 2: Embed with a local MiniLM model, query pgvector in Postgres for cosine similarity >= threshold.
+Tier 1: Normalize goal text, SHA256 hash, check `roadmap_templates` table. Free, instant ($0 cost, <2ms).
+Tier 2: Embed goal with 384-d vector, query pgvector in Postgres for cosine similarity >= threshold.
+
+RECOMMENDED DEPLOYMENT STRATEGY:
+- Development / Lightweight: `ENABLE_SEMANTIC_EMBEDDINGS=false`
+  Zero memory overhead; Tier 1 exact SHA-256 hash caching handles identical queries.
+- Cloud / Serverless Production (Render/Fly/K8s with <1GB RAM):
+  Configure `EMBEDDING_API_URL` pointing to an external microservice or hosted embedding
+  (e.g., HuggingFace Inference Endpoint or OpenAI text-embedding-3-small).
+- Dedicated / GPU / High-RAM Instances (>= 1GB free RAM):
+  Set `ENABLE_SEMANTIC_EMBEDDINGS=true` to load local SentenceTransformer ("all-MiniLM-L6-v2").
+  Note: Loading PyTorch + weights locally consumes ~350MB-500MB resident RAM.
 
 On a miss, the caller should run the full agent pipeline and then call `save_to_cache()`.
 """

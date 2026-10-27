@@ -73,7 +73,7 @@ const NeuralLoader = ({ message = 'Processing...', subMessages = [] }) => {
         {/* Main message */}
         <div className="text-center space-y-3">
           <h3 className="text-xl font-black font-headline tracking-tight text-on-surface uppercase">
-            {message}{'.'.repeat(dotCount)}
+            {message.replace(/\.+$/, '')}{'.'.repeat(dotCount)}
           </h3>
           {subMessages.length > 0 && (
             <div className="relative h-6 overflow-hidden">

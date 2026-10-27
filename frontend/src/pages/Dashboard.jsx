@@ -5,10 +5,12 @@ import { useData } from '../context/DataContext';
 import { toggleGoalStatus, deleteGoal } from '../services/api';
 import NeuralLoader from '../components/NeuralLoader';
 import SettingsModal from '../components/SettingsModal';
+import ConfirmDialog from '../components/ConfirmDialog';
+import OnboardingTour from '../components/Onboarding/OnboardingTour';
 import {
   Activity, ArrowRight, BookOpen, BookText, CalendarClock, CheckCircle2, ChevronDown,
   ChevronRight, Clock3, Flame, GraduationCap, Layers, Pause, Play,
-  Send, ShieldCheck, Sparkles, Target, Trash2, Zap,
+  Send, ShieldCheck, Sparkles, Target, Trash2, Zap, Rocket
 } from 'lucide-react';
 
 const getGreeting = () => {
@@ -133,7 +135,7 @@ const GoalCard = ({ goal, roadmapData, onStudy, onNotes, onToggle, onDelete }) =
             }`}>
               {isActive ? <><Pause size={10} fill="currentColor" /> Pause</> : <><Play size={10} fill="currentColor" /> Resume</>}
             </button>
-            <button onClick={() => { if(confirm('Delete this learning path? This cannot be undone.')) onDelete(goal.id); }}
+            <button onClick={() => onDelete(goal.id)}
               className="h-8 w-8 rounded-lg border border-red-500/20 bg-red-500/10 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/20 hover:border-red-500/30 active:translate-y-[1.5px] transition-all shadow-[0_2.5px_0_rgba(239,68,68,0.05)] active:shadow-none">
               <Trash2 size={12} />
             </button>
@@ -229,6 +231,7 @@ const Dashboard = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('notifications');
+  const [goalToDelete, setGoalToDelete] = useState(null);
 
   const featuredSlides = useMemo(() => {
     if (!goals || goals.length === 0) return FEATURED_SLIDES;
@@ -312,16 +315,16 @@ const Dashboard = () => {
       {busy && <NeuralLoader message="Setting up..." />}
       <div className="w-full max-w-2xl text-center animate-in fade-in zoom-in-95 duration-700">
         <div className="w-20 h-20 mx-auto mb-8 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
-          <GraduationCap className="text-primary" size={36} />
+          <Rocket className="text-primary" size={36} />
         </div>
         <p className="text-[10px] font-label font-black uppercase tracking-[0.3em] text-primary mb-4">Workspace Empty</p>
-        <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight mb-4">Start with one clear <span className="text-primary">objective</span>.</h1>
+        <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight mb-4">Your learning journey starts <span className="text-primary">here</span>.</h1>
         <p className="text-on-surface-variant/60 text-sm leading-relaxed max-w-md mx-auto mb-10">
-          Edxiom will turn your target into a structured roadmap, schedule sessions, and verify progress with quizzes before unlocking the next step.
+          Edxiom turns any topic or YouTube playlist into a structured roadmap. Set your goal and let our AI architect build your perfect curriculum.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-3">
           <button onClick={() => navigate('/onboarding')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-xs font-label font-black uppercase tracking-[0.2em] text-black shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">
-            Create learning goal <ArrowRight size={16} />
+            Create learning path <ArrowRight size={16} />
           </button>
           <button onClick={() => navigate('/calendar')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-8 py-4 text-xs font-label font-black uppercase tracking-[0.2em] text-on-surface-variant hover:border-white/20 hover:text-on-surface transition-all">
             View calendar
@@ -358,7 +361,51 @@ const Dashboard = () => {
         </header>
 
         {dataLoading ? (
-          <div className="rounded-2xl border border-white/[0.06] bg-surface-container-low/40 p-16 text-center text-on-surface-variant/50 text-sm">Loading workspace...</div>
+          <div className="flex flex-col xl:flex-row gap-8 lg:gap-10 animate-pulse">
+            <div className="flex-1 min-w-0 flex flex-col gap-10">
+              <div className="rounded-[2rem] border border-white/[0.05] bg-white/5 h-[280px] w-full" />
+              <div>
+                <div className="h-5 w-48 bg-white/10 rounded mb-4" />
+                <div className="space-y-4">
+                  {[1, 2].map(i => (
+                    <div key={i} className="rounded-2xl border border-white/5 bg-white/5 p-5 h-[100px] flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-white/10 shrink-0" />
+                      <div className="flex-1">
+                        <div className="h-3 w-16 bg-white/10 rounded mb-2" />
+                        <div className="h-5 w-48 bg-white/10 rounded mb-2" />
+                        <div className="h-3 w-32 bg-white/10 rounded" />
+                      </div>
+                      <div className="w-9 h-9 rounded-lg bg-white/10 shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <aside className="w-full xl:w-[280px] shrink-0 flex flex-col gap-5">
+              <div className="h-[120px] rounded-[2rem] bg-white/5 border border-white/5" />
+              <div className="h-[100px] rounded-[2rem] bg-white/5 border border-white/5" />
+              <div className="h-[250px] rounded-[2rem] bg-white/5 border border-white/5 flex flex-col p-5">
+                 <div className="flex justify-between items-center mb-4">
+                   <div className="flex items-center gap-2.5">
+                     <div className="w-7 h-7 rounded-lg bg-white/10" />
+                     <div className="w-16 h-4 bg-white/10 rounded" />
+                   </div>
+                   <div className="w-12 h-3 bg-white/10 rounded" />
+                 </div>
+                 <div className="grid grid-cols-2 gap-3 mb-4">
+                   <div className="h-16 rounded-2xl bg-white/10" />
+                   <div className="h-16 rounded-2xl bg-white/10" />
+                 </div>
+                 <div className="mt-4 flex justify-between items-center">
+                   <div className="space-y-2">
+                     <div className="w-10 h-3 bg-white/10 rounded" />
+                     <div className="w-16 h-6 bg-white/10 rounded" />
+                   </div>
+                   <div className="w-11 h-11 rounded-xl bg-white/10" />
+                 </div>
+              </div>
+            </aside>
+          </div>
         ) : (
           <>
             <div className="flex flex-col xl:flex-row gap-8 lg:gap-10">
@@ -451,7 +498,7 @@ const Dashboard = () => {
                         onStudy={(id) => navigate('/study', { state: { goalId: id } })}
                         onNotes={(id) => navigate('/notebooks', { state: { goalId: id } })}
                         onToggle={(id) => wrap(() => toggleGoalStatus(id))}
-                        onDelete={(id) => wrap(() => deleteGoal(id))}
+                        onDelete={(id) => setGoalToDelete(goals.find(goal => goal.id === id) || null)}
                       />
                     ))}
                   </div>
@@ -639,6 +686,23 @@ const Dashboard = () => {
         onClose={() => setIsSettingsOpen(false)}
         initialTab={settingsTab}
       />
+      <ConfirmDialog
+        isOpen={Boolean(goalToDelete)}
+        onClose={() => setGoalToDelete(null)}
+        onConfirm={() => {
+          const goal = goalToDelete;
+          setGoalToDelete(null);
+          if (goal) void wrap(() => deleteGoal(goal.id));
+        }}
+        title="Delete learning path?"
+        message={goalToDelete
+          ? `"${goalToDelete.title}" and its saved progress will be permanently deleted. This can't be undone.`
+          : ''}
+        confirmText="Delete path"
+        cancelText="Keep path"
+        variant="danger"
+      />
+      <OnboardingTour />
     </div>
   );
 };

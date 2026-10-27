@@ -258,6 +258,9 @@ class OnboardingChatRequest(BaseModel):
     messages: list[ChatMessage]
     session_id: Optional[str] = None
     session_type: Optional[str] = "architect"
+    playlist_url: Optional[str] = Field(default=None, max_length=2048)
+    website_url: Optional[str] = Field(default=None, max_length=2048)
+    reference_text: Optional[str] = Field(default=None, max_length=30000)
 
 
 class OnboardingChatResponse(BaseModel):
@@ -304,5 +307,4 @@ class ExamRoadmap(BaseModel):
     target_entity: str
     total_estimated_weeks: int
     modules: list[SyllabusModule]
-
 

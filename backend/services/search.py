@@ -3,18 +3,92 @@ import httpx
 import json
 import logging
 import asyncio
-from typing import List, Dict
+import time
+from typing import List, Dict, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger("edxiom.search")
 
 SEARXNG_URL = os.getenv("SEARXNG_URL", "http://localhost:8080")
+
+# ── TTL-based in-memory search cache ─────────────────────────────────
+# Key: (query, max_results) -> (result_str, timestamp)
+_SEARCH_CACHE: dict[tuple, tuple[str, float]] = {}
+_CACHE_TTL_S = float(os.getenv("SEARCH_CACHE_TTL_S", "300"))  # 5 minutes default
+
+
+def _cache_get(key: tuple) -> Optional[str]:
+    entry = _SEARCH_CACHE.get(key)
+    if entry is None:
+        return None
+    result, ts = entry
+    if time.time() - ts > _CACHE_TTL_S:
+        del _SEARCH_CACHE[key]
+        return None
+    return result
+
+
+def _cache_set(key: tuple, value: str) -> None:
+    _SEARCH_CACHE[key] = (value, time.time())
+    if len(_SEARCH_CACHE) > 500:
+        cutoff = time.time() - _CACHE_TTL_S
+        expired = [k for k, (_, ts) in _SEARCH_CACHE.items() if ts < cutoff]
+        for k in expired:
+            del _SEARCH_CACHE[k]
+
+
+# ── Domain credibility scoring ────────────────────────────────────────
+
+_HIGH_CREDIBILITY_DOMAINS = frozenset([
+    ".edu", ".gov", ".ac.in", ".ac.uk", ".org",
+    "wikipedia.org", "arxiv.org", "scholar.google",
+    "upsc.gov.in", "iitm.ac.in", "iitd.ac.in", "iitb.ac.in",
+    "gate.iit", "nta.ac.in", "iimcat.ac.in",
+    "coursera.org", "mit.edu", "stanford.edu",
+])
+
+_OFFICIAL_KEYWORDS = frozenset([
+    "official", "syllabus", "exam", "notification", "pattern",
+])
+
+
+def _credibility_score(url: str) -> int:
+    """
+    Return a credibility score for a URL (0–4).
+    Used by Stage 3 research fan-out to rank and prioritise sources.
+    """
+    if not url:
+        return 0
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        score = 0
+        if any(hc in domain for hc in _HIGH_CREDIBILITY_DOMAINS):
+            score += 2
+        elif domain.endswith((".edu", ".gov", ".ac.in")):
+            score += 2
+        path = parsed.path.lower()
+        if any(kw in path for kw in _OFFICIAL_KEYWORDS):
+            score += 1
+        if parsed.scheme == "https":
+            score += 1
+        return min(score, 4)
+    except Exception:
+        return 0
 
 
 async def search_internet(query: str, max_results: int = 5) -> str:
     """
     Search the internet using local SearXNG JSON API endpoint (/search?format=json) via httpx.
     Returns a preformatted string of snippets for LLM consumption.
+    Cached with TTL to avoid redundant outbound network calls.
     """
+    cache_key = (query, max_results)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        logger.debug(f"⚡ Search cache hit for '{query}'")
+        return cached
+
     logger.info(f"🌐 SearXNG Search: '{query}'")
     headers = {
         "User-Agent": "AxiomAI-Agent/1.0",
@@ -37,12 +111,16 @@ async def search_internet(query: str, max_results: int = 5) -> str:
                             f"Title: {r.get('title')}\nSource: {r.get('url')}\nContent: {r.get('content')}\n"
                         )
                     logger.info(f"✅ SearXNG returned {len(results)} results.")
-                    return "\n---\n".join(formatted_results)
+                    output = "\n---\n".join(formatted_results)
+                    _cache_set(cache_key, output)
+                    return output
     except Exception as e:
         logger.warning(f"SearXNG API search failed or unconfigured at {SEARXNG_URL} ({e}). Falling back to web search.")
 
     # Fallback to direct httpx search scraper if SearXNG service is unconfigured
-    return await _fallback_httpx_search(query, max_results=max_results)
+    output = await _fallback_httpx_search(query, max_results=max_results)
+    _cache_set(cache_key, output)
+    return output
 
 
 async def _fallback_httpx_search(query: str, max_results: int = 5) -> str:

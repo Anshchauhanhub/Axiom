@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 import os
 import cloudinary
 import cloudinary.uploader
+from telegram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from email.message import EmailMessage
@@ -222,16 +223,18 @@ async def link_telegram(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from services.scheduler import _bot_instance
-    import logging
-
     user.telegram_chat_id = req.telegram_chat_id
     await db.commit()
     
-    # Notify the user on Telegram
-    if _bot_instance:
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if bot_token and bot_token != "your-telegram-bot-token-here":
+        bot = None
+        initialized = False
         try:
-            await _bot_instance.send_message(
+            bot = Bot(token=bot_token)
+            await bot.initialize()
+            initialized = True
+            await bot.send_message(
                 chat_id=req.telegram_chat_id,
                 text=(
                     f"✅ *Your Telegram is successfully connected!*\n\n"
@@ -242,8 +245,14 @@ async def link_telegram(
                 ),
                 parse_mode="Markdown",
             )
-        except Exception as e:
-            logging.getLogger("edxiom.users").error(f"Failed to send Telegram connection message: {e}")
+        except Exception as exc:
+            logger.error("Failed to send Telegram connection message: %s", exc)
+        finally:
+            if initialized and bot is not None:
+                try:
+                    await bot.shutdown()
+                except Exception as exc:
+                    logger.error("Failed to close Telegram connection: %s", exc)
 
     return {"message": "Telegram linked successfully", "chat_id": req.telegram_chat_id}
 

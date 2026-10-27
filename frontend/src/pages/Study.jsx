@@ -7,10 +7,17 @@ import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { cleanLatexMath } from '../utils/mathUtils';
-
+import CopyButton from '../components/CopyButton';
+import QuizReview from '../components/QuizReview';
+import AchievementToast from '../components/AchievementToast';
+import ProgressShareCard from '../components/ProgressShareCard';
+import { Timer, Play as PlayIcon, Pause as PauseIcon, RotateCcw, Share2, Eye } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
-import { startQuiz, submitQuiz, getPartContent, updateGoalNotes, completeDirect } from '../services/api';
+import { 
+  startQuiz, submitQuiz, getPartContent, updateGoalNotes, 
+  completeDirect, startStudySession, endStudySession 
+} from '../services/api';
 import { useData } from '../context/DataContext';
 import NeuralLoader from '../components/NeuralLoader';
 import MultimediaEditor from '../components/MultimediaEditor';
@@ -47,7 +54,19 @@ const Study = () => {
   const [notes, setNotes] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [studySessionId, setStudySessionId] = useState(null);
+  const [showQuizReview, setShowQuizReview] = useState(false);
+  const [userQuizAnswers, setUserQuizAnswers] = useState([]);
+  const [achievement, setAchievement] = useState(null);
+  const [showShareCard, setShowShareCard] = useState(false);
+
+  // Pomodoro Timer State
+  const [pomoSecondsLeft, setPomoSecondsLeft] = useState(25 * 60);
+  const [pomoIsActive, setPomoIsActive] = useState(false);
+  const [pomoMode, setPomoMode] = useState('work'); // 'work' or 'break'
+
   const timerRef = useRef(null);
+  const pomoTimerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const editorRef = useRef(null);
   const initialNotesRef = useRef(null);
@@ -60,6 +79,34 @@ const Study = () => {
     }
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [phase, activePartId, activeTask?.id]);
+
+  // Pomodoro countdown timer
+  useEffect(() => {
+    if (pomoIsActive) {
+      pomoTimerRef.current = setInterval(() => {
+        setPomoSecondsLeft(prev => {
+          if (prev <= 1) {
+            const nextMode = pomoMode === 'work' ? 'break' : 'work';
+            setPomoMode(nextMode);
+            return nextMode === 'work' ? 25 * 60 : 5 * 60;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(pomoTimerRef.current);
+    }
+    return () => clearInterval(pomoTimerRef.current);
+  }, [pomoIsActive, pomoMode]);
+
+  // Clean up study session on unmount
+  useEffect(() => {
+    return () => {
+      if (studySessionId) {
+        endStudySession(studySessionId).catch(() => {});
+      }
+    };
+  }, [studySessionId]);
 
   useEffect(() => {
     if (!user) { navigate('/onboarding'); return; }
@@ -204,6 +251,10 @@ const Study = () => {
       const data = await getPartContent(partId);
       setLearningContent(data.content);
       setPhase('learning');
+      // Initiate telemetry study session
+      startStudySession(partId).then(sess => {
+        if (sess?.id) setStudySessionId(sess.id);
+      }).catch(err => console.debug('Telemetry session init:', err));
     } catch (e) {
       setError(e.message);
     } finally {
@@ -221,6 +272,13 @@ const Study = () => {
     if (loading || loadingQuiz || completingPart) return;
     const partId = activePartId;
     const title = partTitle;
+    
+    // Close active study session before starting quiz
+    if (studySessionId) {
+      endStudySession(studySessionId).catch(() => {});
+      setStudySessionId(null);
+    }
+
     setLoading(true);
     setLoadingQuiz(true);
     setError('');
@@ -233,6 +291,7 @@ const Study = () => {
       setAnswers([]);
       setSelectedOption(null);
       setTimeLeft(15 * 60);
+      setShowQuizReview(false);
       setPhase('quiz');
     } catch (e) {
       setError(e.message);
@@ -244,6 +303,10 @@ const Study = () => {
 
   const handleMarkComplete = async () => {
     if (loading || completingPart) return;
+    if (studySessionId) {
+      endStudySession(studySessionId).catch(() => {});
+      setStudySessionId(null);
+    }
     setLoading(true);
     setCompletingPart(true);
     setError('');
@@ -282,7 +345,27 @@ const Study = () => {
     try {
       const res = await submitQuiz(quizToken, finalAnswers);
       setResult(res);
+      setUserQuizAnswers(finalAnswers);
       setPhase('result');
+      setShowQuizReview(false);
+      
+      // Trigger achievement celebration
+      if (res.is_passed) {
+        if (res.score_percent >= 100) {
+          setAchievement({
+            title: 'Flawless Synchronization!',
+            description: '100% accuracy on Neural Seal assessment',
+            type: 'perfect',
+          });
+        } else {
+          setAchievement({
+            title: 'Neural Seal Certified',
+            description: `Passed with ${res.score_percent}% verified mastery`,
+            type: 'streak',
+          });
+        }
+      }
+
       await refreshData();
       refreshUser();
     } catch (e) {
@@ -547,7 +630,7 @@ const Study = () => {
             code: ({ inline, className, children, ...props }) => {
               const match = /language-(\w+)/.exec(className || '');
               return !inline && match ? (
-                <div className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl group transition-all duration-500 hover:border-primary/30">
+                <div className="my-8 rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl group transition-all duration-500 hover:border-primary/30 relative">
                   <div className="bg-surface-container flex items-center justify-between px-6 py-3 border-b border-outline-variant/10">
                     <div className="flex gap-1.5">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
@@ -556,11 +639,14 @@ const Study = () => {
                     </div>
                     <span className="text-[9px] font-label font-black uppercase tracking-[0.3em] text-on-surface-variant/40">{match[1]}</span>
                   </div>
-                  <pre className="p-6 sm:p-8 bg-[#0b0c10] overflow-x-auto custom-scrollbar">
-                    <code className="text-xs sm:text-sm font-mono text-slate-300 leading-relaxed block whitespace-pre" {...props}>
-                      {String(children).replace(/\n$/, '')}
-                    </code>
-                  </pre>
+                  <div className="relative">
+                    <CopyButton text={String(children).replace(/\n$/, '')} />
+                    <pre className="p-6 sm:p-8 bg-[#0b0c10] overflow-x-auto custom-scrollbar">
+                      <code className="text-xs sm:text-sm font-mono text-slate-300 leading-relaxed block whitespace-pre" {...props}>
+                        {String(children).replace(/\n$/, '')}
+                      </code>
+                    </pre>
+                  </div>
                 </div>
               ) : (
                 <code className="bg-surface-container-highest px-2 py-0.5 rounded-md font-mono text-primary text-xs sm:text-sm font-semibold border border-primary/20" {...props}>
@@ -797,15 +883,51 @@ const Study = () => {
             </div>
             <h2 className="text-3xl sm:text-5xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none mt-2">{partTitle}</h2>
           </div>
-          <button 
-            onClick={() => setPhase('select')} 
-            className="group flex flex-col items-center gap-2"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-variant group-hover:bg-error group-hover:text-white transition-all duration-500 group-hover:rotate-90 shadow-xl border border-white/5">
-              <span className="material-symbols-outlined text-2xl">close</span>
+          <div className="flex items-center gap-4">
+            {/* Built-in Pomodoro Focus Timer */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/15 backdrop-blur-md">
+              <Timer size={14} className={pomoIsActive ? 'text-primary animate-pulse' : 'text-on-surface-variant'} />
+              <span className="font-mono text-xs font-bold text-on-surface">
+                {String(Math.floor(pomoSecondsLeft / 60)).padStart(2, '0')}:{String(pomoSecondsLeft % 60).padStart(2, '0')}
+              </span>
+              <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${pomoMode === 'work' ? 'bg-primary/20 text-primary' : 'bg-green-500/20 text-green-400'}`}>
+                {pomoMode}
+              </span>
+              <button
+                onClick={() => setPomoIsActive(!pomoIsActive)}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
+                title={pomoIsActive ? 'Pause' : 'Start Focus Timer'}
+              >
+                {pomoIsActive ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
+              </button>
+              <button
+                onClick={() => {
+                  setPomoIsActive(false);
+                  setPomoSecondsLeft(pomoMode === 'work' ? 25 * 60 : 5 * 60);
+                }}
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
+                title="Reset Timer"
+              >
+                <RotateCcw size={12} />
+              </button>
             </div>
-            <span className="text-[8px] font-label tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-opacity font-black text-error">Disconnect</span>
-          </button>
+
+            <button 
+              onClick={() => {
+                if (studySessionId) {
+                  endStudySession(studySessionId).catch(() => {});
+                  setStudySessionId(null);
+                }
+                setPhase('select');
+              }} 
+              className="group flex flex-col items-center gap-2"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-variant group-hover:bg-error group-hover:text-white transition-all duration-500 group-hover:rotate-90 shadow-xl border border-white/5">
+                <span className="material-symbols-outlined text-2xl">close</span>
+              </div>
+              <span className="text-[8px] font-label tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-opacity font-black text-error">Disconnect</span>
+            </button>
+          </div>
         </header>
 
         <div className="bg-surface-container-low/40 backdrop-blur-3xl border border-white/5 rounded-[3rem] p-6 sm:p-12 md:p-16 shadow-[0_50px_100px_rgba(0,0,0,0.4)] relative transition-all duration-700 hover:border-primary/20 overflow-hidden group">
@@ -938,24 +1060,54 @@ const Study = () => {
       </div>
     );
   } else if (phase === 'result' && result) {
-    phaseContent = (
-      <div className="animate-in zoom-in duration-1000 max-w-2xl mx-auto w-full flex flex-col items-center justify-center min-h-[70vh] pb-32">
-        <div className={`w-40 h-40 rounded-[2.5rem] flex items-center justify-center mb-12 shadow-[0_30px_70px_rgba(0,0,0,0.5)] bg-gradient-to-br transition-all duration-1000 ${result.is_passed ? 'from-primary to-secondary rotate-[360deg]' : 'from-error to-error-container'}`}>
-          <span className="material-symbols-outlined text-white text-7xl">{result.is_passed ? 'military_tech' : 'restart_alt'}</span>
+    if (showQuizReview && quizData) {
+      phaseContent = (
+        <QuizReview
+          questions={quizData}
+          userAnswers={userQuizAnswers}
+          isPassed={result.is_passed}
+          onRetry={handleStartQuiz}
+          onContinue={handleContinuePath}
+        />
+      );
+    } else {
+      phaseContent = (
+        <div className="animate-in zoom-in duration-1000 max-w-2xl mx-auto w-full flex flex-col items-center justify-center min-h-[70vh] pb-32">
+          <div className={`w-40 h-40 rounded-[2.5rem] flex items-center justify-center mb-12 shadow-[0_30px_70px_rgba(0,0,0,0.5)] bg-gradient-to-br transition-all duration-1000 ${result.is_passed ? 'from-primary to-secondary rotate-[360deg]' : 'from-error to-error-container'}`}>
+            <span className="material-symbols-outlined text-white text-7xl">{result.is_passed ? 'military_tech' : 'restart_alt'}</span>
+          </div>
+          <div className="text-center mb-12">
+              <h2 className="text-5xl font-black font-headline uppercase mb-4 tracking-tighter">{result.is_passed ? 'Integrity Verified' : 'Sync Incomplete'}</h2>
+              <div className="flex items-center justify-center gap-4">
+                  <div className="h-[1px] w-12 bg-outline-variant/30"></div>
+                  <p className="text-2xl font-headline italic tracking-widest uppercase opacity-60">Mastery: <span className="font-black text-primary not-italic">{result.score_percent}%</span></p>
+                  <div className="h-[1px] w-12 bg-outline-variant/30"></div>
+              </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <button onClick={handleContinuePath} className="px-10 py-5 rounded-full bg-primary text-on-primary-container font-label text-sm font-black uppercase tracking-[0.3em] shadow-xl hover:scale-105 active:scale-95 transition-all">
+              {result.is_passed ? 'Continue Path' : 'Retry Protocol'}
+            </button>
+            {quizData && (
+              <button 
+                onClick={() => setShowQuizReview(true)} 
+                className="px-6 py-5 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface font-label text-xs font-bold uppercase tracking-wider hover:bg-surface-container-high transition-all flex items-center gap-2"
+              >
+                <Eye size={16} /> Review Answers
+              </button>
+            )}
+            {result.is_passed && (
+              <button 
+                onClick={() => setShowShareCard(true)} 
+                className="px-6 py-5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-label text-xs font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all flex items-center gap-2"
+              >
+                <Share2 size={16} /> Share Badge
+              </button>
+            )}
+          </div>
         </div>
-        <div className="text-center mb-16">
-            <h2 className="text-5xl font-black font-headline uppercase mb-4 tracking-tighter">{result.is_passed ? 'Integrity Verified' : 'Sync Incomplete'}</h2>
-            <div className="flex items-center justify-center gap-4">
-                <div className="h-[1px] w-12 bg-outline-variant/30"></div>
-                <p className="text-2xl font-headline italic tracking-widest uppercase opacity-60">Mastery: <span className="font-black text-primary not-italic">{result.score_percent}%</span></p>
-                <div className="h-[1px] w-12 bg-outline-variant/30"></div>
-            </div>
-        </div>
-        <button onClick={handleContinuePath} className="px-14 py-6 rounded-full bg-primary text-on-primary-container font-label text-sm font-black uppercase tracking-[0.4em] shadow-xl hover:scale-105 active:scale-95 transition-all">
-          {result.is_passed ? 'Continue Path' : 'Retry Protocol'}
-        </button>
-      </div>
-    );
+      );
+    }
   }
 
   return (
@@ -972,6 +1124,21 @@ const Study = () => {
       </div>
 
       {renderSideToolbar()}
+
+      {/* Achievement Celebrations */}
+      <AchievementToast 
+        achievement={achievement} 
+        onClose={() => setAchievement(null)} 
+      />
+
+      {/* Progress Share Modal */}
+      <ProgressShareCard
+        goal={activeGoal}
+        progress={result?.score_percent || 0}
+        isOpen={showShareCard}
+        onClose={() => setShowShareCard(false)}
+      />
+
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { unlockTask } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) => {
   const { user, refreshUser } = useAuth();
+  const { showToast } = useToast();
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
   const [adCountdown, setAdCountdown] = useState(5);
@@ -32,9 +34,9 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
       await refreshUser();
       await refreshData();
       setIsWatchingAd(false);
-      alert("🎉 Module unlocked successfully!");
+      showToast("🎉 Module unlocked successfully!", "success");
     } catch (error) {
-      alert("Failed to unlock module: " + error.message);
+      showToast("Failed to unlock module: " + error.message, "error");
       setIsWatchingAd(false);
     } finally {
       setIsUnlocking(false);
@@ -43,7 +45,7 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
 
   const handleUnlockWithCredit = async () => {
     if (!user || user.credits < 1) {
-      alert("You don't have enough credits! Watch an ad to unlock or earn credits.");
+      showToast("You don't have enough credits! Watch an ad to unlock or earn credits.", "error");
       return;
     }
     setIsUnlocking(true);
@@ -51,9 +53,9 @@ const StudyWorkbenchMain = ({ activeTask, handleStartLearning, refreshData }) =>
       await unlockTask(activeTask.id, true); // useCredit=True
       await refreshUser();
       await refreshData();
-      alert("🎉 Module unlocked using 1 Credit!");
+      showToast("🎉 Module unlocked using 1 Credit!", "success");
     } catch (error) {
-      alert("Failed to unlock module: " + error.message);
+      showToast("Failed to unlock module: " + error.message, "error");
     } finally {
       setIsUnlocking(false);
     }

@@ -50,27 +50,49 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
   const isActive = (path) => location.pathname === path;
 
   // Shared nav link renderer
-  const renderNavLinks = (isMobile = false) => (
-    <nav className={`flex-1 space-y-1.5 w-full ${isMobile ? 'px-2' : ''}`}>
-      {navItems.map((item) => (
-        <Link
-          key={item.name}
-          to={item.path}
-          title={isCollapsed && !isMobile ? item.name : undefined}
-          className={`flex items-center transition-all duration-300 rounded-xl ${isCollapsed && !isMobile ? 'justify-center p-3' : 'gap-3.5 px-4 py-3.5'
-            } ${isActive(item.path)
-              ? 'text-white border-l-2 border-primary bg-gradient-to-r from-primary/10 to-transparent'
-              : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
-            }`}
-        >
-          <span className="material-symbols-outlined text-xl">{item.icon}</span>
-          {(isMobile || !isCollapsed) && (
-            <span className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">{item.name}</span>
-          )}
-        </Link>
-      ))}
-    </nav>
-  );
+  const renderNavLinks = (isMobile = false) => {
+    const activeIndex = navItems.findIndex(item => isActive(item.path));
+    
+    return (
+      <nav className={`flex-1 w-full relative ${isMobile ? 'px-2' : ''}`}>
+        {/* Animated Active Indicator */}
+        {activeIndex !== -1 && (
+          <div 
+            className="absolute bg-gradient-to-r from-primary/15 to-transparent border-l-[3px] border-primary rounded-xl transition-all duration-500 ease-out z-0"
+            style={{ 
+              top: `${activeIndex * 54}px`, // 48px height + 6px space-y
+              height: '48px',
+              left: isMobile ? '8px' : '0',
+              right: isMobile ? '8px' : '0'
+            }}
+          />
+        )}
+        
+        <div className="space-y-1.5 relative z-10">
+          {navItems.map((item, index) => {
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                title={isCollapsed && !isMobile ? item.name : undefined}
+                className={`flex items-center h-[48px] transition-colors duration-300 rounded-xl ${isCollapsed && !isMobile ? 'justify-center' : 'gap-3.5 px-4'
+                  } ${active
+                    ? 'text-white'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white active:bg-white/10'
+                  }`}
+              >
+                <span className="material-symbols-outlined text-xl">{item.icon}</span>
+                {(isMobile || !isCollapsed) && (
+                  <span className="font-['Space_Grotesk'] uppercase tracking-widest text-sm">{item.name}</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  };
 
   // Desktop-only profile / auth section (with popup menu)
   const renderDesktopProfileSection = () => (

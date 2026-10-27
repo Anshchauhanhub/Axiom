@@ -3,6 +3,7 @@ import {
   Calendar, Languages, Video, Globe, Upload, 
   Check, ArrowRight, FileText, Link, Sparkles 
 } from 'lucide-react';
+import { readUploadedFile } from '../utils/fileUtils';
 
 const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" }) => {
   const [months, setMonths] = useState(6);
@@ -12,6 +13,8 @@ const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" 
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [dailyHours, setDailyHours] = useState(2);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -19,8 +22,11 @@ const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" 
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setSubmitError('');
     
     // Construct structured text response for the AI assistant
     let summaryText = `Here are my preferences for ${targetExam}:
@@ -38,21 +44,34 @@ const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" 
       summaryText += `\n- Additional Website Resource: ${websiteUrl.trim()}`;
     }
 
-    if (selectedFile) {
-      summaryText += `\n- Uploaded Reference Document: ${selectedFile.name}`;
-    }
-
     summaryText += `\nPlease synthesize the best web-derived roadmap based on these preferences!`;
 
-    onSubmitPreferences({
-      months,
-      dailyHours,
-      language,
-      playlistUrl: hasPlaylist ? playlistUrl : '',
-      websiteUrl,
-      fileName: selectedFile ? selectedFile.name : '',
-      summaryText
-    });
+    try {
+      const referenceText = selectedFile
+        ? (await readUploadedFile(selectedFile))?.content || ''
+        : '';
+      if (selectedFile && !referenceText.trim()) {
+        throw new Error(`Could not extract readable text from ${selectedFile.name}.`);
+      }
+      if (selectedFile) {
+        summaryText += `\n- Uploaded Reference Document: ${selectedFile.name} (contents included as roadmap source)`;
+      }
+
+      await onSubmitPreferences({
+        months,
+        dailyHours,
+        language,
+        playlistUrl: hasPlaylist ? playlistUrl.trim() : '',
+        websiteUrl: websiteUrl.trim(),
+        fileName: selectedFile ? selectedFile.name : '',
+        referenceText,
+        summaryText
+      });
+    } catch (error) {
+      setSubmitError(error.message || 'Could not read the selected document. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -230,18 +249,24 @@ const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" 
                   <FileText size={16} className="text-purple-400 shrink-0" />
                   <span className="truncate">{selectedFile ? selectedFile.name : 'Choose File...'}</span>
                 </div>
-                <input type="file" accept=".pdf,.txt,.docx" onChange={handleFileChange} className="hidden" />
+                <input type="file" accept=".pdf,.txt" onChange={handleFileChange} className="hidden" />
               </label>
             </div>
           </div>
         </div>
 
+        {submitError && (
+          <p role="alert" className="text-sm text-red-400">{submitError}</p>
+        )}
+
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full py-4 bg-primary text-black font-headline font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(253,184,19,0.3)]"
+          disabled={isSubmitting}
+          className="w-full py-4 bg-primary text-black font-headline font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(253,184,19,0.3)] disabled:cursor-wait disabled:opacity-60"
         >
-          Synthesize Master Roadmap <ArrowRight size={18} />
+          {isSubmitting ? 'Reading resources...' : 'Synthesize Master Roadmap'}
+          {!isSubmitting && <ArrowRight size={18} />}
         </button>
       </form>
     </div>

@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { assistantChat, getAssistantSessions, getSessionMessages, deleteAssistantSession } from '../services/api';
 import MessageBubble from './MessageBubble';
 import MoodFace from './MoodFace';
 import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose, Trash2, Paperclip, X } from 'lucide-react';
 import { useMood } from '../context/MoodContext';
 
+import { readUploadedFile } from '../utils/fileUtils';
+
 const AIAgentChat = ({ isOpen, onClose }) => {
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,27 +84,17 @@ const AIAgentChat = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.type.startsWith('image/')) {
-      setSelectedFile({
-        name: file.name,
-        type: 'image',
-        content: `[Attached Image: ${file.name}]`
-      });
-    } else {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target.result || '';
-        setSelectedFile({
-          name: file.name,
-          type: 'text',
-          content: `[Attached File: ${file.name}]\n--- File Content ---\n${text.slice(0, 6000)}\n--- End File Content ---`
-        });
-      };
-      reader.readAsText(file);
+    try {
+      const parsedFile = await readUploadedFile(file);
+      if (parsedFile) {
+        setSelectedFile(parsedFile);
+      }
+    } catch (err) {
+      console.error('Error reading file:', err);
     }
   };
 
@@ -113,6 +107,8 @@ const AIAgentChat = ({ isOpen, onClose }) => {
       fullContent = textToSend 
         ? `${textToSend}\n\n${selectedFile.content}`
         : `Please analyze this attached file "${selectedFile.name}":\n\n${selectedFile.content}`;
+    } else if (location.pathname.startsWith('/study') && messages.length === 0) {
+      fullContent = `[Context: Scholar is studying in the Workbench]\n${textToSend}`;
     }
 
     const userMessage = { role: 'user', content: fullContent };

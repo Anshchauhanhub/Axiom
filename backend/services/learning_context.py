@@ -61,6 +61,7 @@ class LearningContext:
 
     # All active + paused goals (for multi-goal awareness)
     all_goal_titles: list[str] = field(default_factory=list)
+    all_goal_summaries: list[dict] = field(default_factory=list)
 
 
 # ── Context Builder ───────────────────────────────────────────────────
@@ -93,6 +94,20 @@ async def build_learning_context(user, db: AsyncSession) -> LearningContext:
         all_goals = goals_result.scalars().all()
 
         ctx.all_goal_titles = [g.title for g in all_goals]
+
+        # Populate detailed summaries for ALL user goals
+        for g in all_goals:
+            sorted_t = sorted(g.tasks, key=lambda t: t.order_index)
+            done_cnt = len([t for t in sorted_t if t.status == "passed"])
+            curr_task = next((t.title for t in sorted_t if t.status == "active"), "Completed" if done_cnt == len(sorted_t) and sorted_t else "Locked")
+            ctx.all_goal_summaries.append({
+                "title": g.title,
+                "status": g.status,
+                "total_tasks": len(sorted_t),
+                "completed_tasks": done_cnt,
+                "current_module": curr_task,
+                "module_titles": [t.title for t in sorted_t[:8]]
+            })
 
         active_goals = [g for g in all_goals if g.status == "active"]
         if not active_goals:
@@ -223,8 +238,10 @@ def build_goal_context_string(ctx: LearningContext) -> str:
         lines.append(f"⏱️ Daily Study Hours: {ctx.study_hours_per_day}h/day")
     if ctx.total_study_hours_left:
         lines.append(f"📈 Total Hours Remaining: ~{ctx.total_study_hours_left:.0f}h")
-    if ctx.preferred_language and ctx.preferred_language != "English":
-        lines.append(f"🌐 Preferred Teaching Language: {ctx.preferred_language}")
+    if ctx.preferred_language and ctx.preferred_language.lower() in ("hinglish", "hindi"):
+        lines.append(f"🌐 Preferred Language: English by default. (Only use {ctx.preferred_language} if the user explicitly asks for it in their current message).")
+    else:
+        lines.append("🌐 Language: English only. Use clear, simple, accessible English.")
     if ctx.preferred_youtubers:
         lines.append(f"📺 Preferred YouTubers: {ctx.preferred_youtubers}")
 
@@ -239,5 +256,16 @@ def build_goal_context_string(ctx: LearningContext) -> str:
         lines.append("\n### Additional Profile Facts:")
         for k, v in profile_extras.items():
             lines.append(f"- {k.replace('_', ' ').title()}: {v}")
+
+    if ctx.all_goal_summaries:
+        lines.append("\n### ALL USER GOALS & CURRICULA (FULL ACCOUNT STATE):")
+        for summary in ctx.all_goal_summaries:
+            modules_str = ", ".join(summary["module_titles"])
+            if len(summary["module_titles"]) < summary["total_tasks"]:
+                modules_str += f" ... (+{summary['total_tasks'] - len(summary['module_titles'])} more)"
+            lines.append(
+                f"- Goal: '{summary['title']}' [{summary['status'].upper()}] | Progress: {summary['completed_tasks']}/{summary['total_tasks']} modules passed | Active Module: '{summary['current_module']}'\n"
+                f"  Modules: {modules_str}"
+            )
 
     return "\n".join(lines)

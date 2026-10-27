@@ -154,3 +154,17 @@ class ChatMessage(Base):
 
     user = relationship("User", back_populates="chat_messages")
     session = relationship("ChatSession", back_populates="messages")
+
+
+class StudySession(Base):
+    __tablename__ = "study_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    part_id = Column(UUID(as_uuid=True), ForeignKey("parts.id", ondelete="CASCADE"), nullable=False, index=True)
+    started_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
+
+    user = relationship("User", backref="study_sessions")
+    part = relationship("Part", backref="study_sessions")

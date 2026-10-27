@@ -19,6 +19,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Study = lazy(() => import('./pages/Study'));
 const Notebooks = lazy(() => import('./pages/Notebooks'));
 const Calendar = lazy(() => import('./pages/Calendar'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard'));
 
@@ -72,6 +73,7 @@ function App() {
                           <Route path="/study" element={<ProtectedRoute><Study /></ProtectedRoute>} />
                           <Route path="/notebooks" element={<ProtectedRoute><Notebooks /></ProtectedRoute>} />
                           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+                          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>

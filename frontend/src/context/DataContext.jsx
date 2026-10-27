@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import { listGoals, getRoadmap } from '../services/api';
+import { listGoals, getRoadmap, toggleGoalStatus, deleteGoal } from '../services/api';
 
 const DataContext = createContext(null);
 
@@ -151,6 +151,52 @@ export const DataProvider = ({ children }) => {
     }
   }, [fetchGoals, selectedGoalId, loadRoadmap, loadAllRoadmaps]);
 
+  // --- Optimistic Updates ---
+  const toggleGoalOptimistic = useCallback(async (goalId) => {
+    const previousGoals = [...goals];
+    setGoals(prev => prev.map(g =>
+      g.id === goalId ? { ...g, status: g.status === 'active' ? 'paused' : 'active' } : g
+    ));
+    try {
+      await toggleGoalStatus(goalId);
+    } catch (err) {
+      setGoals(previousGoals);
+      console.error('Failed to toggle goal:', err);
+      throw err; // Let caller handle toast
+    }
+  }, [goals]);
+
+  const deleteGoalOptimistic = useCallback(async (goalId) => {
+    const previousGoals = [...goals];
+    setGoals(prev => prev.filter(g => g.id !== goalId));
+    // Clean cache
+    delete roadmapCacheRef.current[goalId];
+    setAllRoadmaps(prev => {
+      const next = { ...prev };
+      delete next[goalId];
+      return next;
+    });
+    // If deleted goal was selected, pick a new one
+    if (selectedGoalId === goalId) {
+      const remaining = previousGoals.filter(g => g.id !== goalId);
+      const next = remaining.find(g => g.status === 'active') || remaining[0];
+      if (next) {
+        handleSetSelectedGoal(next.id);
+      } else {
+        setSelectedGoalId(null);
+        setRoadmap(null);
+        localStorage.removeItem('edxiom_selected_goal');
+      }
+    }
+    try {
+      await deleteGoal(goalId);
+    } catch (err) {
+      setGoals(previousGoals);
+      console.error('Failed to delete goal:', err);
+      throw err;
+    }
+  }, [goals, selectedGoalId]);
+
   const handleSetSelectedGoal = (id) => {
       localStorage.setItem('edxiom_selected_goal', id);
       setSelectedGoalId(id);
@@ -166,7 +212,9 @@ export const DataProvider = ({ children }) => {
       refreshData,
       loadAllRoadmaps,
       selectedGoalId,
-      setSelectedGoalId: handleSetSelectedGoal
+      setSelectedGoalId: handleSetSelectedGoal,
+      toggleGoalOptimistic,
+      deleteGoalOptimistic,
     }}>
       {children}
     </DataContext.Provider>

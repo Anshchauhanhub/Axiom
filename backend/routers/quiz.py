@@ -105,12 +105,18 @@ async def submit_quiz(
     score = (correct / len(correct_indices)) * 100
     is_passed = score >= 80
 
+    # Lock the user row to prevent race conditions during streak increment
+    user_result = await db.execute(select(User).where(User.id == user.id).with_for_update())
+    locked_user = user_result.scalar_one_or_none()
+    if not locked_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     # Check if we should increment streak today (before adding the current result)
     should_increment = False
     if is_passed:
         recent_passed_result = await db.execute(
             select(QuizResult)
-            .where(QuizResult.user_id == user.id)
+            .where(QuizResult.user_id == locked_user.id)
             .where(QuizResult.is_passed == True)
             .order_by(QuizResult.completed_at.desc())
             .limit(1)
@@ -129,7 +135,7 @@ async def submit_quiz(
 
     # Save result
     quiz_result = QuizResult(
-        user_id=user.id,
+        user_id=locked_user.id,
         part_id=part_id,
         score_percent=score,
         is_passed=is_passed,
@@ -192,7 +198,7 @@ async def submit_quiz(
 
         # Increment streak
         if should_increment:
-            user.current_streak += 1
+            locked_user.current_streak += 1
 
     await db.commit()
 

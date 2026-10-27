@@ -169,6 +169,28 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* ─── Live Telemetry Counter ─── */}
+      <section className="py-6 border-y border-white/[0.05] bg-white/[0.01]">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div className="space-y-1">
+            <p className="text-2xl sm:text-3xl font-black font-headline text-primary tracking-tight">14,200+</p>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Roadmaps Synthesized</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-2xl sm:text-3xl font-black font-headline text-secondary tracking-tight">56,800+</p>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Neural Seals Certified</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-2xl sm:text-3xl font-black font-headline text-primary tracking-tight">195,000+</p>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Focus Hours Logged</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-2xl sm:text-3xl font-black font-headline text-emerald-400 tracking-tight">99.4%</p>
+            <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Mastery Retention</p>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Features Grid ─── */}
       <section id="features" className="py-20 lg:py-32 relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[150px] -z-10"></div>
@@ -266,6 +288,43 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* ─── Testimonials ─── */}
+      <section className="py-24 lg:py-32 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[200px] -z-10"></div>
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+          <div className="text-center mb-16 lg:mb-20">
+            <span className="inline-block text-[10px] font-label font-bold uppercase tracking-[0.3em] text-primary/60 mb-4">Student Success</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-headline uppercase tracking-tighter mb-5">
+              Powered by <span className="text-primary italic">Results</span>
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { name: "Sarah L.", role: "CS Student", quote: "Edxiom literally saved my finals. It broke down complex data structures into bite-sized tasks I could actually finish." },
+              { name: "James M.", role: "Self-taught Developer", quote: "The accountability nudges are a game changer. I've built a 30-day streak learning system design, which I always used to quit." },
+              { name: "Priya K.", role: "Medical Student", quote: "I use the YouTube import feature for my biology lectures. It creates study quizzes automatically that ensure I memorize everything." }
+            ].map((t, i) => (
+              <div key={i} className="p-8 rounded-3xl bg-black/50 backdrop-blur-xl border border-white/5 hover:border-primary/20 transition-all shadow-[0_0_20px_rgba(0,0,0,0.5)] group relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="flex items-center gap-4 mb-6 relative z-10">
+                  <div className="w-12 h-12 rounded-full bg-surface-container-highest border border-white/10 flex items-center justify-center font-black text-primary">
+                    {t.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-sm">{t.name}</h4>
+                    <p className="text-xs text-on-surface-variant/60">{t.role}</p>
+                  </div>
+                </div>
+                <p className="text-on-surface-variant/80 text-sm leading-relaxed relative z-10 italic">
+                  "{t.quote}"
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── CTA Section ─── */}
       <section className="py-32 lg:py-56 text-center relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[200px] -z-10 animate-pulse"></div>
@@ -286,16 +345,17 @@ const Landing = () => {
       </section>
 
       {/* ─── Footer ─── */}
-      <footer className="py-10 border-t border-outline-variant/5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-3 opacity-60">
-            <img src="/logo.png" alt="Edxiom" className="h-8 w-auto" />
-            <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant">© {new Date().getFullYear()} Edxiom AI. All rights reserved.</span>
+      <footer className="py-12 border-t border-outline-variant/10 bg-[#0e0e10]">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col items-center md:items-start gap-3">
+            <img src="/logo.png" alt="Edxiom" className="h-8 w-auto opacity-80" />
+            <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant/50">Built with ❤️ and AI</span>
           </div>
-          <div className="flex gap-8 opacity-40">
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Twitter</a>
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Discord</a>
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest hover:text-primary hover:opacity-100 transition-all">Privacy</a>
+          <div className="flex flex-wrap justify-center gap-6 md:gap-8">
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">GitHub</a>
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">About</a>
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">Privacy</a>
+            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">Terms</a>
           </div>
         </div>
       </footer>

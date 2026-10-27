@@ -68,3 +68,6 @@ instructor>=1.3.0
 # YouTube resilient search (replaces HTML scraping — works on Render cloud IPs)
 yt-dlp>=2024.1.0
 duckduckgo-search>=6.0.0
+pypdf>=5.0.0
+tenacity>=8.2.0
+redis>=5.0.0
