@@ -23,7 +23,7 @@ Edxiom is an agentic learning platform that turns passive learning into an activ
 
 For a complete step-by-step walkthrough for new developers, see the **[Setup Guide](setup_guide.md)**.
 
-### 1. Minimal Backend Setup
+### 1. Start the Backend API
 ```bash
 cd backend
 python -m venv venv
@@ -32,7 +32,16 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-### 2. Minimal Frontend Setup
+### 2. Start the Telegram and Scheduler Worker
+Run this in a second terminal from the backend directory, with the same virtual environment and `.env`:
+```bash
+cd backend
+python worker.py
+```
+
+The API and worker run as separate processes. The worker must run as a single instance to avoid competing Telegram pollers and duplicate scheduled nudges.
+
+### 3. Start the Frontend
 ```bash
 cd frontend
 npm install
@@ -48,6 +57,7 @@ Edxiom/
 ├── backend/
 │   ├── routers/      # FastAPI API Endpoints (Auth, Users, Goals, Quiz)
 │   ├── services/     # Core Logic (Groq integration, Scheduler)
+│   ├── worker.py     # Telegram polling and scheduled nudges
 │   ├── models.py     # SQLAlchemy ORM Models
 │   ├── schemas.py    # Pydantic Data Models
 │   └── main.py       # App Entry Point

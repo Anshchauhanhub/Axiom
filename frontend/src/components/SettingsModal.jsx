@@ -1,14 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useTheme } from '../context/ThemeContext';
 import { linkTelegram, updateSchedule, updateProfile, uploadProfileImage } from '../services/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
 
 const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
   const { user, logout, refreshUser } = useAuth();
-  const { theme, setTheme } = useTheme();
   const fileInputRef = useRef(null);
   const modalRef = useRef(null);
   const { showToast } = useToast();
@@ -27,6 +25,9 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.full_name || user?.email?.split('@')[0] || '');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [saveSuccessTelegram, setSaveSuccessTelegram] = useState(false);
+  const [saveSuccessName, setSaveSuccessName] = useState(false);
+  const [saveSuccessSchedule, setSaveSuccessSchedule] = useState(false);
 
   // Reset state when user changes
   useEffect(() => {
@@ -59,7 +60,9 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
     setSaving(true);
     try {
       await linkTelegram(parseInt(chatId));
-      showToast('Telegram linked successfully!');
+      showToast('Telegram linked successfully!', 'success');
+      setSaveSuccessTelegram(true);
+      setTimeout(() => setSaveSuccessTelegram(false), 1500);
       refreshUser();
       setChatId('');
     } catch (e) {
@@ -76,7 +79,9 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
     setSaving(true);
     try {
       await updateProfile({ full_name: newName });
-      showToast('Profile name updated!');
+      showToast('Profile name updated!', 'success');
+      setSaveSuccessName(true);
+      setTimeout(() => setSaveSuccessName(false), 1500);
       await refreshUser();
       setIsEditingName(false);
     } catch (e) {
@@ -91,7 +96,7 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
     setUploadingImage(true);
     try {
       await uploadProfileImage(file);
-      showToast('Profile image updated!');
+      showToast('Profile image updated!', 'success');
       await refreshUser();
     } catch (err) {
       showToast(err.message, 'error');
@@ -105,7 +110,9 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
       const sortedSchedule = [...schedule].sort();
       await updateSchedule(timezone, sortedSchedule);
       setSchedule(sortedSchedule);
-      showToast('Schedule updated!');
+      showToast('Schedule updated!', 'success');
+      setSaveSuccessSchedule(true);
+      setTimeout(() => setSaveSuccessSchedule(false), 1500);
       refreshUser();
     } catch (e) {
       showToast(e.message, 'error');
@@ -304,9 +311,11 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
                   <button
                     onClick={handleSaveSchedule}
                     disabled={saving}
-                    className="mt-4 w-full py-2.5 bg-primary text-black rounded-lg text-[12px] font-bold tracking-wider uppercase disabled:opacity-50 hover:brightness-110 transition-all"
+                    className={`mt-4 w-full py-2.5 rounded-lg text-[12px] font-bold tracking-wider uppercase disabled:opacity-50 transition-all duration-1500 ${
+                      saveSuccessSchedule ? 'bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-primary text-black hover:brightness-110'
+                    }`}
                   >
-                    {saving ? 'Saving...' : 'Save Schedule'}
+                    {saving ? 'Saving...' : saveSuccessSchedule ? 'Saved!' : 'Save Schedule'}
                   </button>
                 </div>
 
@@ -348,9 +357,11 @@ const SettingsModal = ({ isOpen, onClose, initialTab = 'general' }) => {
                         <button
                           onClick={handleLinkTelegram}
                           disabled={saving || !chatId}
-                          className="w-full py-2.5 bg-[#0088cc] text-white rounded-lg text-[12px] font-bold tracking-wider uppercase disabled:opacity-50 hover:brightness-110 transition-all"
+                          className={`w-full py-2.5 rounded-lg text-[12px] font-bold tracking-wider uppercase disabled:opacity-50 transition-all duration-1500 ${
+                            saveSuccessTelegram ? 'bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-[#0088cc] text-white hover:brightness-110'
+                          }`}
                         >
-                          {saving ? 'Linking...' : 'Link Telegram'}
+                          {saving ? 'Linking...' : saveSuccessTelegram ? 'Linked!' : 'Link Telegram'}
                         </button>
                         <p className="text-[11px] text-white/30 leading-relaxed">
                           Open Telegram → message <a href="https://t.me/Axiomneurobot" target="_blank" rel="noopener noreferrer" className="text-[#0088cc] hover:underline font-semibold">@Axiomneurobot</a> → send <code className="bg-white/5 px-1.5 py-0.5 rounded text-white/60">/start</code> → copy your Chat ID

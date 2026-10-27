@@ -479,6 +479,10 @@ def _normalize_draft_roadmap(roadmap):
                     p if isinstance(p, str) else p.get("title", p.get("name", str(p)))
                     for p in item["parts"]
                 ]
+            elif isinstance(item["parts"], str):
+                item["parts"] = [item["parts"]]
+            else:
+                item["parts"] = []
             normalized.append(item)
         else:
             normalized.append({"title": str(item), "parts": []})
@@ -542,23 +546,30 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
 
     if session_type == "assistant":
         system_prompt = (
-            "You are Edxiom AI — a daily study companion and helpful tutor.\n"
-            "Your main role is to help the user with daily tasks, explain concepts, answer questions, and act like ChatGPT.\n"
+            "You are Edxiom AI — a master teacher, study mentor, and expert AI tutor.\n"
+            "You have complete awareness of all the user's active goals, learning paths, study schedules, and uploaded syllabi/documents.\n"
             "\n"
-            f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
+            f"### CURRENT USER CONTEXT & GOALS:\n{goal_context}{exam_grounding_context}\n"
+            "\n"
+            "### STRICT LANGUAGE MANDATE (MANDATORY):\n"
+            "- Speak and write ONLY in English using clean, simple, easy-to-understand words.\n"
+            "- NEVER use Hinglish (Hindi written in English script like 'hai', 'aapka', 'karna') or Hindi UNLESS the user explicitly types in their latest message: 'speak in Hinglish' or 'speak in Hindi'.\n"
+            "- Even if previous messages in the conversation contain Hinglish, ALWAYS respond in 100% simple, clear English.\n"
             "\n"
             "### BEHAVIOR RULES:\n"
-            "- Be conversational, warm, and helpful.\n"
-            "- Explain concepts clearly and concisely.\n"
-            "- You can summarize text, translate, and analyze data if asked.\n"
+            "- Be an encouraging, highly knowledgeable, and articulate master teacher.\n"
+            "- Speak directly and intelligently about any of the user's goals (e.g. Linear Algebra, SQL, MLOps, System Design, Linux, etc.) whenever asked.\n"
+            "- If the user uploads a document, PDF, syllabus, or notes (e.g. Linear Algebra syllabus), analyze it thoroughly, break down key modules/topics, explain concepts with clarity, and provide structured academic guidance.\n"
+            "- Explain complex concepts with step-by-step mathematical or logical breakdowns, formulas, examples, and practical insights.\n"
+            "- You can summarize text, translate, format study notes, and answer academic questions with precision.\n"
             "\n"
             "### OUTPUT FORMAT:\n"
             "Return ONLY a single-line JSON object. Escape all newlines as \\\\n.\n"
             "Fields:\n"
-            "- message: Your helpful response text.\n"
+            "- message: Your detailed, helpful teacher response text in simple English.\n"
             "- phase: ALWAYS return 'chat'.\n"
-            "- mood: Integer 1-5 (3=neutral).\n"
-            "CRITICAL: NEVER generate roadmaps or try to move into discovery phases."
+            "- mood: Integer 1-5 (3=neutral, 4=cheerful, 5=very happy).\n"
+            "CRITICAL: NEVER generate raw roadmaps or try to move into onboarding discovery phases in assistant mode."
         )
     else:
         system_prompt = (
@@ -567,6 +578,10 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
             "by researching and providing their FULL, ACCURATE official syllabus from real-world data.\n"
             "\n"
             f"### CURRENT CONTEXT:\n{goal_context}{exam_grounding_context}\n"
+            "\n"
+            "### STRICT LANGUAGE MANDATE (MANDATORY):\n"
+            "- Speak and write ONLY in English using clean, simple, accessible words.\n"
+            "- NEVER use Hinglish or Hindi unless the user explicitly commands it in their message.\n"
             "\n"
             "### MEMORY RULE (STRICT):\n"
             "- Persistent memory is SILENT background context for calculations only.\n"
@@ -845,9 +860,9 @@ def clean_youtube_title(title: str) -> str:
     # Remove unicode emojis and special icons
     t = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2300-\u23ff]', '', t)
     
-    # Special brand goal title cleanup (only when title starts with the brand name)
-    if re.search(r'^STRIVERS?\s*A2Z.*DSA', t, re.IGNORECASE) and len(t) < 65:
-        return "Striver's A2Z Data Structures & Algorithms"
+    # Keep goal names focused on the subject rather than the creator or playlist brand.
+    if re.search(r"^STRIVER(?:'S|S)?\s*A2Z.*(?:DSA|DATA\s+STRUCTURES)", t, re.IGNORECASE) and len(t) < 65:
+        return "Data Structures & Algorithms"
             
     # Remove creator / channel / playlist boilerplate extensions
     t = re.sub(r'\s*\|\s*(Strivers|Striver|A2Z|DSA|Playlist|Course|Placements|Lecture|Tutorial|Full Course|202\d).*$', '', t, flags=re.IGNORECASE)
@@ -884,8 +899,9 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
         "Your goal is to:\n"
         "1. Synthesize a clean, professional, and academic Goal Title for the course (e.g., 'Data Structures & Algorithms' instead of raw playlist titles like 'STRIVERS A2Z-DSA COURSE | PLACEMENTS').\n"
         "2. Organize EVERY SINGLE ONE of these videos in chronological order into logical Modules.\n"
-        "3. For each module, generate a clean, professional academic Module Name (e.g., 'Module 1: C++ Environment & Fundamentals', 'Module 2: Functional Recursion' - NEVER include clickbait or raw channel tags).\n"
-        "4. For each video in a module, generate a clean, professional academic Module Task Name that describes what is taught in that video (RENAME and CLEAN UP all informal/creator titles like 'Arrays Ka Baap', 'Don't watch my A2Z DSA Course', '| Strivers A2Z DSA Course', 'in 1 Shot' into proper, professional academic subtopics like 'Arrays & Basic Operations' or 'Introduction to Recursion').\n"
+        "3. For each module, generate a concise, generalized academic Module Name (e.g., 'Module 1: Programming Foundations', 'Module 2: Recursion and Problem Solving'). Use the subject and learning progression, not the playlist name or creator's chapter wording.\n"
+        "4. For each video in a module, generate a concise, generalized academic task name describing the learning objective. Paraphrase the source title; do not copy it, retain distinctive phrases from it, or use creator names, branding, episode labels, or clickbait. For example, rename 'Arrays Ka Baap' to 'Array Operations and Core Patterns' and '2 Sum Problem - 2 types of the same problem for Interviews - Brute-Better-Optimal' to 'Two-Sum Algorithms and Complexity'.\n"
+        "5. Names in the roadmap must be suitable for a general learning platform and must not expose the original YouTube playlist or video titles.\n"
         "\n"
         "Return ONLY a JSON object with this exact structure:\n"
         "{\n"
@@ -917,9 +933,27 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
         goal_title = clean_youtube_title(raw_gt)
         parsed_chapters = parsed.get("roadmap", [])
         
+        source_titles = [clean_youtube_title(title) for title in [playlist_title, *video_titles]]
+
+        def repeats_source_title(title):
+            title_words = set(re.findall(r"[a-z0-9]+", title.lower()))
+            title_words.difference_update({"module", "lesson", "course", "video", "chapter"})
+            title_words = {word for word in title_words if not word.isdigit()}
+            if len(title_words) < 2:
+                return False
+            for source_title in source_titles:
+                source_words = set(re.findall(r"[a-z0-9]+", source_title.lower()))
+                source_words.difference_update({"module", "lesson", "course", "video", "chapter"})
+                source_words = {word for word in source_words if not word.isdigit()}
+                if title_words.issubset(source_words):
+                    return True
+            return False
+
         for chapter in parsed_chapters:
             raw_ch = chapter.get("title", f"Module {len(structured_roadmap) + 1}")
             chapter_title = clean_youtube_title(raw_ch)
+            if repeats_source_title(chapter_title):
+                chapter_title = f"Module {len(structured_roadmap) + 1}: Core Concepts"
             if not chapter_title.startswith("Module"):
                 chapter_title = f"Module {len(structured_roadmap) + 1}: {chapter_title}"
                 
@@ -930,9 +964,14 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
                     p_title = clean_youtube_title(part_item.get("title", "Untitled Part"))
                     if idx is not None and 0 <= idx < len(videos):
                         v = videos[idx]
+                        if repeats_source_title(p_title):
+                            p_title = f"Lesson {len(parts) + 1}: Key Concepts"
                         parts.append(f"{p_title} || {v['video_id']}")
                 elif isinstance(part_item, str):
-                    parts.append(clean_youtube_title(part_item))
+                    p_title = clean_youtube_title(part_item)
+                    if repeats_source_title(p_title):
+                        p_title = f"Lesson {len(parts) + 1}: Key Concepts"
+                    parts.append(p_title)
             if parts:
                 structured_roadmap.append({
                     "title": chapter_title,
@@ -961,4 +1000,3 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
         "goal_title": goal_title,
         "roadmap": normalized_roadmap
     }
-

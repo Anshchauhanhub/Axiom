@@ -56,6 +56,15 @@ cd Edxiom
     ```
     The API will be available at `http://localhost:8000`. You can view the interactive documentation at `http://localhost:8000/docs`.
 
+6.  **Start the Telegram and Scheduler Worker in a second terminal:**
+    From the repository root, activate the same virtual environment and run:
+    ```bash
+    cd backend
+    source venv/bin/activate
+    python worker.py
+    ```
+    The worker uses the same `.env` and database as the API. Keep one worker instance running so Telegram polling and scheduled nudges are not duplicated.
+
 ---
 
 ## ⚛️ Step 3: Frontend Setup (React/Vite)
@@ -76,12 +85,16 @@ cd Edxiom
 
 ## 🤖 Step 4: Telegram Bot Integration
 
+The Telegram bot and scheduled nudges run in the background worker started in Step 2.
+
 1.  **Message your bot** on Telegram and send `/start`.
 2.  **Get your Chat ID** (the bot will reply with it once linked).
 3.  **Link your account**:
     - Go to the **Settings** page on the Edxiom website.
     - Enter your Chat ID in the **Neural Bridge** section.
     - Now you'll receive interactive nudges based on your study schedule!
+
+For Render, `render.yaml` defines both the API web service and a background worker. Configure `DATABASE_URL`, `TELEGRAM_BOT_TOKEN`, and `GROQ_API_KEY` on the API service; the worker references those values from that service. Keep the worker scaled to one instance.
 
 ---
 

@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       const profile = await getProfile();
       setUser(profile);
     } catch (err) {
-      alert("API Error (/users/me): " + err.message);
+      console.error("API Error (/users/me): " + err.message);
       clearToken();
       setUser(null);
     }

@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 
 const TeacherDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
 
   // Mock data for the dashboard
   const kpis = [
@@ -52,25 +51,8 @@ const TeacherDashboard = () => {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex overflow-x-auto custom-scrollbar gap-2 mb-8 pb-2 border-b border-outline-variant/10">
-        {['overview', 'students', 'curriculum', 'analytics'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-6 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
-              activeTab === tab 
-                ? 'bg-on-surface text-surface' 
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'overview' && (
-        <div className="space-y-8">
+      {/* Master Overview */}
+      <div className="space-y-8">
           {/* KPI Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {kpis.map((kpi, idx) => (
@@ -202,19 +184,6 @@ const TeacherDashboard = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {activeTab !== 'overview' && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant mb-6">
-            <MoreVertical size={32} />
-          </div>
-          <h2 className="text-xl font-bold text-on-surface mb-2">Module under construction</h2>
-          <p className="text-on-surface-variant text-sm max-w-md">
-            The {activeTab} section for educators is currently being built. Check back soon for advanced insights and tools.
-          </p>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,5 +1,4 @@
 import os
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, APIRouter
@@ -16,89 +15,25 @@ from database import init_db
 from routers.users import router as auth_router, profile_router
 from routers.goals import router as goals_router
 from routers.quiz import router as quiz_router
-from routers.telegram import router as telegram_router, set_bot_app
 from routers.personal import router as personal_router
-from bot import create_bot_app
-from services.scheduler import start_scheduler, set_bot
+from routers.study_sessions import router as study_sessions_router
+from routers.analytics import router as analytics_router
+from routers.goal_stream import router as goal_stream_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("edxiom")
 
-# Track bot state globally
-_bot_started = False
-_bot_app_ref = None
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    global _bot_started, _bot_app_ref
     logger.info("🚀 Edxiom AI Backend starting...")
 
     # Initialize database tables
     await init_db()
     logger.info("✅ Database tables verified.")
 
-    # Start nudge scheduler
-    start_scheduler()
-    logger.info("✅ Nudge scheduler started.")
-
-    # Launch Telegram bot in background so it doesn't block port binding
-    disable_telegram = os.getenv("DISABLE_TELEGRAM", "false").lower() in ("true", "1", "yes", "t")
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-
-    async def _start_bot():
-        """Background task to start Telegram bot without blocking the server."""
-        global _bot_started, _bot_app_ref
-        try:
-            # Wait a moment for the server to fully bind its port first
-            await asyncio.sleep(3)
-
-            bot_app = create_bot_app()
-            await bot_app.initialize()
-            await bot_app.start()
-            set_bot_app(bot_app)
-            set_bot(bot_app.bot)
-
-            # Start polling — drop old updates to avoid conflict
-            await bot_app.updater.start_polling(
-                drop_pending_updates=True,
-                timeout=10,
-                allowed_updates=["message", "callback_query"],
-            )
-
-            _bot_started = True
-            _bot_app_ref = bot_app
-            logger.info("✅ Telegram bot started and polling loop active.")
-        except Exception as e:
-            logger.warning(f"⚠️ Telegram bot failed to start: {e}")
-            _bot_started = False
-            _bot_app_ref = None
-
-    bot_task = None
-    if not disable_telegram and bot_token and bot_token != "your-telegram-bot-token-here":
-        bot_task = asyncio.create_task(_start_bot())
-        logger.info("🤖 Telegram bot startup scheduled (background).")
-    else:
-        if disable_telegram:
-            logger.info("⚠️ Telegram bot disabled via DISABLE_TELEGRAM environment variable.")
-        else:
-            logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set. Bot disabled.")
-
     yield
 
-    # Shutdown — cancel background task if still running
-    if bot_task and not bot_task.done():
-        bot_task.cancel()
-
-    # Stop what was actually started
-    if _bot_started and _bot_app_ref:
-        try:
-            await _bot_app_ref.updater.stop()
-            await _bot_app_ref.stop()
-            await _bot_app_ref.shutdown()
-        except Exception as e:
-            logger.warning(f"Bot shutdown warning: {e}")
     logger.info("👋 Edxiom AI Backend shut down.")
 
 
@@ -144,11 +79,13 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
 api_router.include_router(profile_router)
 api_router.include_router(goals_router)
+api_router.include_router(goal_stream_router)
 api_router.include_router(quiz_router)
-api_router.include_router(telegram_router)
+api_router.include_router(study_sessions_router)
+api_router.include_router(analytics_router)
 api_router.include_router(personal_router, prefix="/personal", tags=["Personal Tasks"])
 
-app.include_router(api_router) 
+app.include_router(api_router)
 
 # Specific endpoints must be defined BEFORE the catch-all wildcard
 @app.get("/health")

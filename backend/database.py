@@ -52,27 +52,5 @@ async def init_db():
             print(f"pgvector extension creation warning: {e}")
 
         await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR NOT NULL DEFAULT 'student'"))
-        await conn.execute(text("UPDATE users SET account_type = 'student' WHERE account_type IS NULL"))
-        # Monetization: credit column
-        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 5"))
-        # Persistent memory: study_profile column
-        await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS study_profile JSONB DEFAULT '{}'::jsonb"))
-        # Agentic system upgrade: roadmap template cache + goal tracking columns
-        await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES roadmap_templates(id)"))
-        await conn.execute(text("ALTER TABLE goals ADD COLUMN IF NOT EXISTS cache_hit BOOLEAN DEFAULT FALSE"))
-        await conn.execute(text("ALTER TABLE parts ADD COLUMN IF NOT EXISTS requires_quiz BOOLEAN NOT NULL DEFAULT TRUE"))
-        await conn.execute(text("ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS session_type VARCHAR NOT NULL DEFAULT 'architect'"))
-        # Entity-detection + verification pipeline columns
-        await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS detected_entity TEXT"))
-        await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS verification_passed BOOLEAN DEFAULT TRUE"))
-        await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ"))
-        
-        # Vector RAG migration (pgvector embedding column)
-        try:
-            await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS embedding vector(384)"))
-        except Exception as e:
-            print(f"pgvector column migration warning (falling back to generic column): {e}")
-            await conn.execute(text("ALTER TABLE roadmap_templates ADD COLUMN IF NOT EXISTS embedding TEXT"))
-        await conn.execute(text("ALTER TABLE roadmap_templates DROP COLUMN IF EXISTS pinecone_vector_id"))
+        # Note: Schema migrations (adding/dropping columns) should be handled through Alembic.
 

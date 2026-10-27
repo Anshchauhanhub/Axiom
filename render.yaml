@@ -3,3 +3,34 @@ services:
     name: axiom-fullstack
     env: docker
     dockerfilePath: ./Dockerfile
+  - type: worker
+    name: axiom-telegram-worker
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: cd backend && python worker.py
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: axiom-fullstack
+          envVarKey: DATABASE_URL
+      - key: TELEGRAM_BOT_TOKEN
+        fromService:
+          type: web
+          name: axiom-fullstack
+          envVarKey: TELEGRAM_BOT_TOKEN
+      - key: GROQ_API_KEY
+        fromService:
+          type: web
+          name: axiom-fullstack
+          envVarKey: GROQ_API_KEY
+      - key: GROQ_MODEL
+        fromService:
+          type: web
+          name: axiom-fullstack
+          envVarKey: GROQ_MODEL
+      - key: GROQ_MODEL_FAST
+        fromService:
+          type: web
+          name: axiom-fullstack
+          envVarKey: GROQ_MODEL_FAST

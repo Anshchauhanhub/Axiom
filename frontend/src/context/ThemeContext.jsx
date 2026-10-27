@@ -12,11 +12,8 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('edxiom_theme', 'dark');
   }, []);
 
-  const setTheme = () => {};
-  const toggleTheme = () => {};
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme }}>
       {children}
     </ThemeContext.Provider>
   );

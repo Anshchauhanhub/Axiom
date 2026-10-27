@@ -5,6 +5,7 @@ import TopNav from './TopNav';
 import AIAgentChat from './AIAgentChat';
 import MoodFace from './MoodFace';
 import { useMood } from '../context/MoodContext';
+import CommandPalette from './CommandPalette';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -73,6 +74,7 @@ const Layout = ({ children }) => {
       )}
 
       <AIAgentChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <CommandPalette />
 
       {/* Ambient Glow Effects — hidden on mobile for performance */}
       {!hideNavigation && (

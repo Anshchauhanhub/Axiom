@@ -55,10 +55,46 @@ async function handleResponse(res) {
   return data;
 }
 
+// --- Request Deduplication & Retry ---
+const _inflightRequests = new Map();
+
+async function fetchWithRetry(url, opts, retries = 1) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      if (res.status >= 500 && attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+    }
+  }
+  throw lastError;
+}
+
 async function request(method, path, body = null) {
   const opts = { method, headers: jsonHeaders() };
   if (body) opts.body = JSON.stringify(body);
-  return handleResponse(await fetch(`${API_BASE}${path}`, opts));
+
+  // Deduplicate GET requests that are already in-flight
+  const key = method === 'GET' ? `${method}:${path}` : null;
+  if (key && _inflightRequests.has(key)) {
+    return _inflightRequests.get(key);
+  }
+
+  const promise = fetchWithRetry(`${API_BASE}${path}`, opts)
+    .then(handleResponse)
+    .finally(() => { if (key) _inflightRequests.delete(key); });
+
+  if (key) _inflightRequests.set(key, promise);
+  return promise;
 }
 
 // --- Password Validation (mirrors backend rules) ---
@@ -123,6 +159,19 @@ export const uploadProfileImage = async (file) => {
   return handleResponse(res);
 };
 
+export const extractFileText = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/goals/extract-file`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+
+  return handleResponse(res);
+};
+
 export const updateSchedule = (timezone, schedule) =>
   request('PUT', '/users/schedule', { timezone, study_schedule: schedule });
 
@@ -153,8 +202,15 @@ export const getActiveQuiz = () => request('GET', '/quiz/active');
 export const completeDirect = (partId) => request('POST', `/quiz/complete-direct/${partId}`);
 
 // --- Architect Chat (Onboarding) ---
-export const architectChat = (messages, sessionId = null) =>
-  request('POST', '/goals/chat', { messages, session_id: sessionId, session_type: 'architect' });
+export const architectChat = (messages, sessionId = null, resources = {}) =>
+  request('POST', '/goals/chat', {
+    messages,
+    session_id: sessionId,
+    session_type: 'architect',
+    playlist_url: resources.playlistUrl || null,
+    website_url: resources.websiteUrl || null,
+    reference_text: resources.referenceText || null,
+  });
 
 export const getArchitectSessions = () => request('GET', '/goals/chat-sessions?session_type=architect');
 
@@ -211,3 +267,29 @@ export const getChatHistory = () =>
 
 export const clearChatHistory = () =>
   request('DELETE', '/goals/chat/history');
+
+// --- Study Sessions ---
+export const startStudySession = (partId) =>
+  request('POST', '/study/start', { part_id: partId });
+
+export const endStudySession = (sessionId) =>
+  request('POST', '/study/end', { session_id: sessionId });
+
+export const getStudyHistory = (days = 7) =>
+  request('GET', `/study/history?days=${days}`);
+
+// --- Analytics ---
+export const getAnalyticsSummary = () =>
+  request('GET', '/analytics/summary');
+
+export const getStudyHours = () =>
+  request('GET', '/analytics/study-hours');
+
+export const getQuizScores = () =>
+  request('GET', '/analytics/quiz-scores');
+
+export const getStreakHistory = () =>
+  request('GET', '/analytics/streak-history');
+
+export const getCompletionVelocity = () =>
+  request('GET', '/analytics/completion-velocity');

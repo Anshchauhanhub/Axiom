@@ -38,6 +38,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     In-memory sliding-window rate limiter.
     - Auth endpoints: 5 req/min per IP
     - General API:   60 req/min per IP
+
+    NOTE ON ARCHITECTURE & SCALING:
+    This rate limiter uses in-memory defaultdicts local to the active process.
+    For single-worker deployments (e.g., standard Render/Docker containers),
+    this provides sub-millisecond, zero-dependency protection.
+    For multi-worker clusters or serverless autoscaling, transition state tracking
+    to a centralized Redis store (e.g. redis-py sliding window / token bucket)
+    or offload rate limiting to a reverse proxy / API gateway (Cloudflare, Nginx, Kong).
     """
 
     AUTH_PATHS = {

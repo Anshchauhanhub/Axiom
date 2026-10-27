@@ -6,8 +6,9 @@ import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { cleanLatexMath } from '../utils/mathUtils';
-import { Bot, User, Globe, BookOpen, HelpCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Bot, User, Globe, BookOpen, HelpCircle, Sparkles, CheckCircle2, FileText } from 'lucide-react';
 import InteractiveDiscoveryCard from './InteractiveDiscoveryCard';
+import CopyButton from './CopyButton';
 
 
 const cleanDisplayMessage = (msg) => {
@@ -19,9 +20,28 @@ const cleanDisplayMessage = (msg) => {
     .trim();
 };
 
+const parseUserMessage = (msg) => {
+  if (!msg || typeof msg !== 'string') return { text: '', attachmentName: null };
+  const attachMatch = msg.match(/\[Attached (?:PDF |Image |)?(?:Document|File):\s*([^\]\n]+)\]/i);
+  let text = msg;
+  let attachmentName = null;
+  if (attachMatch) {
+    attachmentName = attachMatch[1].trim();
+    text = msg
+      .replace(/\[Attached (?:PDF |Image |)?(?:Document|File):[\s\S]*?(?:--- End (?:PDF |Document |File )Content ---|(?=\n\n|$))/gi, '')
+      .replace(/--- (?:Document|File|Extracted PDF) Content ---[\s\S]*?--- End (?:Document|File|PDF) Content ---/gi, '')
+      .trim();
+    if (!text) {
+      text = `Please analyze and explain this attached document.`;
+    }
+  }
+  return { text, attachmentName };
+};
+
 const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, isLastAssistantMessage }) => {
   const isAI = role === 'assistant';
-  const displayMessage = isAI ? cleanDisplayMessage(message) : message;
+  const { text: userText, attachmentName } = !isAI ? parseUserMessage(message) : { text: message, attachmentName: null };
+  const displayMessage = isAI ? cleanDisplayMessage(message) : userText;
   const formattedMessage = cleanLatexMath(displayMessage);
   const showDiscoveryCard = isAI && phase === 'syllabus_review' && isLastAssistantMessage;
 
@@ -39,6 +59,14 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
           ? 'bg-surface-container-low border border-outline-variant/10 text-on-surface rounded-[2rem] rounded-tl-none shadow-2xl space-y-3' 
           : 'bg-[#212121] text-white rounded-[24px]'
       }`}>
+        {/* User Attachment Pill */}
+        {!isAI && attachmentName && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-xs text-primary font-medium w-fit mb-2">
+            <FileText size={14} className="shrink-0" />
+            <span className="truncate max-w-[240px]">{attachmentName}</span>
+          </div>
+        )}
+
         {/* Tool Badge if searching */}
         {isAI && phase === 'syllabus' && (
           <div className="flex items-center gap-1.5 mb-2 px-2 py-0.5 bg-secondary/10 border border-secondary/20 rounded-full w-fit">
@@ -86,7 +114,12 @@ const MessageBubble = ({ message, role, phase, onDiscoverySubmit, targetExam, is
               code: ({ node, className, children, ...props }) => {
                 const isBlock = /language-/.test(className || '');
                 return isBlock 
-                  ? <pre className="bg-surface-container-highest p-4 rounded-xl overflow-x-auto my-2"><code className="text-sm font-mono" {...props}>{children}</code></pre>
+                  ? (
+                    <div className="relative group/code">
+                      <CopyButton text={String(children).replace(/\n$/, '')} className="opacity-0 group-hover/code:opacity-100" />
+                      <pre className="bg-surface-container-highest p-4 rounded-xl overflow-x-auto my-2"><code className="text-sm font-mono" {...props}>{children}</code></pre>
+                    </div>
+                  )
                   : <code className="bg-surface-container-highest px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>;
               }
             }}

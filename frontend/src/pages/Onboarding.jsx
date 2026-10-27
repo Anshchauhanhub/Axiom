@@ -15,7 +15,8 @@ import {
   BrainCircuit, Search, Video, MessageSquare, 
   ArrowRight, Sparkles, Globe, Zap,
   Plus, Edit3, Compass, MessageCircle, Trash2,
-  HelpCircle, CheckCircle2, Paperclip, X, FileText
+  HelpCircle, CheckCircle2,
+  ArrowUp, ArrowDown
 } from 'lucide-react';
 
 const Onboarding = () => {
@@ -42,7 +43,6 @@ const Onboarding = () => {
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
   const [phase, setPhase] = useState('chat');
   const [draftRoadmap, setDraftRoadmap] = useState(null);
   const [goalTitle, setGoalTitle] = useState('');
@@ -55,37 +55,26 @@ const Onboarding = () => {
   const [includeQuizzes, setIncludeQuizzes] = useState(false);
   const [quizLevel, setQuizLevel] = useState('medium');
   const [quizQuestions, setQuizQuestions] = useState(10);
+  const [moduleDialog, setModuleDialog] = useState(null);
+  const [moduleTitle, setModuleTitle] = useState('');
 
   // YouTube state
   const [youtubeUrl, setYoutubeUrl] = useState('');
 
   const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const moduleTitleInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  useEffect(() => {
+    if (!moduleDialog) return;
 
-    if (file.type.startsWith('image/')) {
-      setSelectedFile({
-        name: file.name,
-        type: 'image',
-        content: `[Attached Image: ${file.name}]`
-      });
-    } else {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target.result || '';
-        setSelectedFile({
-          name: file.name,
-          type: 'text',
-          content: `[Attached File: ${file.name}]\n--- File Content ---\n${text.slice(0, 6000)}\n--- End File Content ---`
-        });
-      };
-      reader.readAsText(file);
-    }
-  };
+    moduleTitleInputRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setModuleDialog(null);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [moduleDialog]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -243,7 +232,11 @@ const Onboarding = () => {
     setIsTyping(true);
 
     try {
-      const res = await architectChat([...messages, userMsg], currentSessionId);
+      const res = await architectChat([...messages, userMsg], currentSessionId, {
+        playlistUrl: prefs.playlistUrl,
+        websiteUrl: prefs.websiteUrl,
+        referenceText: prefs.referenceText,
+      });
       if (res.session_id && !currentSessionId) {
         setCurrentSessionId(res.session_id);
         loadChatSessions();
@@ -367,6 +360,61 @@ const Onboarding = () => {
     setError('');
   };
 
+  const handleRemoveTask = (idx) => {
+    setDraftRoadmap(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleMoveTask = (idx, direction) => {
+    setDraftRoadmap(prev => {
+      const arr = [...prev];
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= arr.length) return arr;
+      const temp = arr[idx];
+      arr[idx] = arr[targetIdx];
+      arr[targetIdx] = temp;
+      return arr;
+    });
+  };
+
+  const handleRenameTask = (idx) => {
+    const current = draftRoadmap[idx];
+    const currentTitle = typeof current === 'string' ? current : current?.title || '';
+    setModuleTitle(currentTitle);
+    setModuleDialog({ type: 'rename', index: idx });
+  };
+
+  const handleAddTask = () => {
+    setModuleTitle('');
+    setModuleDialog({ type: 'add' });
+  };
+
+  const handleSaveModule = (event) => {
+    event.preventDefault();
+    const title = moduleTitle.trim();
+    if (!title || !moduleDialog) return;
+
+    if (moduleDialog.type === 'rename') {
+      const { index } = moduleDialog;
+      const current = draftRoadmap[index];
+      const currentTitle = typeof current === 'string' ? current : current?.title || '';
+      if (title !== currentTitle) {
+        setDraftRoadmap(prev => prev.map((task, i) => {
+          if (i !== index) return task;
+          return typeof task === 'string' ? title : { ...task, title };
+        }));
+      }
+    } else {
+      setDraftRoadmap(prev => [
+        ...(prev || []),
+        {
+          title,
+          parts: [`Introduction to ${title}`, `Core Concepts of ${title}`, 'Practical Exercises'],
+        }
+      ]);
+    }
+    setModuleDialog(null);
+  };
+
   const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   if (!user && loading) {
@@ -452,7 +500,11 @@ const Onboarding = () => {
     <div className="w-full flex-1 min-h-[500px] flex animate-in fade-in duration-1000">
       {loading && <NeuralLoader message="PROCESSING..." />}
 
-      <div className={`flex w-full h-[85vh] bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 overflow-hidden relative backdrop-blur-sm ${onboardingMode === 'chat' ? 'flex-row' : 'flex-col'}`}>
+      <div className={`flex w-full bg-surface-container-low/30 rounded-2xl sm:rounded-[2.5rem] border border-outline-variant/10 relative backdrop-blur-sm ${
+        onboardingMode === 'youtube' && draftRoadmap
+          ? 'min-h-[85vh] flex-col'
+          : `h-[85vh] overflow-hidden ${onboardingMode === 'chat' ? 'flex-row' : 'flex-col'}`
+      }`}>
         
         {/* Left Sidebar for Chat Mode */}
         {onboardingMode === 'chat' && (
@@ -490,7 +542,7 @@ const Onboarding = () => {
           </div>
         )}
 
-        <div className="flex-1 flex flex-col relative">
+        <div className={`flex-1 flex flex-col relative ${onboardingMode === 'youtube' && draftRoadmap ? 'min-h-0' : ''}`}>
           <div className="w-full p-3 sm:p-6 flex justify-between items-center border-b border-outline-variant/10 bg-surface-container-low/50 backdrop-blur-xl sticky top-0 z-20">
             <div className="flex items-center gap-4">
               <button 
@@ -516,49 +568,27 @@ const Onboarding = () => {
 
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto px-3 py-4 sm:px-8 sm:py-8 space-y-4 custom-scrollbar"
+            className={`flex-1 px-3 py-4 sm:px-8 sm:py-8 space-y-4 ${
+              onboardingMode === 'youtube' && draftRoadmap
+                ? 'overflow-visible'
+                : 'min-h-0 overflow-y-auto custom-scrollbar'
+            }`}
           >
             {onboardingMode === 'chat' && messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center pb-20 animate-in fade-in zoom-in duration-700">
                  <h2 className="text-2xl sm:text-3xl text-on-surface mb-8 font-light tracking-wide">What's on the agenda today?</h2>
                  <form onSubmit={handleSendMessage} className="w-full max-w-2xl relative group mb-6">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      className="hidden"
-                      accept=".txt,.md,.json,.csv,.pdf,.png,.jpg,.jpeg,.js,.py,.html,.css"
-                    />
-                    {selectedFile && (
-                      <div className="mb-3 flex items-center justify-between bg-surface-container-highest border border-outline-variant/20 px-4 py-2 rounded-xl text-xs text-on-surface">
-                        <div className="flex items-center gap-2 truncate">
-                          <FileText size={16} className="text-primary shrink-0" />
-                          <span className="truncate">{selectedFile.name}</span>
-                        </div>
-                        <button type="button" onClick={() => setSelectedFile(null)} className="text-on-surface-variant hover:text-white p-1">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    )}
                     <div className="relative flex items-center">
-                      <button 
-                        type="button" 
-                        onClick={() => fileInputRef.current?.click()}
-                        title="Upload File"
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1"
-                      >
-                        <Paperclip size={20} />
-                      </button>
                       <input
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         disabled={isTyping}
-                        placeholder="Ask anything or upload a syllabus/doc..."
-                        className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] pl-14 py-4 pr-16 text-on-surface text-lg focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
+                        placeholder="Ask anything..."
+                        className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] px-6 py-4 pr-16 text-on-surface text-lg focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                        <button type="submit" disabled={(!inputText.trim() && !selectedFile) || isTyping} className="w-8 h-8 flex items-center justify-center bg-white text-black rounded-full hover:brightness-110 disabled:opacity-20 disabled:bg-surface-container-highest disabled:text-on-surface-variant transition-all">
+                        <button type="submit" disabled={!inputText.trim() || isTyping} className="w-8 h-8 flex items-center justify-center bg-white text-black rounded-full hover:brightness-110 disabled:opacity-20 disabled:bg-surface-container-highest disabled:text-on-surface-variant transition-all">
                           <Send size={14} />
                         </button>
                       </div>
@@ -812,11 +842,53 @@ const Onboarding = () => {
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 mb-12">
                         {draftRoadmap.map((task, tidx) => (
-                          <div key={tidx} className="p-6 bg-surface-container-lowest/50 border border-outline-variant/10 rounded-2xl hover:border-primary/30 transition-all group">
-                            <h4 className="font-bold text-sm text-primary mb-3 uppercase tracking-wide flex items-center gap-2">
-                              <span className="text-[10px] opacity-40">0{tidx + 1}</span>
-                              {task.title || task}
-                            </h4>
+                          <div key={tidx} className="p-6 bg-surface-container-lowest/50 border border-outline-variant/10 rounded-2xl hover:border-primary/30 transition-all group relative">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-bold text-sm text-primary uppercase tracking-wide flex items-center gap-2 truncate pr-2">
+                                <span className="text-[10px] opacity-40">0{tidx + 1}</span>
+                                <span className="truncate">{task.title || task}</span>
+                              </h4>
+                              {/* Edit controls */}
+                              <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRenameTask(tidx)}
+                                  className="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                                  title="Rename Module"
+                                >
+                                  <Edit3 size={13} />
+                                </button>
+                                {tidx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveTask(tidx, -1)}
+                                    className="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp size={13} />
+                                  </button>
+                                )}
+                                {tidx < draftRoadmap.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveTask(tidx, 1)}
+                                    className="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown size={13} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTask(tidx)}
+                                  className="p-1 rounded hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition-colors"
+                                  title="Remove Module"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </div>
+
                             <ul className="space-y-2">
                               {(Array.isArray(task.parts) ? task.parts : []).slice(0, 3).map((p, pidx) => {
                                 const fullStr = typeof p === 'string' ? p : p?.title || String(p);
@@ -831,6 +903,16 @@ const Onboarding = () => {
                             </ul>
                           </div>
                         ))}
+
+                        {/* Add Custom Module Card */}
+                        <button
+                          type="button"
+                          onClick={handleAddTask}
+                          className="p-6 border-2 border-dashed border-outline-variant/20 hover:border-primary/40 rounded-2xl flex flex-col items-center justify-center gap-2 text-on-surface-variant hover:text-primary transition-all group min-h-[140px]"
+                        >
+                          <Plus size={20} className="group-hover:scale-125 transition-transform" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Add Custom Module</span>
+                        </button>
                       </div>
 
                       <div className="flex flex-col sm:flex-row justify-center items-center gap-4 relative z-10 pt-6 border-t border-outline-variant/10">
@@ -853,35 +935,16 @@ const Onboarding = () => {
           {onboardingMode === 'chat' && messages.length > 0 && (
             <div className="p-3 sm:p-8 border-t border-outline-variant/10 bg-surface-container-low/50">
               <form onSubmit={handleSendMessage} className="relative group max-w-4xl mx-auto">
-                {selectedFile && (
-                  <div className="mb-3 flex items-center justify-between bg-surface-container-highest border border-outline-variant/20 px-4 py-2 rounded-xl text-xs text-on-surface">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText size={16} className="text-primary shrink-0" />
-                      <span className="truncate">{selectedFile.name}</span>
-                    </div>
-                    <button type="button" onClick={() => setSelectedFile(null)} className="text-on-surface-variant hover:text-white p-1">
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
                 <div className="relative flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Upload File"
-                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors p-1 z-10"
-                  >
-                    <Paperclip size={20} />
-                  </button>
                   <input
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isTyping}
-                    placeholder="Respond to Edxiom or attach a file..."
-                    className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl pl-12 sm:pl-14 py-3.5 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
+                    placeholder="Respond to Edxiom..."
+                    className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-xl sm:rounded-2xl pl-4 sm:pl-5 py-3.5 sm:py-5 pr-14 sm:pr-20 text-on-surface text-sm font-light focus:ring-2 focus:ring-primary/40 outline-none transition-all shadow-2xl"
                   />
-                  <button type="submit" disabled={(!inputText.trim() && !selectedFile) || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">
+                  <button type="submit" disabled={!inputText.trim() || isTyping} className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-primary text-on-primary-container rounded-lg sm:rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-lg shadow-primary/20">
                     {isTyping ? <Activity size={20} className="animate-pulse" /> : <Send size={20} />}
                   </button>
                 </div>
@@ -891,6 +954,64 @@ const Onboarding = () => {
           {error && <p className="text-error text-[10px] font-label font-bold uppercase tracking-widest text-center mt-4 animate-bounce mb-8">{error}</p>}
         </div>
       </div>
+      {moduleDialog && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close module dialog"
+            onClick={() => setModuleDialog(null)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          />
+          <form
+            onSubmit={handleSaveModule}
+            className="relative w-full max-w-md rounded-3xl border border-outline-variant/20 bg-surface-container-lowest p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200"
+            aria-labelledby="module-dialog-title"
+          >
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-11 h-11 shrink-0 rounded-2xl border border-primary/20 bg-primary/10 flex items-center justify-center text-primary">
+                {moduleDialog.type === 'add' ? <Plus size={20} /> : <Edit3 size={18} />}
+              </div>
+              <div>
+                <h2 id="module-dialog-title" className="text-lg font-black uppercase tracking-tight text-on-surface">
+                  {moduleDialog.type === 'add' ? 'Add custom module' : 'Rename module'}
+                </h2>
+                <p className="mt-1 text-sm text-on-surface-variant/70">
+                  Give this module a clear title for your learning path.
+                </p>
+              </div>
+            </div>
+            <label htmlFor="custom-module-title" className="block mb-2 text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface-variant/70">
+              Module title
+            </label>
+            <input
+              ref={moduleTitleInputRef}
+              id="custom-module-title"
+              type="text"
+              value={moduleTitle}
+              onChange={(event) => setModuleTitle(event.target.value)}
+              placeholder="e.g. Advanced Projects"
+              maxLength={120}
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-low px-4 py-3 text-sm text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-colors focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setModuleDialog(null)}
+                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!moduleTitle.trim()}
+                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary-container transition-all hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {moduleDialog.type === 'add' ? 'Add module' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

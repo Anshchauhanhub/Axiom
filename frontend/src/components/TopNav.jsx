@@ -1,61 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, AlertCircle, Clock, CheckCircle2, Coins, Play, X, Loader2 } from 'lucide-react';
-import { getAllTasks, isLoggedIn, earnCredit } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { Bell, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { getAllTasks, isLoggedIn } from '../services/api';
 
 const TopNav = () => {
-  const { user, refreshUser } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [adModalOpen, setAdModalOpen] = useState(false);
-  const [isWatchingAd, setIsWatchingAd] = useState(false);
-  const [adCountdown, setAdCountdown] = useState(5);
   const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    let interval;
-    if (isWatchingAd) {
-      interval = setInterval(() => {
-        setAdCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            handleAdComplete();
-            return 5;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isWatchingAd]);
-
-  const handleAdComplete = async () => {
-    try {
-      await earnCredit();
-      await refreshUser();
-      setIsWatchingAd(false);
-      setAdModalOpen(false);
-      alert("🎉 1 Credit Earned! Thank you for supporting Edxiom AI.");
-    } catch (error) {
-      console.error("Failed to earn credit:", error);
-      setIsWatchingAd(false);
-      alert("Error: " + error.message);
-    }
-  };
-
-  const startAd = () => {
-    setIsWatchingAd(true);
-    setAdCountdown(5);
-    
-    // Open Adsterra Direct Link in a new tab to bypass popup blockers
-    const directLink = import.meta.env.VITE_ADSTERRA_DIRECT_LINK;
-    if (directLink) {
-      window.open(directLink, '_blank');
-    } else {
-      // Fallback: open a placeholder or let the popunder try to trigger
-      console.warn("VITE_ADSTERRA_DIRECT_LINK not set in .env. Falling back to background popunder.");
-    }
-  };
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -187,61 +137,6 @@ const TopNav = () => {
         )}
       </div>
 
-      {/* Adsterra Rewards / Earn Credits Modal */}
-      {adModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-md bg-[#131315] border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative">
-            <button
-              onClick={() => !isWatchingAd && setAdModalOpen(false)}
-              disabled={isWatchingAd}
-              className="absolute top-4 right-4 text-white/60 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="p-6 text-center">
-              {!isWatchingAd ? (
-                <>
-                  <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="material-symbols-outlined text-[32px] text-primary">monetization_on</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Need More Credits?</h3>
-                  <p className="text-sm text-white/60 mb-6">
-                    Axiom is 100% free to use. Watch a short sponsor ad to support us and earn 1 Credit!
-                  </p>
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={startAd}
-                      className="w-full py-3 bg-yellow-500 text-black font-extrabold rounded-xl hover:bg-yellow-400 active:scale-98 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Play size={16} fill="black" />
-                      Watch Sponsor Ad
-                    </button>
-                    <button
-                      onClick={() => setAdModalOpen(false)}
-                      className="w-full py-3 bg-white/5 text-white/80 font-bold rounded-xl hover:bg-white/10 transition-all"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="py-8">
-                  <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                    <Loader2 size={48} className="text-yellow-400 animate-spin absolute" />
-                    <span className="text-xl font-extrabold text-yellow-400">{adCountdown}s</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-white mb-2">Streaming Sponsor Content...</h3>
-                  <p className="text-xs text-white/40 max-w-xs mx-auto">
-                    Please do not close this window. Your popunder ad should have opened. Click anywhere on the screen if it didn't trigger.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
