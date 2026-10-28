@@ -1,0 +1,2 @@
+-r backend/requirements.txt
+gradio>=5.0,<7

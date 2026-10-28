@@ -1,3 +1,13 @@
+---
+title: Edxiom API
+emoji: 🧠
+colorFrom: purple
+colorTo: yellow
+sdk: gradio
+app_file: app.py
+app_port: 7860
+---
+
 # 🧠 Edxiom — AI-Driven Growth Partner
 
 > _"Not a tracker — a proof-of-learning engine."_
