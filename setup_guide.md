@@ -61,7 +61,7 @@ cd Edxiom
     ```bash
     cd backend
     source venv/bin/activate
-    python worker.py
+   
     ```
     The worker uses the same `.env` and database as the API. Keep one worker instance running so Telegram polling and scheduled nudges are not duplicated.
 

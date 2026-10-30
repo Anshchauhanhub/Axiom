@@ -496,6 +496,75 @@ const Onboarding = () => {
     );
   }
 
+  if (onboardingMode === 'youtube' && !draftRoadmap) {
+    return (
+      <section
+        aria-labelledby="playlist-import-title"
+        aria-busy={loading}
+        className="relative flex w-full flex-1 min-h-[70vh] items-center justify-center overflow-hidden bg-black px-4 py-12"
+      >
+        {loading && <NeuralLoader message="PROCESSING..." />}
+
+        <button
+          type="button"
+          onClick={() => setOnboardingMode(null)}
+          className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-emerald-500/20 px-4 py-2 text-xs font-label font-bold uppercase tracking-wider text-emerald-400/70 transition-colors hover:border-emerald-400/50 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+        >
+          <ChevronRight className="rotate-180" size={16} />
+          Back to paths
+        </button>
+
+        <div className="w-full max-w-[32rem] text-center">
+          <div className="mx-auto mb-7 flex h-20 w-20 items-center justify-center rounded-[28px] border border-emerald-500/20 bg-emerald-950/20 text-emerald-400 shadow-[0_0_45px_rgba(0,179,89,0.12)]">
+            <Video size={34} strokeWidth={2} />
+          </div>
+
+          <h2
+            id="playlist-import-title"
+            className="mb-3 text-3xl font-black italic uppercase tracking-tight text-white sm:text-[2rem]"
+          >
+            Playlist Import
+          </h2>
+          <p className="mx-auto mb-8 max-w-lg text-sm leading-relaxed text-gray-400">
+            Provide a public YouTube playlist URL. Our engine will analyze the content and generate a master roadmap.
+          </p>
+
+          <form onSubmit={handleYoutubeSynthesis} className="flex w-full flex-col items-center">
+            <label htmlFor="youtube-playlist-url" className="sr-only">
+              YouTube playlist URL
+            </label>
+            <div className="flex h-16 w-full items-center gap-4 rounded-full border-4 border-emerald-950/80 bg-black px-5 shadow-[0_0_18px_rgba(0,179,89,0.08)] transition-colors focus-within:border-emerald-700">
+              <Globe className="shrink-0 text-emerald-500" size={18} />
+              <input
+                id="youtube-playlist-url"
+                type="url"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="https://www.youtube.com/playlist?list=..."
+                autoComplete="url"
+                disabled={loading}
+                required
+                className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-600 disabled:opacity-60"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!youtubeUrl.trim() || loading}
+              className="mt-3 min-w-24 rounded-xl bg-emerald-950 px-5 py-3 text-[10px] font-label font-bold uppercase tracking-widest text-emerald-300 transition-all hover:bg-emerald-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Generate
+            </button>
+            {error && (
+              <p role="alert" className="mt-4 text-sm text-red-400">
+                {error}
+              </p>
+            )}
+          </form>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div className="w-full flex-1 min-h-[500px] flex animate-in fade-in duration-1000">
       {loading && <NeuralLoader message="PROCESSING..." />}
@@ -576,7 +645,7 @@ const Onboarding = () => {
           >
             {onboardingMode === 'chat' && messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center pb-20 animate-in fade-in zoom-in duration-700">
-                 <h2 className="text-2xl sm:text-3xl text-on-surface mb-8 font-light tracking-wide">What's on the agenda today?</h2>
+                 <h2 className="text-2xl sm:text-3xl text-on-surface mb-8 font-light tracking-wide">Ready to prove your mastery today?</h2>
                  <form onSubmit={handleSendMessage} className="w-full max-w-2xl relative group mb-6">
                     <div className="relative flex items-center">
                       <input
@@ -584,7 +653,7 @@ const Onboarding = () => {
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         disabled={isTyping}
-                        placeholder="Ask anything..."
+                        placeholder="Declare a learning goal, exam, or topic to interrogate..."
                         className="w-full bg-surface-container-highest/80 border border-outline-variant/10 rounded-[2rem] px-6 py-4 pr-16 text-on-surface text-lg focus:border-outline-variant/30 focus:bg-surface-container-highest outline-none shadow-2xl transition-all"
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -595,14 +664,14 @@ const Onboarding = () => {
                     </div>
                  </form>
                  <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
-                    <button onClick={() => setInputText("Generate a study plan for Quantum Physics")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
-                      <Sparkles size={16} /> Create a curriculum
+                    <button onClick={() => setInputText("Synthesize an active roadmap for ")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+                      <span className="text-base leading-none">🎯</span> Synthesize Active Roadmap
                     </button>
-                    <button onClick={() => setInputText("I need to practice React.js hooks")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
-                      <Edit3 size={16} /> Write or practice
+                    <button onClick={() => setInputText("Challenge me with a Mastery Gate MCQ assessment on ")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+                      <span className="text-base leading-none">🧪</span> Challenge Mastery Gate (MCQ)
                     </button>
-                    <button onClick={() => setInputText("Explain the theory of relativity")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
-                      <Compass size={16} /> Look something up
+                    <button onClick={() => setInputText("Interrogate the core concepts of ")} className="px-4 py-2.5 rounded-full border border-outline-variant/10 text-on-surface-variant text-base hover:bg-surface-container-highest transition-colors flex items-center gap-2">
+                      <span className="text-base leading-none">🔍</span> Interrogate a Core Concept
                     </button>
                  </div>
               </div>
@@ -629,36 +698,6 @@ const Onboarding = () => {
             {onboardingMode === 'predefined' && !draftRoadmap && (
                <div className="h-full w-full py-8">
                   <GoalSelectionGrid onSelect={handlePredefinedGoal} loading={loading} />
-               </div>
-            )}
-
-            {onboardingMode === 'youtube' && !draftRoadmap && (
-               <div className="h-full flex flex-col items-center justify-center text-center p-10 max-w-2xl mx-auto">
-                  <div className="w-24 h-24 rounded-[2rem] bg-secondary/10 flex items-center justify-center mb-8 border border-secondary/20 shadow-[0_0_40px_rgba(0,179,89,0.2)]">
-                    <Video className="text-secondary" size={40} />
-                  </div>
-                  <h3 className="text-4xl font-black font-headline uppercase tracking-tighter mb-4 italic">Playlist Import</h3>
-                  <p className="text-on-surface-variant/70 text-sm font-light leading-relaxed mb-10">
-                     Provide a public YouTube playlist URL. Our engine will analyze the content and generate a master roadmap.
-                  </p>
-                  <form onSubmit={handleYoutubeSynthesis} className="w-full relative group">
-                    <Globe className="absolute left-6 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-secondary transition-colors" size={20} />
-                    <input 
-                      type="url" 
-                      value={youtubeUrl}
-                      onChange={(e) => setYoutubeUrl(e.target.value)}
-                      placeholder="https://www.youtube.com/playlist?list=..."
-                      className="w-full bg-surface-container-lowest/80 border border-outline-variant/20 rounded-[2rem] pl-16 pr-24 py-6 text-on-surface text-sm font-light focus:ring-4 focus:ring-secondary/20 focus:border-secondary/40 outline-none transition-all shadow-2xl"
-                      required
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!youtubeUrl || loading}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 px-6 py-3 bg-secondary text-on-primary-container rounded-full font-label font-bold text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all disabled:opacity-20"
-                    >
-                      Generate
-                    </button>
-                  </form>
                </div>
             )}
 

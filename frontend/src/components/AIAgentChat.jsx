@@ -113,14 +113,17 @@ const AIAgentChat = ({ isOpen, onClose }) => {
 
     const userMessage = { role: 'user', content: fullContent };
     const newMessages = [...messages, userMessage];
+    const fileReference = selectedFile?.content || null;
     setMessages(newMessages);
     if (text === input) setInput('');
     setSelectedFile(null);
     setLoading(true);
 
     try {
-      // Pass the current session ID if it exists so the backend groups them
-      const res = await assistantChat(newMessages, currentSessionId);
+      // Pass the current session ID and file reference if it exists so the backend groups them
+      const res = await assistantChat(newMessages, currentSessionId, {
+        referenceText: fileReference,
+      });
       const assistantMessage = res?.message || res?.response;
       if (res?.mood) {
           // Backend signals a mood change — trigger a fresh global evaluation
@@ -163,12 +166,15 @@ const AIAgentChat = ({ isOpen, onClose }) => {
 
   const getMoodStyles = (m) => {
     switch (m) {
-      case 5: return { bg: 'from-emerald-400 to-teal-500', shadow: 'shadow-emerald-500/20', indicator: 'border-emerald-400' };
-      case 4: return { bg: 'from-primary to-amber-500', shadow: 'shadow-amber-500/20', indicator: 'border-primary' };
-      case 3: return { bg: 'from-amber-400 to-primary', shadow: 'shadow-amber-500/10', indicator: 'border-amber-400' };
-      case 2: return { bg: 'from-orange-400 to-amber-500', shadow: 'shadow-orange-500/20', indicator: 'border-orange-400' };
-      case 1: return { bg: 'from-primary to-amber-600', shadow: 'shadow-primary/30', indicator: 'border-primary' };
-      default: return { bg: 'from-primary to-amber-500', shadow: 'shadow-amber-500/10', indicator: 'border-primary' };
+      case 5:
+      case 4:
+        return { bg: 'from-emerald-400 to-teal-500', shadow: 'shadow-emerald-500/30', indicator: 'border-emerald-400' };
+      case 1:
+      case 2:
+        return { bg: 'from-rose-500 to-red-600', shadow: 'shadow-rose-500/30', indicator: 'border-rose-500' };
+      case 3:
+      default:
+        return { bg: 'from-[#fdb813] to-amber-500', shadow: 'shadow-amber-500/30', indicator: 'border-primary' };
     }
   };
 
@@ -236,7 +242,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
               {/* Always-visible mood face in header */}
               <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${moodStyles.bg} flex items-center justify-center p-0.5 shadow-lg ${moodStyles.shadow} relative shrink-0 transition-all duration-500`}>
                 <MoodFace mood={mood} size={30} />
-                <div className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface-container-highest ${moodStyles.indicator} transition-colors duration-500`} />
+                <div className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-white rounded-full border-2 ${moodStyles.indicator} transition-colors duration-500`} />
               </div>
               <div className="hidden sm:block">
                 <p className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface/90 leading-none">Edxiom AI</p>

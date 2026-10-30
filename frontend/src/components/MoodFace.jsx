@@ -11,86 +11,72 @@ const MoodFace = ({ mood = 3, size = 64 }) => {
 
   const getMouth = () => {
     switch (mood) {
-      case 5: // Big wide open smile
+      case 5: // Big happy open smile with rosy cheeks (ahead of schedule)
         return (
           <g>
             <path d="M24 62 Q50 84 76 62" stroke="#fff" strokeWidth="4" fill="none" strokeLinecap="round" />
-            {/* Teeth hint */}
             <path d="M30 66 Q50 76 70 66" stroke="#ffffff55" strokeWidth="2" fill="none" strokeLinecap="round" />
-            {/* Rosy cheeks */}
-            <ellipse cx="22" cy="60" rx="8" ry="5" fill="#ff8fa3" opacity="0.35" />
-            <ellipse cx="78" cy="60" rx="8" ry="5" fill="#ff8fa3" opacity="0.35" />
+            <ellipse cx="22" cy="60" rx="8" ry="5" fill="#34d399" opacity="0.4" />
+            <ellipse cx="78" cy="60" rx="8" ry="5" fill="#34d399" opacity="0.4" />
           </g>
         );
-      case 4: // Clear friendly smile
-        return <path d="M28 63 Q50 78 72 63" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />;
-      case 3: // Slight upturn — not flat
-        return <path d="M32 66 Q50 72 68 66" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
-      case 2: // Slight frown
-        return <path d="M32 68 Q50 62 68 68" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />;
-      case 1: // Clear straight frown
+      case 1: // Clear angry/ranger frown (multiple days missed)
         return (
           <g>
-            <path d="M28 70 Q50 60 72 70" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+            <path d="M26 73 Q50 59 74 73" stroke="#fff" strokeWidth="4" fill="none" strokeLinecap="round" />
           </g>
         );
+      case 3: // Normal simple friendly smile
+      case 2:
+      case 4:
       default:
-        return <path d="M28 63 Q50 78 72 63" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />;
+        return (
+          <g>
+            <path d="M28 64 Q50 78 72 64" stroke="#fff" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+          </g>
+        );
     }
   };
 
   const getEyebrows = () => {
     switch (mood) {
-      case 5: // Raised high + curved up — very happy
+      case 5: // Raised high + happy
         return (
           <g>
-            <path d={`M${leftEyeX - 10} ${eyeY - 16} Q${leftEyeX} ${eyeY - 24} ${leftEyeX + 10} ${eyeY - 16}`} stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
-            <path d={`M${rightEyeX - 10} ${eyeY - 16} Q${rightEyeX} ${eyeY - 24} ${rightEyeX + 10} ${eyeY - 16}`} stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
+            <path d={`M${leftEyeX - 10} ${eyeY - 17} Q${leftEyeX} ${eyeY - 25} ${leftEyeX + 10} ${eyeY - 17}`} stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
+            <path d={`M${rightEyeX - 10} ${eyeY - 17} Q${rightEyeX} ${eyeY - 25} ${rightEyeX + 10} ${eyeY - 17}`} stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
           </g>
         );
-      case 4: // Raised gently
+      case 1: // Angry "ranger" V-shape eyebrows angled sharply down toward center
+        return (
+          <g>
+            <line x1={leftEyeX - 10} y1={eyeY - 18} x2={leftEyeX + 10} y2={eyeY - 8} stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
+            <line x1={rightEyeX - 10} y1={eyeY - 8} x2={rightEyeX + 10} y2={eyeY - 18} stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
+          </g>
+        );
+      case 3: // Normal gentle pleasant arched eyebrows
+      case 2:
+      case 4:
+      default:
         return (
           <g>
             <path d={`M${leftEyeX - 9} ${eyeY - 14} Q${leftEyeX} ${eyeY - 20} ${leftEyeX + 9} ${eyeY - 14}`} stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
             <path d={`M${rightEyeX - 9} ${eyeY - 14} Q${rightEyeX} ${eyeY - 20} ${rightEyeX + 9} ${eyeY - 14}`} stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
           </g>
         );
-      case 3: // Flat neutral
-        return (
-          <g>
-            <line x1={leftEyeX - 9} y1={eyeY - 15} x2={leftEyeX + 9} y2={eyeY - 15} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1={rightEyeX - 9} y1={eyeY - 15} x2={rightEyeX + 9} y2={eyeY - 15} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-          </g>
-        );
-      case 2: // Angled inward — slightly concerned
-        return (
-          <g>
-            <line x1={leftEyeX - 9} y1={eyeY - 12} x2={leftEyeX + 9} y2={eyeY - 17} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1={rightEyeX - 9} y1={eyeY - 17} x2={rightEyeX + 9} y2={eyeY - 12} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-          </g>
-        );
-      case 1: // Strong V-shape — stern/strict
-        return (
-          <g>
-            <line x1={leftEyeX - 10} y1={eyeY - 10} x2={leftEyeX + 10} y2={eyeY - 18} stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-            <line x1={rightEyeX - 10} y1={eyeY - 18} x2={rightEyeX + 10} y2={eyeY - 10} stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-          </g>
-        );
-      default:
-        return null;
     }
   };
 
   const getPupils = () => {
-    // Pupils shift based on mood (looking up when happy, looking forward when neutral, angled when stern)
-    const pupilY = mood >= 4 ? eyeY - 1 : mood === 3 ? eyeY + 0 : eyeY + 2;
+    const pupilY = mood === 5 ? eyeY - 1 : mood === 1 ? eyeY + 1 : eyeY;
+    const pupilXOffset = mood === 1 ? 1 : 0; // slightly focused inward when angry
     return (
       <g>
-        <rect x={leftEyeX - 3} y={pupilY - 2} width="6" height="6" rx="1.5" fill="#111" />
-        <rect x={rightEyeX - 3} y={pupilY - 2} width="6" height="6" rx="1.5" fill="#111" />
+        <rect x={leftEyeX - 3 + pupilXOffset} y={pupilY - 2} width="6" height="6" rx="1.5" fill="#111" />
+        <rect x={rightEyeX - 3 - pupilXOffset} y={pupilY - 2} width="6" height="6" rx="1.5" fill="#111" />
         {/* Eye shine */}
-        <circle cx={leftEyeX + 1} cy={pupilY - 1} r="1.2" fill="white" opacity="0.8" />
-        <circle cx={rightEyeX + 1} cy={pupilY - 1} r="1.2" fill="white" opacity="0.8" />
+        <circle cx={leftEyeX + 1 + pupilXOffset} cy={pupilY - 1} r="1.2" fill="white" opacity="0.8" />
+        <circle cx={rightEyeX + 1 - pupilXOffset} cy={pupilY - 1} r="1.2" fill="white" opacity="0.8" />
       </g>
     );
   };

@@ -69,7 +69,9 @@ const GoalCard = ({ goal, roadmapData, onStudy, onNotes, onToggle, onDelete }) =
   const done = parts.filter(p => p.status === 'passed').length;
   const pct = parts.length ? Math.round((done / parts.length) * 100) : 0;
   const activePart = parts.find(p => p.status === 'active');
-  const activeTask = tasks.find(t => t.status === 'active');
+  const activeTask = tasks.find(task => task.parts?.some(part => part.status === 'active'))
+    || tasks.find(task => task.status === 'active')
+    || tasks.find(task => task.status !== 'passed');
   const isActive = goal.status === 'active';
 
   // Determine color matching status for psychological association
@@ -134,6 +136,16 @@ const GoalCard = ({ goal, roadmapData, onStudy, onNotes, onToggle, onDelete }) =
                 : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 shadow-[0_2.5px_0_rgba(16,185,129,0.05)]'
             }`}>
               {isActive ? <><Pause size={10} fill="currentColor" /> Pause</> : <><Play size={10} fill="currentColor" /> Resume</>}
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onStudy(goal.id, activeTask?.id);
+              }}
+              className="h-8 px-3 rounded-lg border border-primary/20 bg-primary/10 text-[9px] font-label font-black uppercase tracking-wider text-primary hover:bg-primary/20 hover:border-primary/30 active:translate-y-[1.5px] transition-all flex items-center gap-1.5 shadow-[0_2.5px_0_rgba(253,184,19,0.05)] active:shadow-none"
+              title={`Continue studying ${goal.title}`}
+            >
+              Continue <ArrowRight size={11} />
             </button>
             <button onClick={() => onDelete(goal.id)}
               className="h-8 w-8 rounded-lg border border-red-500/20 bg-red-500/10 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/20 hover:border-red-500/30 active:translate-y-[1.5px] transition-all shadow-[0_2.5px_0_rgba(239,68,68,0.05)] active:shadow-none">
@@ -447,7 +459,7 @@ const Dashboard = () => {
                       <div className="shrink-0 flex items-center gap-4 mt-8 md:mt-0">
                         <button onClick={() => {
                           if (slide?.goalId) setSelectedGoalId(slide.goalId);
-                          navigate('/study', { state: { goalId: slide?.goalId } });
+                          navigate('/study', { state: { goalId: slide?.goalId, openWorkspace: true } });
                         }} className="h-14 px-8 rounded-xl bg-[#fdb813] text-black text-[11px] font-label font-black uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 transition-all flex items-center gap-3 shadow-[0_4px_15px_rgba(253,184,19,0.2)]">
                           Study <ChevronRight size={16} strokeWidth={3} />
                         </button>
@@ -495,7 +507,10 @@ const Dashboard = () => {
                         key={goal.id}
                         goal={goal}
                         roadmapData={allRoadmaps[goal.id]}
-                        onStudy={(id) => navigate('/study', { state: { goalId: id } })}
+                        onStudy={(id, taskId) => {
+                          setSelectedGoalId(id);
+                          navigate('/study', { state: { goalId: id, taskId, openWorkspace: true } });
+                        }}
                         onNotes={(id) => navigate('/notebooks', { state: { goalId: id } })}
                         onToggle={(id) => wrap(() => toggleGoalStatus(id))}
                         onDelete={(id) => setGoalToDelete(goals.find(goal => goal.id === id) || null)}

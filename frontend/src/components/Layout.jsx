@@ -20,23 +20,43 @@ const Layout = ({ children }) => {
 
   const getMoodGradient = (m) => {
     switch (m) {
-      case 5: return 'from-emerald-400 to-teal-500';
-      case 4: return 'from-primary to-amber-500';
-      case 3: return 'from-amber-400 to-primary';
-      case 2: return 'from-orange-400 to-amber-500';
-      case 1: return 'from-primary to-amber-600';
-      default: return 'from-primary to-amber-500';
+      case 5:
+      case 4:
+        return 'from-emerald-400 to-teal-500';
+      case 1:
+        return 'from-rose-500 to-red-600';
+      case 3:
+      case 2:
+      default:
+        return 'from-[#fdb813] to-amber-500';
     }
   };
 
   const getMoodIndicator = (m) => {
     switch (m) {
-      case 5: return 'border-emerald-400';
-      case 4: return 'border-primary';
-      case 3: return 'border-amber-400';
-      case 2: return 'border-orange-400';
-      case 1: return 'border-primary';
-      default: return 'border-primary';
+      case 5:
+      case 4:
+        return 'border-emerald-400';
+      case 1:
+        return 'border-rose-500';
+      case 3:
+      case 2:
+      default:
+        return 'border-primary';
+    }
+  };
+
+  const getMoodShadow = (m) => {
+    switch (m) {
+      case 5:
+      case 4:
+        return 'shadow-[0_10px_40px_rgba(52,211,153,0.4)]';
+      case 1:
+        return 'shadow-[0_10px_40px_rgba(239,68,68,0.4)]';
+      case 3:
+      case 2:
+      default:
+        return 'shadow-[0_10px_40px_rgba(253,184,19,0.4)]';
     }
   };
 
@@ -65,7 +85,7 @@ const Layout = ({ children }) => {
           title="Ask Edxiom AI"
           onClick={() => setIsChatOpen(true)}
           style={{ borderRadius: '50%' }}
-          className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[55] w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br ${getMoodGradient(mood)} shadow-[0_10px_40px_rgba(234,179,8,0.4)] overflow-hidden hover:scale-110 active:scale-95 transition-all group border-2 border-white/20 flex items-center justify-center mb-safe`}
+          className={`fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[55] w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br ${getMoodGradient(mood)} ${getMoodShadow(mood)} overflow-hidden hover:scale-110 active:scale-95 transition-all group border-2 border-white/20 flex items-center justify-center mb-safe`}
         >
           <MoodFace mood={mood} size={44} />
           {/* Notification Dot */}

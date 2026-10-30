@@ -210,6 +210,7 @@ export const DataProvider = ({ children }) => {
       loading,
       error,
       refreshData,
+      loadRoadmap,
       loadAllRoadmaps,
       selectedGoalId,
       setSelectedGoalId: handleSetSelectedGoal,

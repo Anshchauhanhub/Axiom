@@ -507,19 +507,37 @@ async def onboarding_chat(
             await db.commit()
             logger.info(f"💾 Updated study profile persistent memory for user {user.id}: {updated_profile}")
 
-        # AGENTIC ROADMAP OVERRIDE — if the chat produced a draft roadmap,
-        # re-generate it through the full agentic pipeline (entity detection →
-        # deep web search → grounded generation → verification → YouTube videos).
-        # This prevents the LLM from hallucinating exam syllabi (e.g. GATE DA ≠ Architecture).
+        # AGENTIC ROADMAP OVERRIDE — if the chat produced a draft roadmap or the user
+        # explicitly submitted syllabus resources (PDF/TXT, playlist, website, or preferences form),
+        # generate/re-generate it through the full agentic pipeline with grounded resources.
+        has_resource_submission = bool(
+            req.reference_text
+            or req.playlist_url
+            or req.website_url
+            or "synthesize master roadmap" in clean_user_content.lower()
+        )
+        if has_resource_submission and response_data.get("phase") not in ("draft", "ready"):
+            logger.info("Detected resource/preferences submission; promoting phase to 'draft'")
+            response_data["phase"] = "draft"
+            if not response_data.get("goal_title"):
+                response_data["goal_title"] = (
+                    response_data.get("study_profile_update", {}).get("target_exam")
+                    or user_study_profile.get("target_exam")
+                    or "Master Learning Path"
+                )
+
         if response_data.get("phase") in ("draft", "ready") and response_data.get("goal_title"):
             try:
                 goal_title = response_data["goal_title"]
-                logger.info(f"🔄 Agentic override: regenerating roadmap for '{goal_title}' via pipeline")
+                logger.info(f"🔄 Agentic override: synthesizing roadmap for '{goal_title}' via pipeline with resources")
                 
                 agent_state = await run_goal_agent(
                     user_id=str(user.id),
                     raw_goal=goal_title,
                     clarification_reply="beginner, no specific deadline",
+                    preferred_language=user_study_profile.get("preferred_language"),
+                    target_months=user_study_profile.get("months_remaining"),
+                    daily_hours=user_study_profile.get("study_hours_per_day"),
                     playlist_url=req.playlist_url,
                     website_url=req.website_url,
                     reference_text=sanitize_text(req.reference_text or "") or None,

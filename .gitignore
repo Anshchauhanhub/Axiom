@@ -29,3 +29,4 @@ __pycache__
 .pytest_cache/
 .vercel
 backend/static/
+.agents/

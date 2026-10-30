@@ -74,3 +74,51 @@ async def test_non_youtube_playlist_url_is_not_fetched(monkeypatch):
 
     playlist_fetch.assert_not_awaited()
     assert result["resource_warnings"]
+
+
+@pytest.mark.asyncio
+async def test_detect_entity_skips_ambiguity_clarification_when_reference_text_provided():
+    from services.goal_agent import detect_entity_node
+    # Even if raw_goal has potential candidates, reference_text bypasses clarification
+    state = _agent_state(
+        raw_goal="GATE",
+        reference_text="Detailed Syllabus: Linear Algebra, Probability, Machine Learning"
+    )
+    result = await detect_entity_node(state)
+    assert not result.get("needs_clarification")
+
+
+@pytest.mark.asyncio
+async def test_extract_file_endpoint_text_and_pdf():
+    import io
+    from fastapi import UploadFile
+    from routers.goals import extract_file_endpoint
+    from models import User
+
+    fake_user = User(id="user-123", email="scholar@edxiom.ai")
+
+    # Test plain text extraction
+    txt_file = UploadFile(
+        filename="syllabus.txt",
+        file=io.BytesIO(b"Unit 1: Foundations\nUnit 2: Advanced Topics")
+    )
+    txt_result = await extract_file_endpoint(file=txt_file, user=fake_user)
+    assert "Unit 1: Foundations" in txt_result["text"]
+    assert txt_result["filename"] == "syllabus.txt"
+
+    # Test PDF extraction via pypdf
+    import pypdf
+    writer = pypdf.PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    pdf_bytes_io = io.BytesIO()
+    writer.write(pdf_bytes_io)
+    pdf_bytes_io.seek(0)
+
+    pdf_file = UploadFile(
+        filename="syllabus.pdf",
+        file=pdf_bytes_io
+    )
+    pdf_result = await extract_file_endpoint(file=pdf_file, user=fake_user)
+    assert pdf_result["filename"] == "syllabus.pdf"
+    assert pdf_result["page_count"] == 1
+

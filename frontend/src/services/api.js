@@ -218,8 +218,15 @@ export const deleteArchitectSession = (sessionId) =>
   request('DELETE', `/goals/chat-sessions/${sessionId}`);
 
 // --- Assistant Chat (Edxiom AI) ---
-export const assistantChat = (messages, sessionId = null) =>
-  request('POST', '/goals/chat', { messages, session_id: sessionId, session_type: 'assistant' });
+export const assistantChat = (messages, sessionId = null, resources = {}) =>
+  request('POST', '/goals/chat', {
+    messages,
+    session_id: sessionId,
+    session_type: 'assistant',
+    playlist_url: resources.playlistUrl || null,
+    website_url: resources.websiteUrl || null,
+    reference_text: resources.referenceText || null,
+  });
 
 export const getAssistantSessions = () => request('GET', '/goals/chat-sessions?session_type=assistant');
 

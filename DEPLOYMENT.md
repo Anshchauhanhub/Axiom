@@ -10,13 +10,18 @@ folder.
 Create a new Space and select **Gradio**. Push this repository to the Space, or
 copy/sync the repository contents while preserving the root `app.py`,
 `requirements.txt`, and README metadata. The Space reads the root
-[`README.md`](./README.md) metadata (`sdk: gradio`, `app_file: app.py`); the
-root requirements file installs the Python dependencies from `backend/`.
+[`README.md`](./README.md) metadata (`sdk: gradio`, pinned `sdk_version`, and
+`app_file: app.py`); the root requirements file installs the Python
+dependencies from `backend/`.
 
-The wrapper starts FastAPI on the Space's port 7860, serves a small Gradio
-landing page at the Space root, and serves the existing API at `/api/v1`. If a
-`TELEGRAM_BOT_TOKEN` is configured, it also starts the existing polling worker
-in the same process and stops it when the Space shuts down.
+The Gradio Space runtime starts the wrapper on its assigned port. The wrapper
+serves a small Gradio landing page at the Space root and the existing API at
+`/api/v1`; do not launch a second Uvicorn server from `app.py`. Because Gradio
+is mounted inside FastAPI, the wrapper explicitly reports ZeroGPU startup with
+`spaces.zero.startup()`. The Gradio mount disables SSR to avoid a second
+process binding the Space port. If a `TELEGRAM_BOT_TOKEN` is configured, the
+wrapper also starts the existing polling worker in the same process and stops
+it when the Space shuts down.
 
 Set these as **Space Secrets**, not as values in repository files:
 

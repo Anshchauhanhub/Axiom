@@ -50,7 +50,7 @@ export default function CommandPalette() {
     icon: Sparkles,
     action: () => {
       setSelectedGoalId(g.id);
-      navigate('/study');
+      navigate('/study', { state: { goalId: g.id, openWorkspace: true } });
     },
   }));
 

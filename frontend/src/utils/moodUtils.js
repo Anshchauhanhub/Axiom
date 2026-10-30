@@ -1,24 +1,23 @@
 /**
- * calculateMoodMetrics — canonical getAvatarMood mapping function.
+ * calculateMoodMetrics — evaluates task schedule vs completion status to return
+ * one of three avatar moods:
  *
- * Evaluates timestamp differences between task deadlines and the current
- * completion status, then returns the correct mood level + label.
+ * 1. Normal (mood 3) — simple smile with yellow outline:
+ *    - New user or newly created/active goal
+ *    - Tasks on track or missed < 2 days
+ *    - Completed tasks up to 1 incoming day ahead
  *
- * Mood scale:
- *  1 → Angry       – tasks are severely overdue (≥ 2 days missed, never completed)
- *  2 → Annoyed/Sad – one task is overdue by exactly 1 day
- *  3 → Neutral     – default active state; tasks ongoing and within deadline
- *  4 → Happy       – user completed all of today's tasks on time
- *  5 → Very Happy  – user completed tasks ahead of schedule (future tasks done early)
+ * 2. Ahead of Schedule (mood 5) — smile face with green outline:
+ *    - Completed tasks of incoming 2 or more days ahead
  *
- * Priority order (highest severity wins):
- *   Angry > Annoyed > Very Happy > Happy > Neutral
+ * 3. Angry / Danger (mood 1) — angry ("ranger") face with red outline:
+ *    - Tasks overdue by 2 or more days (skipped daily practice >= 2 days)
  *
  * @param {Array} tasks - Array of task objects from the API.
- *   Each task should have: scheduled_at (ISO string), completed_at (ISO string|null), status (string)
  * @returns {{ mood: number, label: string }}
  */
 export const calculateMoodMetrics = (tasks) => {
+  // New user or no tasks -> Mood 3 (Normal, simple smile with yellow outline)
   if (!tasks || tasks.length === 0) {
     return { mood: 3, label: "On track" };
   }
@@ -27,13 +26,8 @@ export const calculateMoodMetrics = (tasks) => {
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  let isSeverelyOverdue = false;
-  let isOneDayOverdue = false;
-  let isAheadOfSchedule = false;
-
-  let todayHasTasks = false;
-  let todayTotalTasks = 0;
-  let todayDoneTasks = 0;
+  let maxOverdueDays = 0;
+  let maxAheadDays = 0;
 
   tasks.forEach(t => {
     if (!t.scheduled_at) return;
@@ -45,43 +39,39 @@ export const calculateMoodMetrics = (tasks) => {
 
     const isDone = !!(t.completed_at || t.status === 'passed');
     
-    // Difference in milliseconds between today and the scheduled day
+    // Difference in milliseconds between today and scheduled day
+    // diffDays > 0: scheduled in the past
+    // diffDays === 0: scheduled today
+    // diffDays < 0: scheduled in future
     const diffTime = todayStart - scheduledStart;
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
+    // Overdue task from past days
     if (!isDone && diffDays > 0) {
-      if (diffDays >= 2) isSeverelyOverdue = true;
-      else if (diffDays === 1) isOneDayOverdue = true;
+      if (diffDays > maxOverdueDays) {
+        maxOverdueDays = diffDays;
+      }
     }
 
-    if (diffDays === 0) {
-      todayHasTasks = true;
-      todayTotalTasks++;
-      if (isDone) todayDoneTasks++;
-    }
-
-    // Task completed but it was scheduled for a future date
+    // Completed task scheduled for a future incoming date
     if (isDone && diffDays < 0) {
-      isAheadOfSchedule = true;
+      const aheadDays = -diffDays;
+      if (aheadDays > maxAheadDays) {
+        maxAheadDays = aheadDays;
+      }
     }
   });
 
-  // Evaluate final mood state in order of priority (worst to best)
-  if (isSeverelyOverdue) {
+  // Priority 1: User did not complete tasks for 2 or more days -> Angry with red outline
+  if (maxOverdueDays >= 2) {
     return { mood: 1, label: "Multiple days missed" };
   }
-  if (isOneDayOverdue) {
-    return { mood: 2, label: "1 day missed" };
-  }
-  
-  // If no overdue tasks, check positive states
-  if (isAheadOfSchedule) {
+
+  // Priority 2: User completed tasks of incoming 2 or more days -> Smile with green outline
+  if (maxAheadDays >= 2) {
     return { mood: 5, label: "Ahead of schedule" };
   }
-  if (todayHasTasks && todayDoneTasks >= todayTotalTasks && todayTotalTasks > 0) {
-    return { mood: 4, label: "Daily tasks completed" };
-  }
-  
-  // Default active state
+
+  // Priority 3: Normal state (new user, active goal, < 2 days missed, or future <= 1 day) -> Yellow outline
   return { mood: 3, label: "On track" };
 };

@@ -344,21 +344,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ─── Footer ─── */}
-      <footer className="py-12 border-t border-outline-variant/10 bg-[#0e0e10]">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col items-center md:items-start gap-3">
-            <img src="/logo.png" alt="Edxiom" className="h-8 w-auto opacity-80" />
-            <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant/50">Built with ❤️ and AI</span>
-          </div>
-          <div className="flex flex-wrap justify-center gap-6 md:gap-8">
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">GitHub</a>
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">About</a>
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">Privacy</a>
-            <a href="#" className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all">Terms</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

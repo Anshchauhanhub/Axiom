@@ -4,8 +4,8 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
   if (!roadmap || !roadmap.tasks) return null;
 
   return (
-    <div className={`w-full lg:w-80 flex-col gap-6 shrink-0 transition-all duration-500 ${showNotes ? 'hidden' : 'hidden lg:flex'}`}>
-      <div className="bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 shadow-2xl">
+    <div className={`w-full lg:w-80 flex-col gap-6 shrink-0 transition-all duration-500 ${showNotes ? 'hidden' : 'flex'}`}>
+      <div className="bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 shadow-2xl sm:p-6">
         <div className="flex items-center gap-3 mb-6 px-2">
           <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             hub
@@ -15,7 +15,7 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
           </span>
         </div>
         
-        <div className="space-y-3 relative">
+        <div className="relative flex gap-3 overflow-x-auto pb-2 lg:max-h-[calc(100vh-14rem)] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0">
           {roadmap.tasks.map((task, idx) => {
             const isActive = activeTask?.id === task.id;
             const isLocked = task.status === 'locked';
@@ -25,7 +25,7 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
               <button
                 key={task.id}
                 onClick={() => handleSelectTask(task)}
-                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 text-left ${
+                className={`w-[min(82vw,18rem)] shrink-0 flex items-center gap-4 p-4 rounded-2xl transition-all relative z-10 text-left lg:w-full ${
                   isActive 
                     ? 'bg-gradient-to-r from-primary/15 to-primary/5 border-2 border-primary/60 shadow-[0_0_20px_rgba(253,184,19,0.15)] scale-[1.02]' 
                     : isPassed
@@ -61,4 +61,3 @@ const StudySidebar = ({ showNotes, roadmap, activeTask, handleSelectTask }) => {
 };
 
 export default StudySidebar;
-

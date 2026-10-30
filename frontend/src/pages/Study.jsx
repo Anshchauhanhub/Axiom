@@ -11,7 +11,7 @@ import CopyButton from '../components/CopyButton';
 import QuizReview from '../components/QuizReview';
 import AchievementToast from '../components/AchievementToast';
 import ProgressShareCard from '../components/ProgressShareCard';
-import { Timer, Play as PlayIcon, Pause as PauseIcon, RotateCcw, Share2, Eye } from 'lucide-react';
+import { Share2, Eye } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -26,14 +26,16 @@ import StudyWorkbenchMain from '../components/study/StudyWorkbenchMain';
 import { getCategoryForGoal } from '../utils/categoryUtils';
 const Study = () => {
   const { user, refreshUser } = useAuth();
-  const { goals, roadmap, loading: dataLoading, refreshData, selectedGoalId, setSelectedGoalId } = useData();
+  const { goals, roadmap, allRoadmaps, loading: dataLoading, refreshData, loadRoadmap, selectedGoalId, setSelectedGoalId, toggleGoalOptimistic } = useData();
   const navigate = useNavigate();
   const location = useLocation();
-  const [phase, setPhase] = useState('loading'); // loading, select, learning, quiz, result
+  const hasWorkspaceIntent = Boolean(location.state?.openWorkspace || location.state?.goalId);
+  const [phase, setPhase] = useState(() => hasWorkspaceIntent ? 'loading' : 'paths'); // loading, paths, select, learning, quiz, result
   const [viewMode, setViewMode] = useState('task'); // 'task' or 'roadmap'
   const [activeTask, setActiveTask] = useState(null);
   const activeTaskRef = useRef(false);
   const [activeGoal, setActiveGoal] = useState(null);
+  const [pathActionId, setPathActionId] = useState(null);
   const [quizData, setQuizData] = useState(null);
   const [quizToken, setQuizToken] = useState(null);
   const [partTitle, setPartTitle] = useState('');
@@ -60,17 +62,21 @@ const Study = () => {
   const [achievement, setAchievement] = useState(null);
   const [showShareCard, setShowShareCard] = useState(false);
 
-  // Pomodoro Timer State
-  const [pomoSecondsLeft, setPomoSecondsLeft] = useState(25 * 60);
-  const [pomoIsActive, setPomoIsActive] = useState(false);
-  const [pomoMode, setPomoMode] = useState('work'); // 'work' or 'break'
-
   const timerRef = useRef(null);
-  const pomoTimerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const editorRef = useRef(null);
   const initialNotesRef = useRef(null);
   const mainRef = useRef(null);
+
+  // Sync navigation state intent when location changes
+  useEffect(() => {
+    if (location.state?.openWorkspace || location.state?.goalId) {
+      if (location.state.goalId && String(location.state.goalId) !== String(selectedGoalId)) {
+        setSelectedGoalId(location.state.goalId);
+      }
+      setPhase(prev => (prev === 'learning' || prev === 'quiz' || prev === 'result') ? prev : 'select');
+    }
+  }, [location.key, location.state, selectedGoalId, setSelectedGoalId]);
 
   // Auto-scroll main container & window to top on phase, part, or task changes
   useEffect(() => {
@@ -79,25 +85,6 @@ const Study = () => {
     }
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [phase, activePartId, activeTask?.id]);
-
-  // Pomodoro countdown timer
-  useEffect(() => {
-    if (pomoIsActive) {
-      pomoTimerRef.current = setInterval(() => {
-        setPomoSecondsLeft(prev => {
-          if (prev <= 1) {
-            const nextMode = pomoMode === 'work' ? 'break' : 'work';
-            setPomoMode(nextMode);
-            return nextMode === 'work' ? 25 * 60 : 5 * 60;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(pomoTimerRef.current);
-    }
-    return () => clearInterval(pomoTimerRef.current);
-  }, [pomoIsActive, pomoMode]);
 
   // Clean up study session on unmount
   useEffect(() => {
@@ -116,71 +103,58 @@ const Study = () => {
       return;
     }
 
-    if (roadmap && goals && goals.length > 0) {
-      let foundTask = null;
-      let foundGoal = null;
+    if (goals && goals.length > 0) {
+      const targetGoalId = location.state?.goalId ?? selectedGoalId;
+      const primaryGoal = (targetGoalId != null ? goals.find(g => String(g.id) === String(targetGoalId)) : null)
+        || goals.find(g => g.status === 'active')
+        || goals[0];
 
-      const targetGoalId = location.state?.goalId || selectedGoalId;
-      const primaryGoal = (targetGoalId ? goals.find(g => g.id === targetGoalId) : null) || goals.find(g => g.status === 'active') || goals[0];
-      
-      // Wait for the roadmap to sync with the selected goal before processing
-      if (roadmap.goal && primaryGoal && roadmap.goal.id !== primaryGoal.id) {
+      if (!primaryGoal) return;
+      setActiveGoal(primaryGoal);
+
+      const targetRoadmap = allRoadmaps?.[primaryGoal.id]
+        || (roadmap?.goal?.id && String(roadmap.goal.id) === String(primaryGoal.id) ? roadmap : null);
+
+      if (!targetRoadmap) {
+        if (!dataLoading && loadRoadmap && (!roadmap || String(roadmap.goal?.id) !== String(primaryGoal.id))) {
+          loadRoadmap(primaryGoal.id);
+        }
         return;
       }
-      
-      if (roadmap.tasks) {
-        for (const task of roadmap.tasks) {
-          if (task.status === 'active') {
-            foundTask = task;
-            foundGoal = primaryGoal;
-            break; 
-          }
-          if (task.status === 'locked' && !foundTask) {
-            foundTask = task;
-            foundGoal = primaryGoal;
-          }
+
+      if (targetRoadmap.tasks && targetRoadmap.tasks.length > 0) {
+        const requestedTaskId = location.state?.taskId;
+        let foundTask = requestedTaskId
+          ? targetRoadmap.tasks.find(task => String(task.id) === String(requestedTaskId)) || null
+          : null;
+
+        if (!foundTask) {
+          foundTask = targetRoadmap.tasks.find(task => task.parts?.some(part => part.status === 'active'))
+            || targetRoadmap.tasks.find(task => task.status === 'active')
+            || targetRoadmap.tasks.find(task => task.status !== 'passed')
+            || targetRoadmap.tasks[0];
+        }
+
+        if (foundTask) {
+          setActiveTask(foundTask);
         }
       }
 
       const prevGoalId = activeGoal?.id;
-      
-      // Keep activeTask in sync with the latest roadmap data or select the natural progress task
-      if (roadmap.tasks && roadmap.tasks.length > 0) {
-        if (!activeTaskRef.current) {
-          setActiveTask(foundTask);
-          activeTaskRef.current = true;
-        } else if (activeTask) {
-          const freshTask = roadmap.tasks.find(t => t.id === activeTask.id);
-          // If the current activeTask is completed (passed), automatically switch to the newly unlocked active task
-          if (freshTask && freshTask.status !== 'passed') {
-            setActiveTask(freshTask);
-          } else {
-            setActiveTask(foundTask || freshTask);
-          }
-        }
-      }
-      setActiveGoal(foundGoal);
-      
-      // Update notes and editor content ONLY if the goal has changed
-      if (foundGoal && foundGoal.id !== prevGoalId) {
-        // Migration: Ensure notes is at least an empty array or the current goal's notes
-        const newNotes = foundGoal.notes || [];
-        setNotes(newNotes); 
+      if (primaryGoal && primaryGoal.id !== prevGoalId) {
+        const newNotes = primaryGoal.notes || [];
+        setNotes(newNotes);
         initialNotesRef.current = JSON.stringify(newNotes);
       }
-      
-      // Fix: Only reset to 'select' if we are in the initial loading state.
-      if (phase === 'loading') {
-        setPhase('select');
-      }
-    } else if (!dataLoading && goals && goals.length > 0 && !roadmap) {
-      // If we finished loading data but roadmap is still null (e.g. API error),
-      // we must break out of the loading phase so the user isn't stuck forever.
-      if (phase === 'loading') {
-        setPhase('select');
+
+      const shouldOpenWorkspace = Boolean(location.state?.openWorkspace || location.state?.goalId);
+      if (shouldOpenWorkspace) {
+        setPhase(prev => (prev === 'learning' || prev === 'quiz' || prev === 'result') ? prev : 'select');
+      } else if (phase === 'loading') {
+        setPhase('paths');
       }
     }
-  }, [user, dataLoading, roadmap, goals, navigate, phase, activeGoal?.id, selectedGoalId, location.state?.goalId]);
+  }, [user, dataLoading, roadmap, allRoadmaps, goals, navigate, selectedGoalId, location.key, location.state, loadRoadmap, phase, activeGoal?.id]);
 
   // Auto-open notebook when navigating from Dashboard Neural Notebook section
   useEffect(() => {
@@ -266,6 +240,24 @@ const Study = () => {
   const handleSelectTask = (task) => {
     setActiveTask(task);
     setViewMode('task');
+  };
+
+  const handleOpenGoal = async (goal) => {
+    setError('');
+    setPathActionId(goal.id);
+    try {
+      if (goal.status !== 'active') {
+        await toggleGoalOptimistic(goal.id);
+      }
+      setSelectedGoalId(goal.id);
+      setActiveGoal(goal);
+      if (loadRoadmap) await loadRoadmap(goal.id);
+      setPhase('select');
+    } catch (e) {
+      setError(e.message || 'Could not activate this learning path.');
+    } finally {
+      setPathActionId(null);
+    }
   };
 
   const handleStartQuiz = async () => {
@@ -693,12 +685,16 @@ const Study = () => {
     </button>
   );
 
+  const activeRoadmap = activeGoal
+    ? allRoadmaps?.[activeGoal.id] || (roadmap?.goal?.id === activeGoal.id ? roadmap : null)
+    : null;
+
   const renderWorkbench = () => {
     return (
       <div className="flex flex-col lg:flex-row gap-8 h-full w-full mx-auto pb-24 animate-in slide-in-from-bottom-5 duration-700">
         <StudySidebar 
           showNotes={showNotes}
-          roadmap={roadmap}
+          roadmap={activeRoadmap}
           activeTask={activeTask}
           handleSelectTask={handleSelectTask}
         />
@@ -735,136 +731,164 @@ const Study = () => {
         </div>
       </div>
     );
-  } else if (phase === 'select') {
-    const passedParts = roadmap?.tasks?.flatMap(t => t.parts).filter(p => p.status === 'passed').length || 0;
-    const totalParts = roadmap?.tasks?.flatMap(t => t.parts).length || 0;
-    const progressPercent = totalParts > 0 ? Math.round((passedParts / totalParts) * 100) : 0;
-    const activeCategory = getCategoryForGoal(activeGoal?.title, activeGoal?.settings?.category);
-    const activePart = activeTask?.parts?.find(p => p.status === 'active') || activeTask?.parts?.find(p => p.status !== 'locked') || activeTask?.parts?.[0];
+  } else if (phase === 'paths') {
+    const activePaths = goals.filter(goal => goal.status === 'active');
+    const inactivePaths = goals.filter(goal => goal.status !== 'active');
+    const renderPathCard = (goal, isActive) => {
+      const pathRoadmap = allRoadmaps?.[goal.id] || (goal.id === selectedGoalId ? roadmap : null);
+      const parts = pathRoadmap?.tasks?.flatMap(task => task.parts || []) || [];
+      const completedParts = parts.filter(part => part.status === 'passed').length;
+      const progress = parts.length ? Math.round((completedParts / parts.length) * 100) : 0;
+      const category = getCategoryForGoal(goal.title, goal.settings?.category);
+      const isBusy = pathActionId === goal.id;
 
-    const activeGoalsList = goals.filter(g => g.status === 'active');
-    
-    const handlePrevGoal = (e) => {
-      e?.stopPropagation();
-      if (activeGoalsList.length <= 1) return;
-      const currentIndex = activeGoalsList.findIndex(g => g.id === activeGoal?.id);
-      const prevIndex = (currentIndex - 1 + activeGoalsList.length) % activeGoalsList.length;
-      const prevGoal = activeGoalsList[prevIndex];
-      if (prevGoal) {
-        setSelectedGoalId(prevGoal.id);
-        setPhase('loading');
-        activeTaskRef.current = false;
-      }
-    };
+      return (
+        <button
+          key={goal.id}
+          type="button"
+          onClick={() => handleOpenGoal(goal)}
+          disabled={isBusy}
+          className={`group relative w-full overflow-hidden rounded-[1.5rem] border p-5 text-left shadow-[0_16px_45px_rgba(0,0,0,0.28)] transition-all duration-300 sm:p-6 ${
+            isActive
+              ? 'border-white/10 bg-[#1d1e22] hover:border-primary/40 hover:bg-[#232429]'
+              : 'border-white/5 bg-[#111216] opacity-65 hover:opacity-90'
+          } disabled:cursor-wait`}
+          style={{
+            backgroundImage: isActive
+              ? 'radial-gradient(ellipse at 92% 10%, rgba(253,184,19,0.09), transparent 42%), linear-gradient(115deg, #1a1b20, #24252a)'
+              : 'linear-gradient(115deg, #15161a, #1d1e22)',
+          }}
+        >
+          <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <span className={`mb-3 inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[9px] font-label font-black uppercase tracking-[0.16em] ${
+                isActive
+                  ? 'border-primary/20 bg-primary/10 text-primary'
+                  : 'border-white/10 bg-white/5 text-white/40'
+              }`}>
+                <span className="material-symbols-outlined text-xs">{category.icon}</span>
+                {category.name}
+              </span>
+              <h2 className={`text-lg font-black uppercase leading-tight tracking-tight sm:text-xl ${
+                isActive ? 'text-white' : 'text-white/60'
+              }`}>
+                {goal.title}
+              </h2>
+              <p className={`mt-2 max-w-2xl text-xs leading-relaxed sm:text-sm ${
+                isActive ? 'text-white/45' : 'text-white/35'
+              }`}>
+                {goal.description || category.tagline}
+              </p>
+            </div>
 
-    const handleNextGoal = (e) => {
-      e?.stopPropagation();
-      if (activeGoalsList.length <= 1) return;
-      const currentIndex = activeGoalsList.findIndex(g => g.id === activeGoal?.id);
-      const nextIndex = (currentIndex + 1) % activeGoalsList.length;
-      const nextGoal = activeGoalsList[nextIndex];
-      if (nextGoal) {
-        setSelectedGoalId(nextGoal.id);
-        setPhase('loading');
-        activeTaskRef.current = false;
-      }
+            <div className="flex items-center justify-between gap-5 sm:justify-end">
+              <span className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-3 text-[10px] font-label font-black uppercase tracking-wider transition-all ${
+                isActive
+                  ? 'bg-primary text-black group-hover:bg-yellow-400'
+                  : 'border border-white/25 text-white/80 group-hover:border-primary/50 group-hover:text-primary'
+              }`}>
+                {isBusy ? 'Opening...' : isActive ? 'Start Learning' : 'Activate Path'}
+                <span className="material-symbols-outlined text-base">
+                  {isBusy ? 'progress_activity' : isActive ? 'arrow_forward' : 'bolt'}
+                </span>
+              </span>
+
+              <div
+                className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 ${
+                  isActive ? 'border-white/20' : 'border-white/10'
+                }`}
+                aria-label={`${progress}% complete`}
+              >
+                <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" className="text-white/10" strokeWidth="3" />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="20"
+                    fill="none"
+                    stroke={isActive ? '#fdb813' : '#8b8b91'}
+                    strokeWidth="3"
+                    strokeDasharray={`${(progress / 100) * 125.66} 125.66`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className="text-[10px] font-bold text-white/80">{progress}%</span>
+              </div>
+            </div>
+          </div>
+        </button>
+      );
     };
 
     phaseContent = (
-      <div className="animate-in fade-in duration-1000 max-w-6xl mx-auto w-full space-y-8">
-        {/* Goal Hero Banner Card */}
-        <header className="relative">
-          {/* Side Navigation Arrow Buttons */}
-          {activeGoalsList.length > 1 && (
-            <>
-              <button 
-                onClick={handlePrevGoal}
-                className="absolute left-2 sm:-left-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#121216]/90 backdrop-blur-md border border-white/20 text-white hover:bg-primary hover:text-black hover:border-primary transition-all duration-300 shadow-2xl flex items-center justify-center z-30 group/arrow active:scale-90"
-                title="Previous Goal"
-              >
-                <span className="material-symbols-outlined text-2xl group-hover/arrow:-translate-x-0.5 transition-transform">
-                  chevron_left
-                </span>
-              </button>
-
-              <button 
-                onClick={handleNextGoal}
-                className="absolute right-2 sm:-right-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-[#121216]/90 backdrop-blur-md border border-white/20 text-white hover:bg-primary hover:text-black hover:border-primary transition-all duration-300 shadow-2xl flex items-center justify-center z-30 group/arrow active:scale-90"
-                title="Next Goal"
-              >
-                <span className="material-symbols-outlined text-2xl group-hover/arrow:translate-x-0.5 transition-transform">
-                  chevron_right
-                </span>
-              </button>
-            </>
-          )}
-
-          <div className="relative bg-gradient-to-r from-[#0c0c0e] via-[#141419] to-[#0c0c0e] border border-white/10 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl overflow-hidden group">
-            {/* Background Glow */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-              {/* Left Column: Text & Action */}
-              <div className="lg:col-span-7 space-y-5 text-left">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-label font-black uppercase tracking-[0.3em]">
-                  <span className="material-symbols-outlined text-sm">{activeCategory.icon}</span>
-                  {activeCategory.name}
-                </div>
-
-                <h2 
-                  className="text-3xl sm:text-5xl font-black font-headline text-white uppercase tracking-tight leading-none"
-                >
-                  {activeGoal?.title}
-                </h2>
-
-                <p className="text-sm sm:text-base text-white/70 font-light leading-relaxed max-w-xl">
-                  {activeCategory.tagline}
-                </p>
-
-                {activePart && (
-                  <div className="pt-2">
-                    <button
-                      onClick={() => handleStartLearning(activePart.id, activePart.title)}
-                      className="group/btn inline-flex items-center gap-4 px-8 py-4 bg-primary text-black font-headline font-black text-sm uppercase tracking-wider rounded-full shadow-[0_0_40px_rgba(253,184,19,0.3)] hover:bg-yellow-400 active:scale-95 transition-all duration-300"
-                    >
-                      Start Learning
-                      <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center text-primary group-hover/btn:translate-x-1 transition-transform">
-                        <span className="material-symbols-outlined text-base">arrow_forward</span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Clean 3D Category Visual Artwork */}
-              <div className="lg:col-span-5 flex justify-center lg:justify-end">
-                <div className="relative w-full max-w-xs sm:max-w-sm flex items-center justify-center p-2">
-                  <img 
-                    src={activeCategory.image} 
-                    alt={activeCategory.name}
-                    className="w-full h-auto max-h-72 object-contain rounded-2xl drop-shadow-[0_20px_35px_rgba(0,0,0,0.8)] transition-transform duration-700 hover:scale-105" 
-                  />
-                </div>
-              </div>
+      <div className="relative mx-auto min-h-[70vh] w-full max-w-5xl space-y-8 overflow-hidden px-1 py-6 animate-in fade-in duration-700">
+        <div className="pointer-events-none absolute -left-24 top-0 h-80 w-80 rounded-full bg-primary/5 blur-[110px]" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-indigo-500/5 blur-[120px]" />
+        <section className="relative z-10 space-y-4">
+          <div className="flex items-center gap-3 px-1">
+            <span className="h-6 w-1 rounded-full bg-primary shadow-[0_0_14px_rgba(253,184,19,0.5)]" />
+            <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">Active Paths</h1>
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+              {activePaths.length} Active
+            </span>
+          </div>
+          {error && (
+            <div role="alert" className="rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
+              {error}
             </div>
+          )}
+          {activePaths.length ? (
+            <div className="space-y-4">{activePaths.map(goal => renderPathCard(goal, true))}</div>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-white/45">
+              No active learning paths yet. Activate one below to continue.
+            </div>
+          )}
+        </section>
+
+        {inactivePaths.length > 0 && (
+          <section className="relative z-10 space-y-3 pt-2">
+            <h2 className="px-1 text-sm font-medium tracking-wide text-white/45">Inactive Paths</h2>
+            <div className="space-y-4">{inactivePaths.map(goal => renderPathCard(goal, false))}</div>
+          </section>
+        )}
+      </div>
+    );
+  } else if (phase === 'select') {
+    phaseContent = (
+      <div className="relative mx-auto min-h-[70vh] w-full max-w-7xl space-y-6 overflow-hidden py-4 animate-in fade-in duration-500">
+        <div className="pointer-events-none absolute -right-24 -top-20 h-96 w-96 rounded-full bg-primary/5 blur-[120px]" />
+        <header className="relative z-10 flex items-center gap-4 border-b border-white/10 pb-5">
+          <button
+            type="button"
+            onClick={() => {
+              setError('');
+              setPhase('paths');
+            }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition hover:border-primary/40 hover:text-primary"
+            aria-label="Back to paths"
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
+              {activeGoal?.title || 'Learning Path'}
+            </h1>
           </div>
         </header>
 
         {error && (
-          <div className="mb-10 p-6 bg-error/5 border border-error/20 rounded-3xl max-w-2xl mx-auto backdrop-blur-md animate-in slide-in-from-top-4">
-             <div className="flex items-center gap-4 justify-center">
-                <span className="material-symbols-outlined text-error">warning</span>
-                <p className="text-error text-[10px] font-label font-black text-center tracking-[0.2em] uppercase">{error}</p>
-             </div>
+          <div role="alert" className="relative z-10 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
+            {error}
           </div>
         )}
 
-        {!activeTask && !roadmap ? (
-          <div className="text-center py-20 bg-surface-container-low/30 rounded-3xl border border-outline-variant/10 text-on-surface-variant/40 italic font-label text-sm tracking-widest uppercase">
+        {!activeTask && !activeRoadmap ? (
+          <div className="relative z-10 rounded-3xl border border-white/10 bg-white/[0.03] py-20 text-center text-sm uppercase tracking-widest text-white/40">
             Calibrating mastery protocols...
           </div>
         ) : (
-          renderWorkbench()
+          <div className="relative z-10">{renderWorkbench()}</div>
         )}
       </div>
     );
@@ -884,34 +908,6 @@ const Study = () => {
             <h2 className="text-3xl sm:text-5xl font-black font-headline text-on-surface uppercase tracking-tighter leading-none mt-2">{partTitle}</h2>
           </div>
           <div className="flex items-center gap-4">
-            {/* Built-in Pomodoro Focus Timer */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/15 backdrop-blur-md">
-              <Timer size={14} className={pomoIsActive ? 'text-primary animate-pulse' : 'text-on-surface-variant'} />
-              <span className="font-mono text-xs font-bold text-on-surface">
-                {String(Math.floor(pomoSecondsLeft / 60)).padStart(2, '0')}:{String(pomoSecondsLeft % 60).padStart(2, '0')}
-              </span>
-              <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${pomoMode === 'work' ? 'bg-primary/20 text-primary' : 'bg-green-500/20 text-green-400'}`}>
-                {pomoMode}
-              </span>
-              <button
-                onClick={() => setPomoIsActive(!pomoIsActive)}
-                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
-                title={pomoIsActive ? 'Pause' : 'Start Focus Timer'}
-              >
-                {pomoIsActive ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
-              </button>
-              <button
-                onClick={() => {
-                  setPomoIsActive(false);
-                  setPomoSecondsLeft(pomoMode === 'work' ? 25 * 60 : 5 * 60);
-                }}
-                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
-                title="Reset Timer"
-              >
-                <RotateCcw size={12} />
-              </button>
-            </div>
-
             <button 
               onClick={() => {
                 if (studySessionId) {

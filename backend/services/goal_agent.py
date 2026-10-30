@@ -364,9 +364,9 @@ async def detect_entity_node(state: GoalState) -> GoalState:
         state["metrics"]["detect_entity"] = round((time.perf_counter() - t0) * 1000, 2)
         return state
 
-    # 2. Ambiguity resolution
+    # 2. Ambiguity resolution (skip if user already provided source syllabus or playlist)
     if not res.matched and res.candidates and res.confidence >= 50.0:
-        if state.get("conversation_turns", 0) < 3:
+        if state.get("conversation_turns", 0) < 3 and not state.get("reference_text") and not state.get("playlist_url"):
             state["needs_clarification"] = True
             state["clarification_question"] = (
                 f"Did you mean one of these specific exams?\n" +
@@ -556,6 +556,24 @@ async def fetch_entity_context_node(state: GoalState) -> GoalState:
                 state["resource_warnings"].append(warning)
                 logger.warning(f"[{state['run_id']}] {warning}: {e}")
 
+    if website_url and website_url != playlist_url:
+        try:
+            async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}, follow_redirects=True, timeout=6.0) as client:
+                web_resp = await client.get(website_url)
+                if web_resp.status_code == 200:
+                    html_text = web_resp.text
+                    clean_html = re.sub(r'<script.*?</script>', '', html_text, flags=re.DOTALL | re.IGNORECASE)
+                    clean_html = re.sub(r'<style.*?</style>', '', clean_html, flags=re.DOTALL | re.IGNORECASE)
+                    text_content = re.sub(r'<[^>]+>', ' ', clean_html)
+                    text_content = re.sub(r'\s+', ' ', text_content).strip()
+                    if len(text_content) > 60:
+                        context_parts.append(
+                            f"User-provided Website / Article Resource ({website_url}):\n{text_content[:15000]}"
+                        )
+                        citations.add(website_url)
+        except Exception as e:
+            logger.warning(f"[{state['run_id']}] Direct website fetch failed for {website_url}: {e}")
+
     state["realtime_context"] = "\n\n".join(context_parts) or None
 
     state["metrics"]["research"] = round((time.perf_counter() - t0) * 1000, 2)
@@ -733,8 +751,8 @@ async def verify_syllabus_node(state: GoalState) -> GoalState:
         return state
 
     context = state.get("realtime_context") or ""
-    if not context or not state.get("detected_entity"):
-        # Generic skill without scraped entity syllabus -> passes directly
+    if not context or not state.get("detected_entity") or state.get("reference_text") or state.get("playlist_url"):
+        # Generic skill without scraped entity syllabus or explicit user document/playlist -> passes directly
         state["verified_syllabus"] = draft
         state["verification_passed"] = True
         state["metrics"]["verify"] = round((time.perf_counter() - t0) * 1000, 2)

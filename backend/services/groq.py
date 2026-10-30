@@ -61,12 +61,14 @@ async def generate_exam_roadmap_structured(
         system_prompt = (
             "You are Edxiom AI, a high-accountability learning coach. "
             "Build a structured, exhaustive, subject-grounded learning roadmap based strictly on the provided clean context. "
+            "If the context includes an uploaded document, study syllabus (PDF/TXT), or YouTube playlist, treat it as the primary authoritative source material: "
+            "faithfully extract and structure all modules and core topics directly reflecting those chapters, sections, and topics. "
             "Ensure modules have core topics and recommended video resources with satisfaction scores."
         )
         user_prompt = (
             f"Target Goal/Entity: {goal_title}\n\n"
             f"Verified Clean Context:\n{clean_context}\n\n"
-            "Generate the complete ExamRoadmap structure:"
+            "Analyze the source context and generate the complete structured ExamRoadmap:"
         )
 
         roadmap: ExamRoadmap = await client.chat.completions.create(
@@ -632,12 +634,13 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
         "     b. Set phase: 'syllabus_review'.\n"
         "     c. Set draft_roadmap: null.\n"
         "\n"
-        "4. **Phase: draft** (Schedule Submitted -> Generate Master Roadmap)\n"
-        "   - Trigger: User submits schedule preferences form (contains timeline/hours like '6m', '2 hrs/day', 'Synthesize Master Roadmap').\n"
+        "4. **Phase: draft** (Schedule / Resource Submission -> Generate Master Roadmap)\n"
+        "   - Trigger: User submits schedule preferences or resources (contains 'Synthesize Master Roadmap', timeline like '6m' or 'months', hours like '2 hrs/day', or provides an uploaded study syllabus / document, YouTube playlist, or website URL).\n"
         "   - Action:\n"
         "     a. Set phase: 'draft'.\n"
-        "     b. Set goal_title to the specific subject/skill name (e.g. 'Python Data Structures').\n"
-        "     c. Provide a clean 10-12 module breakdown in `draft_roadmap`.\n"
+        "     b. Set goal_title to the specific subject/skill name (e.g. 'GATE DA', 'Python Data Structures').\n"
+        "     c. CRITICAL RESOURCE ANALYSIS: If the user provided an uploaded syllabus document (PDF/TXT), YouTube playlist, or website resource, thoroughly analyze it! Architect modules and tasks directly matching the uploaded syllabus chapters, units, topics, and video sequences.\n"
+        "     d. Provide a clean 8-15 module breakdown in `draft_roadmap` with comprehensive topics in `parts`.\n"
         "\n"
         "5. **Phase: ready** — User confirms draft and starts.\n"
         "\n"

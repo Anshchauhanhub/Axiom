@@ -29,22 +29,18 @@ const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" 
     setSubmitError('');
     
     // Construct structured text response for the AI assistant
-    let summaryText = `Here are my preferences for ${targetExam}:
-- Target Timeline: ${months} months
-- Daily Study Hours: ${dailyHours} hours/day
+    let summaryText = `Synthesize Master Roadmap for ${targetExam}:
+- Target Timeline: ${months} months (${months}m)
+- Daily Study Hours: ${dailyHours} hrs/day
 - Preferred Language: ${language}`;
 
     if (hasPlaylist && playlistUrl.trim()) {
-      summaryText += `\n- YouTube Playlist/Channel: ${playlistUrl.trim()}`;
-    } else {
-      summaryText += `\n- YouTube Playlist: Please find the best playlists online for me.`;
+      summaryText += `\n- YouTube Playlist / Channel: ${playlistUrl.trim()}`;
     }
 
     if (websiteUrl.trim()) {
-      summaryText += `\n- Additional Website Resource: ${websiteUrl.trim()}`;
+      summaryText += `\n- Additional Website / Article Resource: ${websiteUrl.trim()}`;
     }
-
-    summaryText += `\nPlease synthesize the best web-derived roadmap based on these preferences!`;
 
     try {
       const referenceText = selectedFile
@@ -54,8 +50,10 @@ const InteractiveDiscoveryCard = ({ onSubmitPreferences, targetExam = "GATE DA" 
         throw new Error(`Could not extract readable text from ${selectedFile.name}.`);
       }
       if (selectedFile) {
-        summaryText += `\n- Uploaded Reference Document: ${selectedFile.name} (contents included as roadmap source)`;
+        summaryText += `\n- Uploaded Study Syllabus / Document: ${selectedFile.name} (analyzed as primary roadmap source)`;
       }
+
+      summaryText += `\nPlease analyze these resources and synthesize my master roadmap with well-defined modules and tasks!`;
 
       await onSubmitPreferences({
         months,

@@ -5,8 +5,8 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import spaces
 import gradio as gr
-import uvicorn
 
 BACKEND_DIR = Path(__file__).resolve().parent / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
@@ -16,6 +16,11 @@ from main import lifespan as backend_lifespan
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("edxiom.space")
+
+
+@spaces.GPU(duration=10)
+def zero_gpu_check():
+    return "ZeroGPU integration is available."
 
 
 @asynccontextmanager
@@ -53,10 +58,14 @@ async def space_lifespan(application):
 
 api_app.router.lifespan_context = space_lifespan
 
-# The backend's root route returns JSON; let the Gradio landing page own `/`.
+# The frontend is served by Vercel; keep the Space root dedicated to Gradio.
 api_app.router.routes[:] = [
     route for route in api_app.router.routes
     if getattr(route, "path", None) != "/"
+    and not (
+        getattr(route, "path", None) == "/{full_path:path}"
+        and getattr(route, "name", None) == "serve_spa"
+    )
 ]
 
 with gr.Blocks(title="Edxiom API") as demo:
@@ -70,8 +79,15 @@ with gr.Blocks(title="Edxiom API") as demo:
         "- Versioned API: `/api/v1`\n"
         "- OpenAPI docs: `/docs` (development mode only)"
     )
+    zero_gpu_button = gr.Button("Check ZeroGPU")
+    zero_gpu_result = gr.Textbox(label="ZeroGPU status", interactive=False)
+    zero_gpu_button.click(fn=zero_gpu_check, outputs=zero_gpu_result)
 
-app = gr.mount_gradio_app(api_app, demo, path="/")
+demo.queue()
+app = gr.mount_gradio_app(api_app, demo, path="/", ssr_mode=False)
+spaces.zero.startup()
 
 if __name__ == "__main__":
+    import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "7860")))
