@@ -2,7 +2,8 @@ import re
 import uuid
 from datetime import datetime
 from typing import Optional, Union
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ValidationInfo
+from security_rules import validate_email_security, validate_password_security
 
 
 # --- Auth ---
@@ -13,6 +14,11 @@ class RegisterRequest(BaseModel):
     timezone: str = "Asia/Kolkata"
     study_schedule: list[str] = ["12:00", "18:00"]
 
+    @field_validator("email")
+    @classmethod
+    def validate_email_domain(cls, v: EmailStr) -> str:
+        return validate_email_security(str(v))
+
     @field_validator("account_type")
     @classmethod
     def validate_account_type(cls, v: str) -> str:
@@ -22,16 +28,9 @@ class RegisterRequest(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"[0-9]", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
+    def validate_password_strength(cls, v: str, info: ValidationInfo) -> str:
+        email = info.data.get("email") if info.data else None
+        return validate_password_security(v, email=str(email) if email else None)
 
 
 class LoginRequest(BaseModel):
@@ -58,15 +57,7 @@ class ResetPasswordRequest(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"[0-9]", v):
-            raise ValueError("Password must contain at least one digit")
-        return v
+        return validate_password_security(v)
 
 
 class GoogleLoginRequest(BaseModel):

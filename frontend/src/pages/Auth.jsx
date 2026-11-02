@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { login, register, validatePassword, forgotPassword, resetPassword, googleLogin } from '../services/api';
+import { login, register, validatePassword, validateEmailDomain, forgotPassword, resetPassword, googleLogin } from '../services/api';
 import { useGoogleLogin } from '@react-oauth/google';
 import { 
   ShieldCheck, Mail, Lock, ArrowRight, 
@@ -29,6 +29,7 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [pwRequirements, setPwRequirements] = useState([]);
+  const [emailDomainWarning, setEmailDomainWarning] = useState('');
 
   // Particle background logic
   const canvasRef = useRef(null);
@@ -236,12 +237,23 @@ const Auth = () => {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (mode === 'register') {
+                        setEmailDomainWarning(validateEmailDomain(e.target.value) || '');
+                      }
+                    }}
                     className="w-full bg-surface-container-lowest/50 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-on-surface font-label text-sm focus:ring-2 focus:ring-primary/40 focus:border-primary/20 outline-none transition-all placeholder:text-white/10"
                     placeholder={accountType === 'creator' ? 'creator@academy.com' : 'name@nexus.com'}
                     required
                   />
                 </div>
+                {mode === 'register' && emailDomainWarning && (
+                  <div className="flex items-center gap-2 mt-1 px-2 py-1.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                    <span className="material-symbols-outlined text-yellow-400 text-sm">warning</span>
+                    <p className="text-[10px] font-label font-bold text-yellow-400 uppercase tracking-widest">{emailDomainWarning}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -282,6 +294,7 @@ const Auth = () => {
                      <RequirementItem text="Uppercase" met={/[A-Z]/.test(password)} />
                      <RequirementItem text="Lowercase" met={/[a-z]/.test(password)} />
                      <RequirementItem text="Digit" met={/[0-9]/.test(password)} />
+                     <RequirementItem text="Not Common" met={password.length > 0 && !pwRequirements.includes('Password is too common')} />
                   </div>
                 )}
               </div>

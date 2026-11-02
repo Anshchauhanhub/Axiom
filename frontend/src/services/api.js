@@ -104,13 +104,62 @@ async function request(method, path, body = null) {
 }
 
 // --- Password Validation (mirrors backend rules) ---
+const COMMON_CASUAL_PASSWORDS = new Set([
+  'password', 'password1', 'password123', 'password1234', 'password12345',
+  'admin', 'admin123', 'admin1234', 'administrator',
+  'welcome', 'welcome1', 'welcome123',
+  'qwerty', 'qwerty123', 'qwerty1234',
+  'abc123', 'abc1234', '123abc',
+  'letmein', 'letmein1', 'letmein123',
+  'monkey', 'monkey123', 'dragon', 'dragon123',
+  'master', 'master123', 'shadow', 'shadow123',
+  'sunshine', 'sunshine1', 'princess', 'princess1',
+  'iloveyou', 'iloveyou1', 'trustno1',
+  'baseball', 'football', 'soccer', 'hockey',
+  'exiom', 'exiom123', 'exiom1234',
+  'changeme', 'changeme1', 'changeme123',
+  'pass1234', 'pass12345',
+]);
+
+const COMMON_DOMAIN_TYPOS = {
+  'gamil.com': 'gmail.com',
+  'gmal.com': 'gmail.com',
+  'gmial.com': 'gmail.com',
+  'gmail.co': 'gmail.com',
+  'gmail.cm': 'gmail.com',
+  'hotmial.com': 'hotmail.com',
+  'hotmail.co': 'hotmail.com',
+  'htomail.com': 'hotmail.com',
+  'yaho.com': 'yahoo.com',
+  'yahooo.com': 'yahoo.com',
+  'yhoo.com': 'yahoo.com',
+  'yahoo.co': 'yahoo.com',
+  'outlok.com': 'outlook.com',
+  'outloook.com': 'outlook.com',
+};
+
 export function validatePassword(password) {
   const errors = [];
   if (password.length < 8) errors.push('At least 8 characters');
   if (!/[A-Z]/.test(password)) errors.push('At least one uppercase letter');
   if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter');
   if (!/[0-9]/.test(password)) errors.push('At least one digit');
+  if (COMMON_CASUAL_PASSWORDS.has(password.toLowerCase())) errors.push('Password is too common');
   return errors;
+}
+
+/**
+ * Returns a suggestion string if the domain looks like a typo, else null.
+ * e.g. validateEmailDomain("foo@gamil.com") => "Did you mean @gmail.com?"
+ */
+export function validateEmailDomain(email) {
+  if (!email || !email.includes('@')) return null;
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (!domain) return null;
+  if (COMMON_DOMAIN_TYPOS[domain]) {
+    return `Did you mean @${COMMON_DOMAIN_TYPOS[domain]}?`;
+  }
+  return null;
 }
 
 // --- Auth ---
