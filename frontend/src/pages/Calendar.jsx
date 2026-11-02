@@ -37,6 +37,17 @@ const Calendar = () => {
             }
         };
         fetchAllData();
+
+        const handleCalendarUpdate = () => {
+            getPersonalTasks().then(data => {
+                setPersonalTasks(data);
+                if (globalCalendarCache) {
+                    globalCalendarCache.personalTasks = data;
+                }
+            }).catch(console.error);
+        };
+        window.addEventListener('calendar-updated', handleCalendarUpdate);
+        return () => window.removeEventListener('calendar-updated', handleCalendarUpdate);
     }, []);
 
     const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();

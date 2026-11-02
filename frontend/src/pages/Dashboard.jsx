@@ -332,7 +332,7 @@ const Dashboard = () => {
         <p className="text-[10px] font-label font-black uppercase tracking-[0.3em] text-primary mb-4">Workspace Empty</p>
         <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight mb-4">Your learning journey starts <span className="text-primary">here</span>.</h1>
         <p className="text-on-surface-variant/60 text-sm leading-relaxed max-w-md mx-auto mb-10">
-          Edxiom turns any topic or YouTube playlist into a structured roadmap. Set your goal and let our AI architect build your perfect curriculum.
+          Exiom turns any topic or YouTube playlist into a structured roadmap. Set your goal and let our AI architect build your perfect curriculum.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-3">
           <button onClick={() => navigate('/onboarding')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 text-xs font-label font-black uppercase tracking-[0.2em] text-black shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">

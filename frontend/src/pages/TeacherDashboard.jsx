@@ -38,7 +38,7 @@ const TeacherDashboard = () => {
             <span className="bg-primary/20 text-primary text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border border-primary/20">Pro</span>
           </h1>
           <p className="text-on-surface-variant font-label tracking-wide uppercase text-xs opacity-80">
-            Edxiom Master Console • Educator Edition
+            Exiom Master Console • Educator Edition
           </p>
         </div>
         <div className="flex items-center gap-3">

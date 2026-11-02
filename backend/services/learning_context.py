@@ -63,6 +63,9 @@ class LearningContext:
     all_goal_titles: list[str] = field(default_factory=list)
     all_goal_summaries: list[dict] = field(default_factory=list)
 
+    # Personal calendar events
+    personal_events: list[str] = field(default_factory=list)
+
 
 # ── Context Builder ───────────────────────────────────────────────────
 
@@ -182,10 +185,31 @@ async def build_learning_context(user, db: AsyncSession) -> LearningContext:
         if ctx.days_until_exam and ctx.study_hours_per_day:
             ctx.total_study_hours_left = ctx.days_until_exam * ctx.study_hours_per_day
 
+        # ── 6. Load user's personal calendar events ───────────────────
+        try:
+            from models import PersonalTask
+            from zoneinfo import ZoneInfo
+            user_tz = ZoneInfo(getattr(user, "timezone", None) or "Asia/Kolkata")
+            pt_res = await db.execute(
+                select(PersonalTask).where(
+                    PersonalTask.user_id == user.id,
+                    PersonalTask.status.in_(["active", "pending"])
+                ).order_by(PersonalTask.scheduled_at.asc()).limit(15)
+            )
+            for pt in pt_res.scalars().all():
+                if pt.scheduled_at:
+                    local_time = pt.scheduled_at.astimezone(user_tz).strftime("%A, %b %d at %I:%M %p")
+                    ctx.personal_events.append(f"'{pt.title}' ({local_time})")
+                else:
+                    ctx.personal_events.append(f"'{pt.title}' (Unscheduled)")
+        except Exception as pte:
+            logger.warning(f"Could not load personal tasks for context: {pte}")
+
         logger.info(
             f"✅ LearningContext built: goal='{ctx.active_goal_title}', "
             f"entity='{ctx.exam_entity}', task='{ctx.current_task_title}', "
-            f"completion={ctx.completion_percent:.1f}%, days_left={ctx.days_until_exam}"
+            f"completion={ctx.completion_percent:.1f}%, days_left={ctx.days_until_exam}, "
+            f"personal_events={len(ctx.personal_events)}"
         )
 
     except Exception as e:
@@ -200,15 +224,13 @@ def build_goal_context_string(ctx: LearningContext) -> str:
     """
     Convert a LearningContext into the rich goal_context string that
     gets injected into the system prompt in generate_onboarding_response().
-
-    This replaces the 10-line ad-hoc string concatenation in goals.py.
     """
     lines = []
 
     # Goal & progress
     if ctx.active_goal_title:
-        lines.append(f"🎯 Active Goal: {ctx.active_goal_title}")
-        lines.append(f"📊 Roadmap Progress: {ctx.completion_percent:.0f}% complete ({ctx.completed_tasks}/{ctx.total_tasks} modules done)")
+        lines.append(f"🎯 Primary Active Goal: {ctx.active_goal_title}")
+        lines.append(f"📊 Progress: {ctx.completion_percent:.0f}% complete ({ctx.completed_tasks}/{ctx.total_tasks} modules passed)")
     else:
         lines.append("No active goal yet — user is in onboarding phase.")
 
@@ -218,9 +240,9 @@ def build_goal_context_string(ctx: LearningContext) -> str:
     if ctx.current_part_title:
         lines.append(f"🔖 Current Subtopic: {ctx.current_part_title}")
 
-    # Syllabus overview (just titles, so the AI knows scope)
+    # Syllabus overview
     if ctx.syllabus_summary:
-        syllabus_text = ", ".join(ctx.syllabus_summary[:8])  # Cap at 8 to avoid bloating prompt
+        syllabus_text = ", ".join(ctx.syllabus_summary[:8])
         if len(ctx.syllabus_summary) > 8:
             syllabus_text += f" ... (+{len(ctx.syllabus_summary) - 8} more)"
         lines.append(f"📚 Syllabus Modules: {syllabus_text}")
@@ -257,15 +279,58 @@ def build_goal_context_string(ctx: LearningContext) -> str:
         for k, v in profile_extras.items():
             lines.append(f"- {k.replace('_', ' ').title()}: {v}")
 
+    # All goals breakdown — active, paused, and completed
     if ctx.all_goal_summaries:
-        lines.append("\n### ALL USER GOALS & CURRICULA (FULL ACCOUNT STATE):")
-        for summary in ctx.all_goal_summaries:
-            modules_str = ", ".join(summary["module_titles"])
-            if len(summary["module_titles"]) < summary["total_tasks"]:
-                modules_str += f" ... (+{summary['total_tasks'] - len(summary['module_titles'])} more)"
-            lines.append(
-                f"- Goal: '{summary['title']}' [{summary['status'].upper()}] | Progress: {summary['completed_tasks']}/{summary['total_tasks']} modules passed | Active Module: '{summary['current_module']}'\n"
-                f"  Modules: {modules_str}"
-            )
+        active_goals = [s for s in ctx.all_goal_summaries if s["status"] == "active"]
+        paused_goals = [s for s in ctx.all_goal_summaries if s["status"] == "paused"]
+        completed_goals = [s for s in ctx.all_goal_summaries if s["status"] in ("completed", "passed")]
+        missed_goals = [
+            s for s in ctx.all_goal_summaries
+            if s["status"] == "active" and s["completed_tasks"] == 0 and s["total_tasks"] > 0
+        ]
+
+        lines.append("\n### ALL USER GOALS & ACCOUNT STATE:")
+
+        if active_goals:
+            lines.append("🟡 ACTIVE GOALS:")
+            for s in active_goals:
+                modules_str = ", ".join(s["module_titles"])
+                if len(s["module_titles"]) < s["total_tasks"]:
+                    modules_str += f" ... (+{s['total_tasks'] - len(s['module_titles'])} more)"
+                pct = round(s["completed_tasks"] / max(s["total_tasks"], 1) * 100)
+                lines.append(
+                    f"  • '{s['title']}' — {pct}% done ({s['completed_tasks']}/{s['total_tasks']} modules passed) | "
+                    f"Current Module: '{s['current_module']}'\n    Modules: {modules_str}"
+                )
+
+        if completed_goals:
+            lines.append("✅ COMPLETED GOALS:")
+            for s in completed_goals:
+                lines.append(f"  • '{s['title']}' — FULLY COMPLETED ({s['completed_tasks']}/{s['total_tasks']} modules)")
+
+        if paused_goals:
+            lines.append("⏸️ PAUSED GOALS:")
+            for s in paused_goals:
+                pct = round(s["completed_tasks"] / max(s["total_tasks"], 1) * 100)
+                lines.append(f"  • '{s['title']}' — {pct}% done, currently paused")
+
+        if missed_goals:
+            lines.append("⚠️ GOALS WITH ZERO PROGRESS (NOT STARTED / MISSED):")
+            for s in missed_goals:
+                lines.append(f"  • '{s['title']}' — 0 of {s['total_tasks']} modules started")
+
+        # Streak info from raw_study_profile if available
+        streak = ctx.raw_study_profile.get("current_streak")
+        if streak is not None:
+            lines.append(f"\n🔥 Current Study Streak: {streak} days")
+
+    # Personal calendar events
+    if ctx.personal_events:
+        lines.append("\n### USER'S PERSONAL CALENDAR & SCHEDULED EVENTS:")
+        for ev in ctx.personal_events:
+            lines.append(f"  • 📅 {ev}")
+    else:
+        lines.append("\n### USER'S PERSONAL CALENDAR & SCHEDULED EVENTS:\n  • No personal events currently scheduled.")
 
     return "\n".join(lines)
+

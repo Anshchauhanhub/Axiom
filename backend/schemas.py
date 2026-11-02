@@ -203,6 +203,8 @@ class PersonalTaskResponse(BaseModel):
     description: Optional[str] = None
     status: str
     scheduled_at: Optional[datetime] = None
+    reminded_at: Optional[datetime] = None
+    created_via: Optional[str] = "web"
     created_at: datetime
 
     class Config:

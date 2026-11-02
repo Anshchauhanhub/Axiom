@@ -2,9 +2,15 @@ const BASE_URL = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http:/
 export const API_BASE = `${BASE_URL}/api/v1`;
 
 // --- Token Management ---
-export const getToken = () => localStorage.getItem('edxiom_token');
-export const setToken = (token) => localStorage.setItem('edxiom_token', token);
-export const clearToken = () => localStorage.removeItem('edxiom_token');
+export const getToken = () => localStorage.getItem('exiom_token') || localStorage.getItem('edxiom_token');
+export const setToken = (token) => {
+  localStorage.setItem('exiom_token', token);
+  localStorage.setItem('edxiom_token', token);
+};
+export const clearToken = () => {
+  localStorage.removeItem('exiom_token');
+  localStorage.removeItem('edxiom_token');
+};
 export const isLoggedIn = () => !!getToken();
 
 const AUTH_HEADER = 'Authorization';

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { assistantChat, getAssistantSessions, getSessionMessages, deleteAssistantSession } from '../services/api';
 import MessageBubble from './MessageBubble';
 import MoodFace from './MoodFace';
-import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Languages, Search, CheckSquare, Send, MessageSquare, PanelRightClose, Trash2, Paperclip, X } from 'lucide-react';
+import { Sparkles, History, RefreshCcw, MessageSquarePlus, PanelRight, Maximize2, Minimize2, Minus, FileText, Send, MessageSquare, PanelRightClose, Trash2, Paperclip, X } from 'lucide-react';
 import { useMood } from '../context/MoodContext';
 
 import { readUploadedFile } from '../utils/fileUtils';
@@ -129,6 +129,9 @@ const AIAgentChat = ({ isOpen, onClose }) => {
           // Backend signals a mood change — trigger a fresh global evaluation
           refreshMood();
       }
+      if (res?.task || res?.action_taken === 'schedule_task' || res?.schedule_event) {
+          window.dispatchEvent(new CustomEvent('calendar-updated'));
+      }
       if (assistantMessage) {
          setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
          // The backend might return a new session ID if one was created
@@ -245,10 +248,7 @@ const AIAgentChat = ({ isOpen, onClose }) => {
                 <div className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-white rounded-full border-2 ${moodStyles.indicator} transition-colors duration-500`} />
               </div>
               <div className="hidden sm:block">
-                <p className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface/90 leading-none">Edxiom AI</p>
-                 <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wider mt-0.5">
-                  {moodLabel}
-                 </p>
+                <p className="text-[10px] font-label font-black uppercase tracking-[0.2em] text-on-surface/90 leading-none">Exiom AI</p>
               </div>
             </div>
             
@@ -271,34 +271,65 @@ const AIAgentChat = ({ isOpen, onClose }) => {
           {/* Messages / Empty State */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar bg-surface-container-lowest/50 relative">
             
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center animate-in fade-in duration-700 max-w-sm mx-auto">
-                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${moodStyles.bg} flex items-center justify-center p-0.5 shadow-xl ${moodStyles.shadow} mb-6 relative transition-all duration-500`} style={{ borderRadius: '50%' }}>
-                  <MoodFace mood={mood} size={68} />
-                  <div className={`absolute top-0 right-0 w-4 h-4 bg-white rounded-full border-2 ${moodStyles.indicator} transition-colors duration-500`}></div>
+            {messages.length === 0 ? (() => {
+              // ── Mood-driven greeting & quick actions ──────────────────────
+              const moodConfig = {
+                // mood 1: Angry — missed 2+ days
+                1: {
+                  greeting: "You've missed multiple days. Let's get back to work.",
+                  chips: [
+                    { icon: <span className="text-lg">🎯</span>, label: 'Interrogate missed goals',    action: 'Interrogate my missed goals and tell me what I need to catch up on.' },
+                    { icon: <span className="text-lg">🧪</span>, label: 'Challenge MCQ mastery gate', action: 'Challenge me with an MCQ mastery gate on my active roadmap topic.' },
+                  ],
+                },
+                // mood 3: Normal — on track / new user
+                3: {
+                  greeting: 'Ready to prove your mastery today?',
+                  chips: [
+                    { icon: <span className="text-lg">🎯</span>, label: 'Synthesize Active Roadmap',      action: 'Synthesize my active roadmap and highlight the next key milestone.' },
+                    { icon: <span className="text-lg">🧪</span>, label: 'Challenge Mastery Gate (MCQ)',   action: 'Challenge me with a mastery gate MCQ on my current learning topic.' },
+                    { icon: <span className="text-lg">🔍</span>, label: 'Interrogate a Core Concept',     action: 'Interrogate a core concept from my active goal and explain it deeply.' },
+                    { icon: <span className="text-lg">📅</span>, label: "What's my schedule today?",      action: "What's my study schedule and upcoming tasks for today?" },
+                  ],
+                },
+                // mood 5: Ahead — completed 2+ days ahead
+                5: {
+                  greeting: "You're ahead of schedule — keep the momentum going! 🚀",
+                  chips: [
+                    { icon: <span className="text-lg">⚡</span>, label: 'Push further ahead',             action: 'I am ahead of schedule. Suggest the next advanced topic I should tackle to stay ahead.' },
+                    { icon: <span className="text-lg">🧪</span>, label: 'Challenge Mastery Gate (MCQ)',   action: 'Challenge me with a harder mastery gate MCQ since I am ahead of schedule.' },
+                    { icon: <span className="text-lg">🔍</span>, label: 'Deep dive a concept',            action: 'Give me a deep dive on the most complex concept in my current roadmap.' },
+                    { icon: <span className="text-lg">🎯</span>, label: 'Synthesize Active Roadmap',      action: 'Show me a synthesis of my active roadmap and where I am relative to the goal.' },
+                  ],
+                },
+              };
+
+              // Fall back to mood 3 for any unhandled mood value
+              const cfg = moodConfig[mood] || moodConfig[3];
+
+              return (
+                <div className="h-full flex flex-col items-center justify-center text-center animate-in fade-in duration-700 max-w-sm mx-auto">
+                  <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${moodStyles.bg} flex items-center justify-center p-0.5 shadow-xl ${moodStyles.shadow} mb-6 relative transition-all duration-500`} style={{ borderRadius: '50%' }}>
+                    <MoodFace mood={mood} size={68} />
+                    <div className={`absolute top-0 right-0 w-4 h-4 bg-white rounded-full border-2 ${moodStyles.indicator} transition-colors duration-500`}></div>
+                  </div>
+                  <h2 className="text-xl font-bold text-on-surface mb-8">{cfg.greeting}</h2>
+
+                  <div className="w-full space-y-2">
+                    {cfg.chips.map((chip, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleQuickAction(chip.action)}
+                        className="w-full flex items-center gap-4 p-4 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-white/5 transition-colors group text-left"
+                      >
+                        <span className="shrink-0">{chip.icon}</span>
+                        <span className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">{chip.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-on-surface mb-8">On call and ready, how can I help?</h2>
-                
-                <div className="w-full space-y-2">
-                  <button onClick={() => handleQuickAction('Summarize this page')} className="w-full flex items-center gap-4 p-4 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-white/5 transition-colors group text-left">
-                    <FileText size={20} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Summarize this page</span>
-                  </button>
-                  <button onClick={() => handleQuickAction('Translate this page')} className="w-full flex items-center gap-4 p-4 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-white/5 transition-colors group text-left">
-                    <Languages size={20} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Translate this page</span>
-                  </button>
-                  <button onClick={() => handleQuickAction('Analyze for insights')} className="w-full flex items-center gap-4 p-4 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-white/5 transition-colors group text-left">
-                    <Search size={20} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Analyze for insights</span>
-                  </button>
-                  <button onClick={() => handleQuickAction('Create a task tracker')} className="w-full flex items-center gap-4 p-4 rounded-xl bg-surface-container hover:bg-surface-container-highest border border-white/5 transition-colors group text-left">
-                    <CheckSquare size={20} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-                    <span className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Create a task tracker</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
+              );
+            })() : (
               <>
                 {messages.map((m, idx) => (
                    <MessageBubble key={idx} message={m.content} role={m.role} />

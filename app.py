@@ -68,10 +68,10 @@ api_app.router.routes[:] = [
     )
 ]
 
-with gr.Blocks(title="Edxiom API") as demo:
+with gr.Blocks(title="Exiom API") as demo:
     gr.Markdown(
-        "# Edxiom API\n"
-        "The Edxiom web interface is hosted separately. "
+        "# Exiom API\n"
+        "The Exiom web interface is hosted separately. "
         "This Space serves the Python API at `/api/v1`."
     )
     gr.Markdown(

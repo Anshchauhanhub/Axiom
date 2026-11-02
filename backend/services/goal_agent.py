@@ -619,7 +619,7 @@ async def synthesize_draft_node(state: GoalState) -> GoalState:
         # Fallback via LLMGateway with JSON self-healing repair
         gw = get_gateway()
         system_prompt = (
-            "You are Edxiom AI curriculum architect. Generate a complete, grounded study syllabus. "
+            "You are Exiom AI curriculum architect. Generate a complete, grounded study syllabus. "
             "Output ONLY valid JSON matching this schema:\n"
             "{\"modules\": [{\"title\": \"Module 1: Title\", \"parts\": [\"topic 1\", \"topic 2\"]}]}"
         )

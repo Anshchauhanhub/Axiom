@@ -100,9 +100,9 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
         msg = EmailMessage()
         msg["From"] = os.getenv("SMTP_USERNAME")
         msg["To"] = email
-        msg["Subject"] = "Reset your Edxiom password"
+        msg["Subject"] = "Reset your Exiom password"
         msg.set_content(
-            f"Hello,\n\nYou requested to reset your Edxiom password.\n"
+            f"Hello,\n\nYou requested to reset your Exiom password.\n"
             f"Click the link below to set a new password:\n{reset_url}\n\n"
             f"If you did not request this, please ignore this email.\n"
         )
@@ -110,9 +110,9 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
             f"""
             <html>
                 <body style="font-family: 'Inter', sans-serif; background-color: #0e0e10; color: #ffffff; padding: 20px;">
-                    <h2 style="color: #fdb813;">Edxiom AI</h2>
+                    <h2 style="color: #fdb813;">Exiom AI</h2>
                     <p>Hello,</p>
-                    <p>You requested to reset your Edxiom password.</p>
+                    <p>You requested to reset your Exiom password.</p>
                     <a href="{reset_url}" style="display: inline-block; padding: 12px 24px; background-color: #fdb813; color: #000000; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">Reset Password</a>
                     <p style="color: #8c909f; font-size: 12px; margin-top: 25px;">If you didn't request this, you can safely ignore this email.</p>
                 </body>
@@ -238,7 +238,7 @@ async def link_telegram(
                 chat_id=req.telegram_chat_id,
                 text=(
                     f"✅ *Your Telegram is successfully connected!*\n\n"
-                    f"Hey there, and welcome to Edxiom AI's Neural Bridge.\n"
+                    f"Hey there, and welcome to Exiom AI's Neural Bridge.\n"
                     f"You'll now receive your scheduled study nudges and can start "
                     f"Sudden Death quizzes right from here.\n\n"
                     f"Type /info to get more information."

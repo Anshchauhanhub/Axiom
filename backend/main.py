@@ -26,7 +26,7 @@ logger = logging.getLogger("edxiom")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    logger.info("🚀 Edxiom AI Backend starting...")
+    logger.info("🚀 Exiom AI Backend starting...")
 
     # Initialize database tables
     await init_db()
@@ -34,14 +34,14 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    logger.info("👋 Edxiom AI Backend shut down.")
+    logger.info("👋 Exiom AI Backend shut down.")
 
 
 # Conditionally disable API docs in production
 _is_dev = os.getenv("APP_ENV", "development") == "development"
 
 app = FastAPI(
-    title="Edxiom AI",
+    title="Exiom AI",
     description="High-Accountability AI Learning Coach Backend",
     version="1.0.0",
     lifespan=lifespan,
@@ -100,7 +100,7 @@ async def root():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {
-        "name": "Edxiom AI API",
+        "name": "Exiom AI API",
         "status": "operational",
         "version": "1.0.0",
     }

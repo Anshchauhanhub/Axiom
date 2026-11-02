@@ -95,7 +95,7 @@ async def test_extract_file_endpoint_text_and_pdf():
     from routers.goals import extract_file_endpoint
     from models import User
 
-    fake_user = User(id="user-123", email="scholar@edxiom.ai")
+    fake_user = User(id="user-123", email="scholar@exiom.live")
 
     # Test plain text extraction
     txt_file = UploadFile(

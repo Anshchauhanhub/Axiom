@@ -66,7 +66,7 @@ const Landing = () => {
               <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <img
                 src="/logo.png"
-                alt="Edxiom"
+                alt="Exiom"
                 className="w-auto h-12 sm:h-14 lg:h-16 relative z-10 transition-transform duration-500 group-hover:scale-110"
               />
             </div>
@@ -149,7 +149,7 @@ const Landing = () => {
               Architect Your <span className="text-secondary italic">Future</span>.
             </h1>
             <p className="text-base sm:text-lg text-on-surface-variant/70 font-light leading-relaxed mb-10 max-w-lg">
-              Edxiom is a high-accountability learning ecosystem. We transform fragmented content into structured mastery paths using world-class AI coaching.
+              Exiom is a high-accountability learning ecosystem. We transform fragmented content into structured mastery paths using world-class AI coaching.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/register" className="px-8 py-4 bg-primary text-on-primary-container rounded-full font-label font-bold text-xs uppercase tracking-[0.2em] hover:scale-[1.03] active:scale-[0.97] transition-all shadow-[0_10px_40px_rgba(253,184,19,0.25)] flex items-center justify-center gap-3">
@@ -202,7 +202,7 @@ const Landing = () => {
               Built for High <span className="text-primary">Performance</span>
             </h2>
             <p className="text-on-surface-variant/60 font-light text-base sm:text-lg">
-              Traditional learning is broken by cognitive overload. Edxiom fixes it with precision architecture.
+              Traditional learning is broken by cognitive overload. Exiom fixes it with precision architecture.
             </p>
           </div>
 
@@ -238,12 +238,12 @@ const Landing = () => {
 
             {/* Right: Heading + Info (rendered first on mobile) */}
             <div className="order-1 lg:order-2">
-              <span className="inline-block text-[10px] font-label font-bold uppercase tracking-[0.4em] text-secondary/60 mb-6">Edxiom Methodology</span>
+              <span className="inline-block text-[10px] font-label font-bold uppercase tracking-[0.4em] text-secondary/60 mb-6">Exiom Methodology</span>
               <h2 className="text-4xl sm:text-5xl lg:text-7xl font-black font-headline uppercase tracking-tighter mb-8 leading-[0.9] italic">
                 The Science of <br /><span className="text-secondary">Progression</span>
               </h2>
               <p className="text-lg sm:text-xl text-on-surface-variant/50 font-light leading-relaxed mb-12 max-w-lg">
-                We've engineered Edxiom to reduce friction and maximize focus. Our systems handle the planning, so you can handle the learning.
+                We've engineered Exiom to reduce friction and maximize focus. Our systems handle the planning, so you can handle the learning.
               </p>
               <div className="flex items-center gap-6 group">
                 <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20 group-hover:scale-110 transition-all duration-500 shadow-[0_0_30px_rgba(0,179,89,0.2)]">
@@ -252,7 +252,7 @@ const Landing = () => {
                 <div>
                   <span className="block font-label font-black uppercase tracking-widest text-[10px] text-secondary mb-1">Security Protocol</span>
                   <p className="text-xs text-on-surface-variant/40 font-light italic leading-relaxed max-w-xs">
-                    "Your data is localized and private. Edxiom's goal is your growth, not your attention."
+                    "Your data is localized and private. Exiom's goal is your growth, not your attention."
                   </p>
                 </div>
               </div>
@@ -262,9 +262,9 @@ const Landing = () => {
             <div className="order-2 lg:order-1">
               <div className="space-y-12">
                 {[
-                  { num: '01', color: 'primary', title: 'Discovery Phase', desc: "Tell Edxiom what you want to achieve. Our AI analyzes your intent and level to start the architecture.",
+                  { num: '01', color: 'primary', title: 'Discovery Phase', desc: "Tell Exiom what you want to achieve. Our AI analyzes your intent and level to start the architecture.",
                     bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', hoverBg: 'group-hover:bg-primary', shadow: 'shadow-primary/5', line: 'from-primary/30' },
-                  { num: '02', color: 'secondary', title: 'Roadmap Generation', desc: "Edxiom generates a granular, step-by-step roadmap. Approve, refine, or import from external sources.",
+                  { num: '02', color: 'secondary', title: 'Roadmap Generation', desc: "Exiom generates a granular, step-by-step roadmap. Approve, refine, or import from external sources.",
                     bg: 'bg-secondary/10', text: 'text-secondary', border: 'border-secondary/20', hoverBg: 'group-hover:bg-secondary', shadow: 'shadow-secondary/5', line: 'from-secondary/30' },
                   { num: '03', color: 'primary', title: 'Verified Progression', desc: "Complete tasks and pass assessments. Progress is tracked and nudged via our integrated assistant.",
                     bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', hoverBg: 'group-hover:bg-primary', shadow: 'shadow-primary/5', line: 'from-primary/30' },
@@ -301,7 +301,7 @@ const Landing = () => {
           
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { name: "Sarah L.", role: "CS Student", quote: "Edxiom literally saved my finals. It broke down complex data structures into bite-sized tasks I could actually finish." },
+              { name: "Sarah L.", role: "CS Student", quote: "Exiom literally saved my finals. It broke down complex data structures into bite-sized tasks I could actually finish." },
               { name: "James M.", role: "Self-taught Developer", quote: "The accountability nudges are a game changer. I've built a 30-day streak learning system design, which I always used to quit." },
               { name: "Priya K.", role: "Medical Student", quote: "I use the YouTube import feature for my biology lectures. It creates study quizzes automatically that ensure I memorize everything." }
             ].map((t, i) => (
@@ -331,7 +331,7 @@ const Landing = () => {
 
         <div className="max-w-5xl mx-auto px-5 sm:px-8">
           <h2 className="text-5xl sm:text-7xl lg:text-9xl font-black font-headline uppercase tracking-tighter leading-[0.85] mb-12 italic">
-            Ready to build <br />your <span className="text-primary underline decoration-primary/20 decoration-8 underline-offset-[16px]">Edxiom</span>?
+            Ready to build <br />your <span className="text-primary underline decoration-primary/20 decoration-8 underline-offset-[16px]">Exiom</span>?
           </h2>
           <p className="text-lg sm:text-2xl text-on-surface-variant/40 font-light leading-relaxed mb-16 max-w-2xl mx-auto">
             Join the new era of high-accountability learning. No more passive consumption. Only active mastery.

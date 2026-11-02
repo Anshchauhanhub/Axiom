@@ -430,6 +430,79 @@ async def onboarding_chat(
             return response_data
 
         # ─────────────────────────────────────────────────────────────────
+        # LAYER 1.5 — Personal Assistant Interceptor (Jarvis Agent)
+        # Intercepts scheduling, agenda queries, and task management.
+        # Uses keyword list + regex to catch natural language like
+        # "i have a tournament at 6pm" or "book my meeting tomorrow".
+        # ─────────────────────────────────────────────────────────────────
+        import re as _re
+        lower_msg = clean_user_content.lower()
+
+        # Keyword-based triggers
+        _schedule_keywords = [
+            "schedule my", "schedule a", "schedule an", "schedule the",
+            "shedule my", "shedule a", "shedule an", "shedule the",
+            "book my", "book a", "book an", "book the",
+            "add to calendar", "add to my calendar", "put in calendar",
+            "cancel my meet", "cancel my", "delete my meeting",
+            "what's my schedule", "what is my schedule",
+            "my agenda today", "my agenda for",
+            "change my study schedule", "adjust my study",
+            "remind me to", "remind me at",
+            "my streak", "pending tasks",
+            "i have a meeting", "i have an appointment",
+            "tournament at", "match at", "gym at", "workout at",
+            "meeting at", "dinner at", "call at", "class at", "exam at", "quiz at"
+        ]
+        is_keyword_match = any(k in lower_msg for k in _schedule_keywords)
+
+        # Regex: "i have a/an <something> at <time>" or "<event> at <time>"
+        _time_pattern = _re.compile(
+            r"(\b(?:i have|there is|got|attend|going to)\b\s+)?(a |an )?[\w\s]+ (at \d{1,2}(:\d{2})?\s*(am|pm)?|tomorrow|today|tonight|next\s+\w+)",
+            _re.IGNORECASE
+        )
+        is_regex_match = bool(_time_pattern.search(clean_user_content)) and any(w in lower_msg for w in [
+            "tournament", "match", "meet", "appointment", "class", "practice", "workout", "gym", "exam", "quiz", "interview", "session", "call", "dinner", "lunch", "football", "cricket", "basketball", "tennis", "game"
+        ])
+
+        is_scheduling_intent = is_keyword_match or is_regex_match
+
+        if is_scheduling_intent:
+            from services.personal_agent import process_message as process_personal_assistant
+            chat_hist = []
+            if session_id:
+                h_res = await db.execute(
+                    select(ChatMessage)
+                    .where(ChatMessage.session_id == session_id)
+                    .order_by(ChatMessage.created_at.desc())
+                    .limit(4)
+                )
+                raw_h = h_res.scalars().all()
+                chat_hist = [{"role": m.role, "content": m.content} for m in reversed(raw_h)]
+
+            agent_res = await process_personal_assistant(user, clean_user_content, db, created_via="web", history=chat_hist)
+            if agent_res.get("action") not in ("general_chat", "rate_limited"):
+                response_data = {
+                    "session_id": session_id,
+                    "message": agent_res["reply"],
+                    "phase": "chat",
+                    "mood": 4 if agent_res.get("action") in ("schedule_task", "adjust_study_schedule") else 3,
+                    "draft_roadmap": None,
+                    "goal_title": None,
+                    "action_taken": agent_res.get("action"),
+                    "task": agent_res.get("task")
+                }
+                assistant_msg = ChatMessage(
+                    session_id=session_id,
+                    user_id=user.id,
+                    role="assistant",
+                    content=response_data["message"]
+                )
+                db.add(assistant_msg)
+                await db.commit()
+                return response_data
+
+        # ─────────────────────────────────────────────────────────────────
         # LAYER 2 — Learning Context Engine (RAG + User Profile)
         # Replaces the ad-hoc goal_context string with a rich structured object.
         # ─────────────────────────────────────────────────────────────────
@@ -567,6 +640,38 @@ async def onboarding_chat(
             active_entity=learning_ctx.exam_entity,
             syllabus_task_titles=learning_ctx.syllabus_summary,
         )
+
+        # 5.5 If LLM returned a schedule_event, execute the database write
+        if response_data.get("schedule_event") and isinstance(response_data["schedule_event"], dict):
+            try:
+                evt = response_data["schedule_event"]
+                evt_title = str(evt.get("title") or "Event").strip()[:120]
+                evt_date = evt.get("date_str") or "today"
+                evt_time = evt.get("time_str")
+                from services.personal_agent import _resolve_datetime, get_user_zone
+                user_tz = get_user_zone(user)
+                t_utc = _resolve_datetime(evt_date, evt_time, user_tz)
+                if t_utc:
+                    from models import PersonalTask
+                    new_pt = PersonalTask(
+                        user_id=user.id,
+                        title=evt_title,
+                        description="Scheduled via Edxiom AI Assistant",
+                        scheduled_at=t_utc,
+                        status="active",
+                        created_via="web"
+                    )
+                    db.add(new_pt)
+                    await db.commit()
+                    await db.refresh(new_pt)
+                    response_data["task"] = {
+                        "id": str(new_pt.id),
+                        "title": new_pt.title,
+                        "scheduled_at": t_utc.isoformat()
+                    }
+                    logger.info(f"✅ Executed LLM schedule_event: '{evt_title}' saved to database for user {user.id}")
+            except Exception as sched_err:
+                logger.error(f"Failed to execute schedule_event from LLM: {sched_err}")
 
         # 6. Save AI response to DB
         assistant_msg = ChatMessage(

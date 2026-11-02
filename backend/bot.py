@@ -6,6 +6,8 @@ from telegram.ext import (
     Application,
     CommandHandler,
     CallbackQueryHandler,
+    MessageHandler,
+    filters,
     ContextTypes,
 )
 from sqlalchemy import select
@@ -34,7 +36,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user:
         await update.message.reply_text(
-            f"⚡ *Welcome back to Edxiom AI*\n\n"
+            f"⚡ *Welcome back to Exiom AI*\n\n"
             f"Your streak: *{user.current_streak} days*\n\n"
             f"Commands:\n"
             f"/quiz — Start a Sudden Death quiz\n"
@@ -44,9 +46,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         await update.message.reply_text(
-            "🔗 *Edxiom AI — Neural Bridge*\n\n"
+            "🔗 *Exiom AI — Neural Bridge*\n\n"
             f"Your Chat ID: `{chat_id}`\n\n"
-            "To connect, go to your Edxiom Dashboard → Settings → Link Telegram, "
+            "To connect, go to your Exiom Dashboard → Settings → Link Telegram, "
             "and enter this Chat ID.\n\n"
             "Once linked, I'll send you precision nudges at your scheduled times.",
             parse_mode="Markdown",
@@ -325,7 +327,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        f"📊 *Edxiom Status*\n\n"
+        f"📊 *Exiom Status*\n\n"
         f"🔥 Streak: *{user.current_streak} days*\n"
         f"🕐 Schedule: {', '.join(user.study_schedule or [])}\n"
         f"🌐 Timezone: {user.timezone}",
@@ -369,12 +371,136 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /info command — list available commands."""
     commands_text = (
-        "ℹ️ *Edxiom AI — Available Commands*\n\n"
+        "ℹ️ *Exiom AI — Available Commands*\n\n"
         "⚡ /quiz — Start a Sudden Death quiz\n"
         "📊 /status — View your current streak and progress\n"
         "📅 /schedule — View your study and nudge schedule\n"
     )
     await update.message.reply_text(commands_text, parse_mode="Markdown")
+
+
+async def settz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/settz <IANA_timezone> — update the user's stored timezone."""
+    chat_id = update.effective_chat.id
+    args = context.args
+    if not args:
+        await update.message.reply_text(
+            "📍 *Set Your Timezone*\n\nUsage: `/settz Asia/Kolkata`\nExamples: `Asia/Kolkata`, `America/New_York`, `Europe/London`",
+            parse_mode="Markdown",
+        )
+        return
+
+    tz_str = args[0].strip()
+    try:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        ZoneInfo(tz_str)  # validate
+    except Exception:
+        await update.message.reply_text(
+            f"❌ Unknown timezone `{tz_str}`. Use an IANA name like `Asia/Kolkata` or `America/New_York`.",
+            parse_mode="Markdown",
+        )
+        return
+
+    async with async_session() as db:
+        result = await db.execute(select(User).where(User.telegram_chat_id == chat_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            await update.message.reply_text("❌ Account not linked. Use /start for instructions.")
+            return
+        user.timezone = tz_str
+        db.add(user)
+        await db.commit()
+
+    await update.message.reply_text(
+        f"✅ Timezone updated to `{tz_str}`. All future reminders will use this timezone.",
+        parse_mode="Markdown",
+    )
+
+
+async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Route free-text Telegram messages through the personal agent."""
+    chat_id = update.effective_chat.id
+    text = (update.message.text or "").strip()
+    if not text:
+        return
+
+    async with async_session() as db:
+        result = await db.execute(select(User).where(User.telegram_chat_id == chat_id))
+        user = result.scalar_one_or_none()
+
+    if not user:
+        await update.message.reply_text(
+            "🔗 Account not linked. Use /start to get your Chat ID, then connect in Exiom Dashboard → Settings."
+        )
+        return
+
+    # Route through personal agent with conversation context
+    from services.personal_agent import process_message as process_personal_assistant
+    user_history = context.user_data.get("history", [])
+    async with async_session() as db:
+        # Reload user in fresh session for DB writes
+        result = await db.execute(select(User).where(User.id == user.id))
+        user = result.scalar_one_or_none()
+        agent_res = await process_personal_assistant(user, text, db, created_via="telegram", history=user_history)
+
+    reply_text = agent_res.get("reply", "I'm not sure how to help with that. Try scheduling a task or asking for your agenda!")
+
+    # Update conversation history in user_data
+    user_history = context.user_data.setdefault("history", [])
+    user_history.append({"role": "user", "content": text})
+    user_history.append({"role": "assistant", "content": reply_text})
+    context.user_data["history"] = user_history[-6:]
+
+    # Build inline keyboard if a task was scheduled (Undo button)
+    reply_markup = None
+    task_info = agent_res.get("task")
+    action = agent_res.get("action")
+    if action == "schedule_task" and task_info and task_info.get("id"):
+        keyboard = [
+            [
+                InlineKeyboardButton("🗑️ Undo", callback_data=f"undo_{task_info['id']}"),
+                InlineKeyboardButton("📅 View Calendar", url="https://exiom.live/calendar"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(reply_text, parse_mode="Markdown", reply_markup=reply_markup)
+
+
+async def handle_undo_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle [Undo] button press to cancel a scheduled PersonalTask."""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data  # "undo_<task_uuid>"
+    task_id = data.replace("undo_", "")
+    chat_id = query.message.chat_id
+
+    from models import PersonalTask
+    async with async_session() as db:
+        user_res = await db.execute(select(User).where(User.telegram_chat_id == chat_id))
+        user = user_res.scalar_one_or_none()
+        if not user:
+            await query.edit_message_text("❌ Account not linked.")
+            return
+
+        task_res = await db.execute(
+            select(PersonalTask).where(
+                PersonalTask.id == task_id,
+                PersonalTask.user_id == user.id,
+                PersonalTask.status == "active",
+            )
+        )
+        task = task_res.scalar_one_or_none()
+        if not task:
+            await query.edit_message_text("⚠️ Task not found or already cancelled.")
+            return
+
+        task.status = "cancelled"
+        db.add(task)
+        await db.commit()
+
+    await query.edit_message_text(f"✅ *'{task.title}'* has been cancelled.", parse_mode="Markdown")
 
 
 def create_bot_app() -> Application:
@@ -386,9 +512,13 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("status", status_command))
     app.add_handler(CommandHandler("schedule", schedule_command))
     app.add_handler(CommandHandler("info", info_command))
+    app.add_handler(CommandHandler("settz", settz_command))
     app.add_handler(CallbackQueryHandler(handle_quiz_start, pattern=r"^startquiz_"))
     app.add_handler(CallbackQueryHandler(handle_answer, pattern=r"^answer_"))
-    
+    app.add_handler(CallbackQueryHandler(handle_undo_callback, pattern=r"^undo_"))
+    # Text messages route through the personal assistant (MUST come last)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
+
     # Add error handler
     app.add_error_handler(error_handler)
 

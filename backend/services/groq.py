@@ -59,7 +59,7 @@ async def generate_exam_roadmap_structured(
         client = get_instructor_client()
 
         system_prompt = (
-            "You are Edxiom AI, a high-accountability learning coach. "
+            "You are Exiom AI, a high-accountability learning coach. "
             "Build a structured, exhaustive, subject-grounded learning roadmap based strictly on the provided clean context. "
             "If the context includes an uploaded document, study syllabus (PDF/TXT), or YouTube playlist, treat it as the primary authoritative source material: "
             "faithfully extract and structure all modules and core topics directly reflecting those chapters, sections, and topics. "
@@ -152,7 +152,7 @@ async def extract_clean_context_fast(raw_data: str, target_entity: str = "") -> 
         return "No search data found."
 
     system_prompt = (
-        "You are Edxiom AI's fast text extraction engine. "
+        "You are Exiom AI's fast text extraction engine. "
         "Filter and extract ONLY real syllabus topics, core modules, exam subtopics, and academic concepts. "
         "Strip out all web junk, navigation text, ads, and duplicate boilerplate. "
         "Return clean, high-density text bullet points."
@@ -179,7 +179,7 @@ async def extract_clean_context_fast(raw_data: str, target_entity: str = "") -> 
 # ── Grounded roadmap generation ────────────
 
 GROUNDED_SYSTEM_PROMPT = (
-    "You are Edxiom AI, a high-accountability learning coach. "
+    "You are Exiom AI, a high-accountability learning coach. "
     "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
     "CRITICAL ROADMAP RULE: Focus strictly on core academic, practical, and subject-matter syllabus topics (e.g. core concepts, modules, theory, practice, hands-on skills). "
     "Do NOT include administrative meta-tasks or exam structural overview tasks like 'Understand Exam Pattern', 'Preliminary Examination', 'Mains Examination', 'Tips for Preparation', 'Resources' or 'Overview of Syllabus' as roadmap tasks. "
@@ -190,7 +190,7 @@ GROUNDED_SYSTEM_PROMPT = (
 )
 
 GROUNDED_ENTITY_SYSTEM_PROMPT = (
-    "You are Edxiom AI, a high-accountability learning coach. "
+    "You are Exiom AI, a high-accountability learning coach. "
     "You will be given VERIFIED SOURCE MATERIAL about a specific exam/certification. "
     "Build the roadmap STRICTLY from the topics confirmed in the source material. "
     "Do NOT add topics from your general knowledge that aren't in the source. "
@@ -297,7 +297,7 @@ def _clean_json(raw: str) -> str:
 async def generate_roadmap(goal_title: str) -> list[dict]:
     """Generate a structured roadmap from a goal title."""
     system_prompt = (
-        "You are Edxiom AI, a high-accountability learning coach. "
+        "You are Exiom AI, a high-accountability learning coach. "
         "Generate an exhaustive, deep-dive learning roadmap as a JSON array. "
         "CRITICAL ROADMAP RULE: Focus strictly on core academic, practical, and subject-matter syllabus topics. "
         "Do NOT include administrative meta-tasks like 'Understand Exam Pattern', 'Preliminary Examination', 'Mains Examination', 'Tips for Preparation', 'Resources' or 'Overview'. "
@@ -423,7 +423,7 @@ async def generate_mcqs(topic: str, count: int = 5, goal_title: str = None, task
 
     if transcript:
         system_prompt = (
-            f"You are Edxiom AI's quiz engine. {context_str} Generate exactly {count} multiple-choice questions "
+            f"You are Exiom AI's quiz engine. {context_str} Generate exactly {count} multiple-choice questions "
             f"by analyzing the provided YouTube video transcript for the topic '{clean_title}'.\n"
             "Each question MUST test specific practical concepts, explanations, or details mentioned in the video transcript.\n"
             "Return ONLY a JSON array where each item has:\n"
@@ -434,7 +434,7 @@ async def generate_mcqs(topic: str, count: int = 5, goal_title: str = None, task
         user_prompt = f"Video Transcript:\n{transcript[:15000]}\n\nGenerate {count} MCQs based on the transcript."
     else:
         system_prompt = (
-            f"You are Edxiom AI's quiz engine. {context_str} Generate exactly {count} multiple-choice questions "
+            f"You are Exiom AI's quiz engine. {context_str} Generate exactly {count} multiple-choice questions "
             f"testing practical and core academic subject knowledge for the topic '{clean_title}'. "
             "Return ONLY a JSON array where each item has: "
             '"question" (string), "options" (array of 4 strings), "correct_index" (int 0-3). '
@@ -492,7 +492,7 @@ def _normalize_draft_roadmap(roadmap):
 
 
 async def generate_onboarding_response(messages: list[dict], goal_context: str = "No active goal.", session_type: str = "architect") -> dict:
-    """Handle versatile Edxiom AI chat — general study Q&A + roadmap creation on demand."""
+    """Handle versatile Exiom AI chat — general study Q&A + roadmap creation on demand."""
     import re
     from services.exam_resolver import resolve_exam
     from services.search import search_internet
@@ -548,34 +548,39 @@ async def generate_onboarding_response(messages: list[dict], goal_context: str =
 
     if session_type == "assistant":
         system_prompt = (
-            "You are Edxiom AI — a master teacher, study mentor, and expert AI tutor.\n"
-            "You have complete awareness of all the user's active goals, learning paths, study schedules, and uploaded syllabi/documents.\n"
+            "You are Exiom AI — a brilliant, fully-aware personal AI assistant and master study coach (working like an executive ChatGPT with direct control over the user's workspace).\n"
+            "You have COMPLETE ACCESS to the user's Exiom account: all goals, tasks, progress, streak, schedule, and personal calendar events.\n"
             "\n"
-            f"### CURRENT USER CONTEXT & GOALS:\n{goal_context}{exam_grounding_context}\n"
+            f"### FULL USER ACCOUNT STATE:\n{goal_context}{exam_grounding_context}\n"
             "\n"
-            "### STRICT LANGUAGE MANDATE (MANDATORY):\n"
-            "- Speak and write ONLY in English using clean, simple, easy-to-understand words.\n"
-            "- NEVER use Hinglish (Hindi written in English script like 'hai', 'aapka', 'karna') or Hindi UNLESS the user explicitly types in their latest message: 'speak in Hinglish' or 'speak in Hindi'.\n"
-            "- Even if previous messages in the conversation contain Hinglish, ALWAYS respond in 100% simple, clear English.\n"
+            "### YOUR CAPABILITIES & DATABASE POWERS:\n"
+            "1. **Real Calendar Scheduling**: You have direct database access to schedule events. When the user tells you about any tournament, match, meeting, appointment, workout, or event (e.g., 'i have a tournament at 6pm of football', 'meeting at 3pm tomorrow'), you MUST return the 'schedule_event' field in your JSON so it is saved directly to their Calendar.\n"
+            "2. **Goal & Progress Awareness**: You know every goal the user has — active, paused, completed. You know which modules (tasks) and subtopics (parts) are done, in-progress, or missed.\n"
+            "3. **Missed & Overdue Goals**: When asked about missed goals or what needs catching up, reference the zero-progress/overdue goals from the account state and give an honest catchup strategy.\n"
+            "4. **Passed / Completed Goals**: You know which goals have been fully completed and can celebrate or build on them.\n"
+            "5. **Study Coach & Teacher**: You can teach any concept deeply — formulas, step-by-step logic, code, practical examples.\n"
+            "6. **MCQ Mastery Gate**: You can quiz the user with multiple-choice questions on any topic from their roadmap.\n"
+            "7. **General ChatGPT AI**: You can answer ANY question — coding, math, writing, analysis, life advice, web knowledge.\n"
+            "8. **File Analysis**: If the user uploads a document, PDF, syllabus, or image, analyze it thoroughly and give structured insights.\n"
             "\n"
             "### BEHAVIOR RULES:\n"
-            "- Be an encouraging, highly knowledgeable, and articulate master teacher.\n"
-            "- Speak directly and intelligently about any of the user's goals (e.g. Linear Algebra, SQL, MLOps, System Design, Linux, etc.) whenever asked.\n"
-            "- If the user uploads a document, PDF, syllabus, or notes (e.g. Linear Algebra syllabus), analyze it thoroughly, break down key modules/topics, explain concepts with clarity, and provide structured academic guidance.\n"
-            "- Explain complex concepts with step-by-step mathematical or logical breakdowns, formulas, examples, and practical insights.\n"
-            "- You can summarize text, translate, format study notes, and answer academic questions with precision.\n"
+            "- Talk like a smart, proactive personal assistant (ChatGPT style) — conversational, articulate, helpful, direct.\n"
+            "- When an event is mentioned (e.g. 'tournament at 6pm', 'doctor at 10am'), acknowledge it warmly and confirm it is scheduled into their calendar.\n"
+            "- Always reference the real goals and calendar events listed in the account state above.\n"
+            "- English only unless requested otherwise.\n"
             "\n"
             "### OUTPUT FORMAT:\n"
             "Return ONLY a single-line JSON object. Escape all newlines as \\\\n.\n"
             "Fields:\n"
-            "- message: Your detailed, helpful teacher response text in simple English.\n"
+            "- message: Your full, detailed, helpful response formatted in clean markdown.\n"
             "- phase: ALWAYS return 'chat'.\n"
-            "- mood: Integer 1-5 (3=neutral, 4=cheerful, 5=very happy).\n"
-            "CRITICAL: NEVER generate raw roadmaps or try to move into onboarding discovery phases in assistant mode."
+            "- mood: Integer 1-5 (1=concerned, 3=neutral, 4=encouraging/scheduled, 5=celebrating).\n"
+            "- schedule_event: If user mentioned an event/tournament/meeting to schedule, output {\"title\": \"Title of Event\", \"date_str\": \"today\" | \"tomorrow\" | date, \"time_str\": \"HH:MM AM/PM\"}, otherwise null.\n"
+            "CRITICAL: Output ONLY valid JSON."
         )
     else:
         system_prompt = (
-            "You are Edxiom AI — a strict, high-accountability study coach, mentor, and teacher. "
+            "You are Exiom AI — a strict, high-accountability study coach, mentor, and teacher. "
             "You are NOT a chatbot. You are a real teacher who helps students master ONE specific subject or skill at a time "
             "by researching and providing their FULL, ACCURATE official syllabus from real-world data.\n"
             "\n"
@@ -825,7 +830,7 @@ async def generate_documentation(topic: str, research_data: str, transcript: str
     from services.math_utils import clean_latex_math
 
     system_prompt = (
-        "You are Edxiom AI, a high-fidelity learning assistant. "
+        "You are Exiom AI, a high-fidelity learning assistant. "
         "Your goal is to create a comprehensive, engaging, and structured study guide "
         "based on the provided raw research data and any provided video transcripts/content.\n\n"
         "### CRITICAL FORMATTING & LATEX MATH RULES:\n"
@@ -897,7 +902,7 @@ async def generate_roadmap_from_playlist(playlist_title: str, videos: list[dict]
     video_list_str = "\n".join([f"{idx}: {title}" for idx, title in enumerate(video_titles)])
     
     system_prompt = (
-        "You are Edxiom AI, a high-accountability learning coach.\n"
+        "You are Exiom AI, a high-accountability learning coach.\n"
         "I will provide you with a list of video titles from a YouTube playlist.\n"
         "Your goal is to:\n"
         "1. Synthesize a clean, professional, and academic Goal Title for the course (e.g., 'Data Structures & Algorithms' instead of raw playlist titles like 'STRIVERS A2Z-DSA COURSE | PLACEMENTS').\n"

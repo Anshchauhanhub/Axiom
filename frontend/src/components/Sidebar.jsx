@@ -187,7 +187,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
       >
         <img
           src="/logo.png"
-          alt="Edxiom Logo"
+          alt="Exiom Logo"
           className="w-14 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] group-hover:scale-110 transition-transform duration-500"
         />
       </button>
@@ -207,7 +207,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
               <Link to="/" className="group flex items-center" onClick={() => setIsMobileOpen(false)}>
                 <img
                   src="/logo.png"
-                  alt="Edxiom Logo"
+                  alt="Exiom Logo"
                   className="w-16 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)]"
                 />
               </Link>
@@ -293,7 +293,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
             <button onClick={toggleCollapse} className="group flex justify-center cursor-pointer">
               <img
                 src="/logo.png"
-                alt="Edxiom Logo"
+                alt="Exiom Logo"
                 className="w-10 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] transition-all duration-500 group-hover:scale-110"
               />
             </button>
@@ -302,7 +302,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse }) => {
               <Link to="/" className="group flex justify-center">
                 <img
                   src="/logo.png"
-                  alt="Edxiom Logo"
+                  alt="Exiom Logo"
                   className="w-20 h-auto object-contain drop-shadow-[0_0_25px_rgba(253,184,19,0.5)] transition-all duration-500 group-hover:scale-110"
                 />
               </Link>

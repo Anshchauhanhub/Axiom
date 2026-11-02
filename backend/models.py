@@ -35,11 +35,13 @@ class PersonalTask(Base):
     __tablename__ = "personal_tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    title = Column(String, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(120), nullable=False)
     description = Column(Text, nullable=True) # User's reasoning or notes
-    status = Column(String, default="pending") # pending, completed
+    status = Column(String, default="active") # active, done, cancelled, pending, completed
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    reminded_at = Column(DateTime(timezone=True), nullable=True) # Idempotency guard for notifications
+    created_via = Column(String, default="web") # web, telegram
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="personal_tasks")

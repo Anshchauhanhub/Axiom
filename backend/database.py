@@ -12,17 +12,34 @@ if not DATABASE_URL:
 if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Railway/Render/Neon/Supabase require SSL, but local dev might not.
-# We'll use ssl=True if a remote database host is detected in the URL.
-use_ssl = any(k in DATABASE_URL for k in ("railway", "render", "neon.tech", "supabase.co")) if DATABASE_URL else False
+import ssl
+
+# Railway/Render/Neon/Supabase/Aiven require SSL, but local dev might not.
+# We'll use ssl if a remote database host or sslmode=require is detected in the URL.
+use_ssl = any(k in DATABASE_URL for k in ("railway", "render", "neon.tech", "supabase.co", "aivencloud.com", "aiven.io", "sslmode=require")) if DATABASE_URL else False
+
+# Cloud PostgreSQL providers (like Aiven or self-hosted) use CA certificates that may not be in default system trust store.
+if use_ssl:
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+    connect_args = {"ssl": ssl_ctx}
+else:
+    connect_args = {}
+
+clean_db_url = DATABASE_URL
+if clean_db_url and "?sslmode=" in clean_db_url:
+    clean_db_url = clean_db_url.split("?sslmode=")[0]
+elif clean_db_url and "&sslmode=" in clean_db_url:
+    clean_db_url = clean_db_url.split("&sslmode=")[0]
 
 engine = create_async_engine(
-    DATABASE_URL,
+    clean_db_url,
     echo=False,
     pool_size=5,
     max_overflow=10,
     pool_pre_ping=True,
-    connect_args={"ssl": True} if use_ssl else {}
+    connect_args=connect_args
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

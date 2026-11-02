@@ -17,7 +17,7 @@ export default function ProgressShareCard({ goal, progress = 0, isOpen, onClose 
 
   const handleShareTwitter = () => {
     const text = encodeURIComponent(
-      `I'm currently at ${Math.round(progress)}% mastery on "${goal?.title || 'my curriculum'}" using @Edxiom, the AI-driven neural learning engine! 🔥 Streak: ${user?.current_streak || 1} days`
+      `I'm currently at ${Math.round(progress)}% mastery on "${goal?.title || 'my curriculum'}" using @Exiom, the AI-driven neural learning engine! 🔥 Streak: ${user?.current_streak || 1} days`
     );
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
@@ -60,7 +60,7 @@ export default function ProgressShareCard({ goal, progress = 0, isOpen, onClose 
                 E
               </div>
               <span className="text-xs font-bold uppercase tracking-widest text-on-surface font-headline">
-                Edxiom Neural Verified
+                Exiom Neural Verified
               </span>
             </div>
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold">
@@ -88,7 +88,7 @@ export default function ProgressShareCard({ goal, progress = 0, isOpen, onClose 
 
           <div className="mt-4 pt-3 flex items-center justify-between text-[10px] text-on-surface-variant border-t border-outline-variant/10">
             <span>Scholar: {user?.full_name || 'Autonomous Learner'}</span>
-            <span className="font-mono text-primary/80">edxiom.ai</span>
+            <span className="font-mono text-primary/80">exiom.live</span>
           </div>
         </div>
 

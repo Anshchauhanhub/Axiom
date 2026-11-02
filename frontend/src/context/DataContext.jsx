@@ -12,7 +12,7 @@ export const DataProvider = ({ children }) => {
   const [roadmap, setRoadmap] = useState(null);
   const [allRoadmaps, setAllRoadmaps] = useState({});  // goalId -> roadmap data
   const roadmapCacheRef = useRef({});
-  const [selectedGoalId, setSelectedGoalId] = useState(() => localStorage.getItem('edxiom_selected_goal') || null);
+  const [selectedGoalId, setSelectedGoalId] = useState(() => (localStorage.getItem('exiom_selected_goal') || localStorage.getItem('edxiom_selected_goal')) || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -97,7 +97,8 @@ export const DataProvider = ({ children }) => {
           if (activeGoal) {
               activeGoalId = activeGoal.id;
               setSelectedGoalId(activeGoalId);
-              localStorage.setItem('edxiom_selected_goal', activeGoalId);
+              localStorage.setItem('exiom_selected_goal', activeGoalId);
+        localStorage.setItem('edxiom_selected_goal', activeGoalId);
           }
       }
       
@@ -125,10 +126,12 @@ export const DataProvider = ({ children }) => {
       if (activeGoal) {
         currentSelected = activeGoal.id;
         setSelectedGoalId(currentSelected);
+        localStorage.setItem('exiom_selected_goal', currentSelected);
         localStorage.setItem('edxiom_selected_goal', currentSelected);
       } else {
         currentSelected = null;
         setSelectedGoalId(null);
+        localStorage.removeItem('exiom_selected_goal');
         localStorage.removeItem('edxiom_selected_goal');
       }
     }
@@ -185,6 +188,7 @@ export const DataProvider = ({ children }) => {
       } else {
         setSelectedGoalId(null);
         setRoadmap(null);
+        localStorage.removeItem('exiom_selected_goal');
         localStorage.removeItem('edxiom_selected_goal');
       }
     }
@@ -198,6 +202,7 @@ export const DataProvider = ({ children }) => {
   }, [goals, selectedGoalId]);
 
   const handleSetSelectedGoal = (id) => {
+      localStorage.setItem('exiom_selected_goal', id);
       localStorage.setItem('edxiom_selected_goal', id);
       setSelectedGoalId(id);
   };

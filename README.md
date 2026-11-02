@@ -1,5 +1,5 @@
 ---
-title: Edxiom API
+title: Exiom API
 emoji: 🧠
 colorFrom: purple
 colorTo: yellow
@@ -8,11 +8,11 @@ sdk_version: 6.31.0
 app_file: app.py
 ---
 
-# 🧠 Edxiom — AI-Driven Growth Partner
+# 🧠 Exiom — AI-Driven Growth Partner
 
 > _"Not a tracker — a proof-of-learning engine."_
 
-Edxiom is an agentic learning platform that turns passive learning into an active, accountable dialogue. It **interrogates** your goals, builds a custom roadmap using SOTA LLMs, sends daily interactive nudges via Telegram, and uses AI-generated MCQ gates to **verify** mastery before you advance.
+Exiom is an agentic learning platform that turns passive learning into an active, accountable dialogue. It **interrogates** your goals, builds a custom roadmap using SOTA LLMs, sends daily interactive nudges via Telegram, and uses AI-generated MCQ gates to **verify** mastery before you advance.
 
 ---
 
