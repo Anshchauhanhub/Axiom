@@ -9,8 +9,17 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set. Please configure it in .env")
-if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+
+def normalize_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
+DATABASE_URL = normalize_database_url(DATABASE_URL)
 
 import ssl
 
@@ -70,4 +79,3 @@ async def init_db():
 
         await conn.run_sync(Base.metadata.create_all)
         # Note: Schema migrations (adding/dropping columns) should be handled through Alembic.
-
